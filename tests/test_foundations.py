@@ -131,6 +131,35 @@ def test_mstar_tables():
     assert abs(float(a(0.9)) - float(b(0.9))) < 0.1
 
 
+def test_lsst_and_euclid_tables():
+    """The LSST and Euclid tables load like the DECam ones and seed a red-sequence model."""
+    from importlib import resources
+    from pathlib import Path
+
+    from rema.io.tables import read_table
+    from rema.model.redsequence import RSModel
+
+    for name in ("lsst_i03", "lsst_r03", "lsst_z03", *[f"lsst_{b}_ezgal" for b in "ugrizy"],
+                 *[f"euclid_{b}_ezgal" for b in ("vis", "y", "j", "h")]):
+        ms = P.MStar(name)
+        assert ms.zmin == pytest.approx(0.01)
+        assert ms.zmax == pytest.approx(1.51 if name.endswith("03") else 2.5)
+    # Empirical (redMaPPer) and model m* agree in LSST z at low redshift.
+    assert abs(float(P.MStar("lsst_z03")(0.5)) - float(P.MStar("lsst_z_ezgal")(0.5))) < 0.05
+    # A red population is brighter in the redder bands.
+    m = [float(P.MStar(f"euclid_{b}_ezgal")(0.5)) for b in ("vis", "y", "j", "h")]
+    assert m == sorted(m, reverse=True)
+    for bands, ref, template, tbands, mstar in [
+            (tuple("grizy"), "z", "bc03_lsst_ugrizy", tuple("ugrizy"), "lsst_z03"),
+            (("vis", "y", "j", "h"), "h", "bc03_euclid_visyjh", ("vis", "y", "j", "h"), "euclid_h_ezgal")]:
+        rs = RSModel.from_template(bands=bands, ref_band=ref, template=template, template_bands=tbands,
+                                   mstar=mstar)
+        t = read_table(Path(str(resources.files("rema.data"))) / f"colors_{template}.fits")
+        j0 = tbands.index(bands[0])
+        want = [np.interp(0.5, t["Z"], t["COLOR"][:, j0 + j]) for j in range(len(bands) - 1)]
+        np.testing.assert_allclose(np.asarray(rs.at(0.5).mean), want, atol=1e-6)
+
+
 # ----------------------------------------------------------------- HEALPix
 @pytest.mark.parametrize("nside", [1, 2, 64, 1024, 8192])
 def test_ang2pix_nest_matches_healpy(nside, rng):

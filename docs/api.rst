@@ -82,4 +82,5 @@ Model tables
              passive_mags
 
 .. automodule:: rema.data.build
-   :members: build_all, build_mstar_des_z03, build_ezgal_tables, fetch, compare
+   :members: build_all, build_mstar_redmapper, build_mstar_des_z03, build_bc03_tables,
+             build_ezgal_tables, passive_population_mags, FilterSet, FILTER_SETS, fetch, compare

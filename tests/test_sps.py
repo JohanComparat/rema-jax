@@ -115,16 +115,76 @@ def test_passive_mags_normalisation_and_colours():
     assert np.all(np.diff(m[:, 1]) > 0)                    # fainter with redshift
 
 
-def test_mstar_des_z03_resampling(tmp_path, monkeypatch):
+@pytest.mark.parametrize("name", ["des_z03", "lsst_i03", "lsst_r03", "lsst_z03"])
+def test_mstar_redmapper_resampling(tmp_path, monkeypatch, name):
     z = np.round(np.arange(1, 121) * 0.01, 6)
     m = 15.0 + 5.0 * z
     fits.BinTableHDU.from_columns([fits.Column("Z", "D", array=z),
                                    fits.Column("MSTAR", "D", array=m)]).writeto(tmp_path / "src.fit")
-    monkeypatch.setattr(build, "fetch", lambda name, cache=None: tmp_path / "src.fit")
-    cols, header = build.build_mstar_des_z03()
+    asked = []
+    monkeypatch.setattr(build, "fetch", lambda n, cache=None: asked.append(n) or tmp_path / "src.fit")
+    cols, header = build.build_mstar_des_z03() if name == "des_z03" else build.build_mstar_redmapper(name)
+    assert asked == [f"mstar_{name}.fit"] and header["SOURCE"].endswith(f"/mstar_{name}.fit")
     assert cols["Z"].size == 151 and cols["Z"][0] == pytest.approx(0.01) and cols["Z"][-1] == pytest.approx(1.51)
     np.testing.assert_allclose(cols["MSTAR"], 15.0 + 5.0 * cols["Z"], atol=1e-10)   # linear, extrapolated
     assert header["ZEXTRAP"][0] == pytest.approx(1.2)
+
+
+def test_filter_sets_name_their_tables():
+    legacy, lsst, euclid = (build.FILTER_SETS[k] for k in ("legacy", "lsst", "euclid"))
+    assert legacy.colors_file == "colors_bc03_legacy_grizw1.fits"
+    assert legacy.mstar_file("z") == "mstar_legacy_z_ezgal.fits" and legacy.mstar_bands == ("z",)
+    assert lsst.colors_file == "colors_bc03_lsst_ugrizy.fits" and lsst.mstar_bands == tuple("ugrizy")
+    assert euclid.colors_file == "colors_bc03_euclid_visyjh.fits" and euclid.mstar_file("h") == "mstar_euclid_h_ezgal.fits"
+    np.testing.assert_allclose(legacy.z_grid, build.Z_GRID)
+    assert legacy.z_grid[-1] == pytest.approx(1.5) and lsst.z_grid.size == 250 and euclid.z_grid[-1] == pytest.approx(2.5)
+    for fs in build.FILTER_SETS.values():                  # every response is a pinned input
+        assert len(fs.files) == len(fs.bands) and all(f in build.INPUTS for f in fs.files)
+
+
+def test_build_bc03_tables_layout(monkeypatch):
+    """m* in each band of mstar_bands, adjacent colours of all bands; the magnitudes are stubbed."""
+    def fake(bands, z, cache=None):
+        return np.asarray(z)[:, None] + np.arange(len(bands))[None, :] * 0.5
+    monkeypatch.setattr(build, "passive_population_mags", fake)
+    out = build.build_bc03_tables("euclid")
+    assert sorted(out) == sorted(["mstar_euclid_vis_ezgal.fits", "mstar_euclid_y_ezgal.fits",
+                                  "mstar_euclid_j_ezgal.fits", "mstar_euclid_h_ezgal.fits",
+                                  "colors_bc03_euclid_visyjh.fits"])
+    cols, header = out["mstar_euclid_j_ezgal.fits"]
+    np.testing.assert_allclose(cols["MSTAR"], cols["Z"] + 1.0)
+    assert header["BAND"] == "euclid j" and header["RESPONSE"] == "Euclid-J.ecsv" and header["FILTSET"] == "euclid"
+    cols, header = out["colors_bc03_euclid_visyjh.fits"]
+    assert cols["COLOR"].shape == (250, 3) and np.allclose(cols["COLOR"], -0.5) and header["BANDS"] == "vis,y,j,h"
+    mstar, colors = build.build_ezgal_tables()
+    assert mstar[1]["BAND"] == "decam z" and colors[0]["COLOR"].shape == (150, 4)
+    names = set(build.build_all())
+    assert {"mstar_des_z03.fits", "mstar_lsst_z03.fits", "mstar_lsst_u_ezgal.fits",
+            "colors_bc03_lsst_ugrizy.fits", "colors_bc03_legacy_grizw1.fits"} <= names
+
+
+def test_passive_population_mags_rejects_non_finite(monkeypatch):
+    monkeypatch.setattr(build, "fetch", lambda name, cache=None: name)
+    import rema.model.sps as sps
+
+    class _Fake:
+        @staticmethod
+        def from_ezgal(path):
+            return None
+
+        @staticmethod
+        def from_ecsv(path, name=""):
+            return None
+
+        @staticmethod
+        def from_ascii(path, unit="angstrom", name=""):
+            return None
+
+    monkeypatch.setattr(sps, "SSPGrid", _Fake)
+    monkeypatch.setattr(sps, "Bandpass", _Fake)
+    monkeypatch.setattr(sps, "passive_mags", lambda *a, **k: jnp.array([[np.nan]]))
+    with pytest.raises(ValueError, match="non-finite"):
+        build.passive_population_mags([("f.ecsv", "x")], np.array([0.5]))
 
 
 def test_fetch_uses_the_cache_and_checks_the_hash(tmp_path, monkeypatch):

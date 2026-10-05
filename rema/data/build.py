@@ -4,18 +4,25 @@
     python -m rema.data.build --out DIR       # write them elsewhere
     python -m rema.data.build --check         # compare with the packaged tables, write nothing
 
-The inputs (16 MB) are downloaded once from fixed commits, checked against their SHA-256 and
+The inputs (14 MB) are downloaded once from fixed commits, checked against their SHA-256 and
 kept in ``--cache`` (default ``$REMA_CACHE_DIR/inputs``, else ``~/.cache/rema/inputs``):
 
-- ``mstar_des_z03.fits``: redMaPPer's m*(z) in DES z (``redmapper/data/mstar/mstar_des_z03.fit``,
-  0.01 <= z <= 1.2), resampled with linear interpolation on z = 0.01, 0.02, ..., 1.51 and
-  extrapolated linearly above z = 1.2.
-- ``mstar_legacy_z_ezgal.fits`` and ``colors_bc03_legacy_grizw1.fits``: a Bruzual & Charlot (2003)
-  population (Salpeter IMF, Z = 0.02; EzGal's SSP grid) with exponential star formation,
-  tau = 0.1 Gyr, formed at z_f = 3, normalised to SDSS i = 17.85 (AB) at z = 0.2, seen through
-  the DECam 2014 griz and WISE W1 responses (speclite) at z = 0.01, ..., 1.50; flat cosmology with
-  Omega_m = 0.3, h = 0.7 (ggah_mod). m*(z) is the DECam z magnitude; the colours are the
-  differences of adjacent magnitudes g-r, r-i, i-z, z-W1. See :mod:`rema.model.sps`.
+- ``mstar_des_z03.fits``, ``mstar_lsst_{i,r,z}03.fits``: redMaPPer's m*(z) in DES z and LSST
+  i, r, z (``redmapper/data/mstar/*.fit``, 0.01 <= z <= 1.2), resampled with linear
+  interpolation on z = 0.01, 0.02, ..., 1.51 and extrapolated linearly above z = 1.2.
+- ``mstar_<set>_<band>_ezgal.fits`` and ``colors_bc03_<set>_<bands>.fits``: a Bruzual & Charlot
+  (2003) population (Salpeter IMF, Z = 0.02; EzGal's SSP grid) with exponential star formation,
+  tau = 0.1 Gyr, formed at z_f = 3, normalised to SDSS i = 17.85 (AB) at z = 0.2, in a flat
+  cosmology with Omega_m = 0.3, h = 0.7 (ggah_mod), seen through the speclite responses of a
+  filter set (:data:`FILTER_SETS`):
+
+  - ``legacy``: DECam 2014 griz and WISE W1, z = 0.01, ..., 1.50; m* in DECam z;
+  - ``lsst``: LSST ugrizy (lsst/throughputs 1.9, airmass 1.2), z = 0.01, ..., 2.50; m* in every band;
+  - ``euclid``: Euclid VIS, Y, J, H (end-of-life total throughputs), z = 0.01, ..., 2.50; m* in
+    every band.
+
+  The colours are the differences of adjacent magnitudes (g-r, r-i, i-z, z-W1 for ``legacy``).
+  See :mod:`rema.model.sps`.
 """
 
 from __future__ import annotations
@@ -58,18 +65,83 @@ INPUTS = {
                               "0db2b279dffe3e9c31397bda7a33f59e7b20c18b5986cf94534aa31bd8d09a7b"),
     "wise2010-W1.ecsv": Input(f"{_SPECLITE}/wise2010-W1.ecsv",
                               "73d3c1595c3fb4bcff1c82f0f5f814b37754391924d8572e9328a9de54212a28"),
+    "lsst2023-u.ecsv": Input(f"{_SPECLITE}/lsst2023-u.ecsv",
+                             "64bce83105665d031b9ad70e9d0a3f0d82cbf790e7d6a95cf31b7b94599d5b92"),
+    "lsst2023-g.ecsv": Input(f"{_SPECLITE}/lsst2023-g.ecsv",
+                             "117936fc15690ad68e31c081c18b09e607ca13021a7041ffe1f83666ab33d069"),
+    "lsst2023-r.ecsv": Input(f"{_SPECLITE}/lsst2023-r.ecsv",
+                             "31cd5aa96ce6e6b0167a228b6426c075f49818dce35afe20a3fd81d42a96eb7d"),
+    "lsst2023-i.ecsv": Input(f"{_SPECLITE}/lsst2023-i.ecsv",
+                             "3cca620f782cc6dbb142c63371692897dd7c0f625e7b1ac151240a48873f1b56"),
+    "lsst2023-z.ecsv": Input(f"{_SPECLITE}/lsst2023-z.ecsv",
+                             "b8c8a5b1ef4d92294e44dec0141e1b672b4f47f3b08f668dc66f3fdefe2722a7"),
+    "lsst2023-y.ecsv": Input(f"{_SPECLITE}/lsst2023-y.ecsv",
+                             "c517a973e5fac485d6b6592175850d93556d5b99a68d0aabe666a110ea834552"),
+    "Euclid-VIS.ecsv": Input(f"{_SPECLITE}/Euclid-VIS.ecsv",
+                             "0f93302ae7a695c05adc4591db64e41852cb37ce07258a2dc890fb5f4a3e8d7d"),
+    "Euclid-Y.ecsv": Input(f"{_SPECLITE}/Euclid-Y.ecsv",
+                           "3081fffb8801e18bfdc38ebbc4011c069c76e964d5f07bc6c0b043875a04b1b1"),
+    "Euclid-J.ecsv": Input(f"{_SPECLITE}/Euclid-J.ecsv",
+                           "3df8b137e4862405990499cdc21e162a4c2dee7fd398dc799dd7384fcde76a68"),
+    "Euclid-H.ecsv": Input(f"{_SPECLITE}/Euclid-H.ecsv",
+                           "1d1b9e3642d9d559e84127f60de61f3261e792999e8143578e641120d42b71d3"),
     "mstar_des_z03.fit": Input(f"{_REDMAPPER}/mstar/mstar_des_z03.fit",
                                "5b0772b96238d74868153ddb3cd0af19876f2b04f2ab1e28512e3794ca67fbe0"),
+    "mstar_lsst_i03.fit": Input(f"{_REDMAPPER}/mstar/mstar_lsst_i03.fit",
+                                "c7e9329ae26fb5b2611805b318a858d6f10dee2962deeddf3bbf0260358ea191"),
+    "mstar_lsst_r03.fit": Input(f"{_REDMAPPER}/mstar/mstar_lsst_r03.fit",
+                                "8a32d2efdbb16c773858cbab204dd85afedc3e4d2a7fdda2da093f56b7814dfe"),
+    "mstar_lsst_z03.fit": Input(f"{_REDMAPPER}/mstar/mstar_lsst_z03.fit",
+                                "bfc7d642ab22c9310cb37ea85d1dbae1bfa1aa026712a368ba191d9c2c2dc2d3"),
 }
 
 # The passive population of the EzGal tables.
 TAU_GYR, ZF, IMF, METALLICITY = 0.1, 3.0, "salpeter", 0.02
 NORM_BAND, NORM_Z, NORM_MAG = "sloan_i", 0.2, 17.85
 OMEGA_M, H = 0.3, 0.7
-BANDS = ("g", "r", "i", "z", "w1")
-BAND_FILES = ("decam2014-g.ecsv", "decam2014-r.ecsv", "decam2014-i.ecsv", "decam2014-z.ecsv",
-              "wise2010-W1.ecsv")
-Z_GRID = np.round(np.arange(1, 151) * 0.01, 10)       # 0.01, ..., 1.50
+
+
+@dataclass(frozen=True)
+class FilterSet:
+    """Bands of the BC03 tables: ``colors_bc03_<name>_<bands joined>.fits`` (adjacent colours) and
+    ``mstar_<name>_<band>_ezgal.fits`` for each band of ``mstar_bands``."""
+
+    name: str
+    bands: tuple[str, ...]
+    files: tuple[str, ...]          # speclite responses, one per band
+    mstar_bands: tuple[str, ...]
+    zmax: float                     # redshift grid 0.01, 0.02, ..., zmax
+    description: str
+
+    @property
+    def z_grid(self) -> np.ndarray:
+        return np.round(np.arange(1, int(round(self.zmax / 0.01)) + 1) * 0.01, 10)
+
+    @property
+    def colors_file(self) -> str:
+        return f"colors_bc03_{self.name}_{''.join(self.bands)}.fits"
+
+    def mstar_file(self, band: str) -> str:
+        return f"mstar_{self.name}_{band}_ezgal.fits"
+
+
+FILTER_SETS = {
+    "legacy": FilterSet("legacy", ("g", "r", "i", "z", "w1"),
+                        ("decam2014-g.ecsv", "decam2014-r.ecsv", "decam2014-i.ecsv", "decam2014-z.ecsv",
+                         "wise2010-W1.ecsv"), ("z",), 1.50, "DECam 2014 griz, WISE W1"),
+    "lsst": FilterSet("lsst", tuple("ugrizy"), tuple(f"lsst2023-{b}.ecsv" for b in "ugrizy"), tuple("ugrizy"),
+                      2.50, "LSST ugrizy, lsst/throughputs 1.9 with the airmass 1.2 atmosphere"),
+    "euclid": FilterSet("euclid", ("vis", "y", "j", "h"),
+                        ("Euclid-VIS.ecsv", "Euclid-Y.ecsv", "Euclid-J.ecsv", "Euclid-H.ecsv"),
+                        ("vis", "y", "j", "h"), 2.50,
+                        "Euclid VIS and NISP Y, J, H, end-of-life total throughputs (ESA NISP-PHOTO-PASSBANDS-V1)"),
+}
+REDMAPPER_MSTAR = ("des_z03", "lsst_i03", "lsst_r03", "lsst_z03")
+
+# The DECam tables (kept for the functions below and their callers).
+BANDS = FILTER_SETS["legacy"].bands
+BAND_FILES = FILTER_SETS["legacy"].files
+Z_GRID = FILTER_SETS["legacy"].z_grid                  # 0.01, ..., 1.50
 
 
 def default_cache() -> Path:
@@ -103,11 +175,13 @@ def fetch(name: str, cache: str | Path | None = None) -> Path:
     return path
 
 
-def build_mstar_des_z03(cache=None) -> tuple[dict, dict]:
-    """redMaPPer's m*(z) in DES z on z = z0, 2 z0, ..., 151 z0 (linear, extrapolated); z0 = 0.01."""
+def build_mstar_redmapper(name: str = "des_z03", cache=None) -> tuple[dict, dict]:
+    """redMaPPer's m*(z) table ``mstar_<name>.fit`` on z = z0, 2 z0, ..., 151 z0 (linear,
+    extrapolated); z0 = 0.01."""
     from astropy.io import fits
 
-    with fits.open(fetch("mstar_des_z03.fit", cache)) as h:
+    src = f"mstar_{name}.fit"
+    with fits.open(fetch(src, cache)) as h:
         z = np.asarray(h[1].data["Z"], np.float64)
         m = np.asarray(h[1].data["MSTAR"], np.float64)
     o = np.argsort(z)
@@ -117,13 +191,19 @@ def build_mstar_des_z03(cache=None) -> tuple[dict, dict]:
     lo, hi = zn < z[0], zn > z[-1]
     mn[lo] = m[0] + (m[1] - m[0]) / (z[1] - z[0]) * (zn[lo] - z[0])
     mn[hi] = m[-1] + (m[-1] - m[-2]) / (z[-1] - z[-2]) * (zn[hi] - z[-1])
-    header = {"BUILDER": "rema.data.build", "SOURCE": INPUTS["mstar_des_z03.fit"].url,
+    header = {"BUILDER": "rema.data.build", "SOURCE": INPUTS[src].url,
               "ZEXTRAP": (float(z[-1]), "linear extrapolation above this redshift")}
     return {"Z": zn, "MSTAR": mn}, header
 
 
-def build_ezgal_tables(cache=None) -> tuple[tuple[dict, dict], tuple[dict, dict]]:
-    """(m*(z) in DECam z, adjacent colours g-r, r-i, i-z, z-W1) of the passive population."""
+def build_mstar_des_z03(cache=None) -> tuple[dict, dict]:
+    """redMaPPer's m*(z) in DES z (see :func:`build_mstar_redmapper`)."""
+    return build_mstar_redmapper("des_z03", cache)
+
+
+def passive_population_mags(bands, z, cache=None) -> np.ndarray:
+    """AB magnitudes [len(z), len(bands)] of the passive population through speclite responses
+    ``bands`` = [(file, name), ...]."""
     import jax.numpy as jnp
     from ggah_mod.cosmology import Cosmology
 
@@ -132,32 +212,48 @@ def build_ezgal_tables(cache=None) -> tuple[tuple[dict, dict], tuple[dict, dict]
 
     with _float64():
         ssp = SSPGrid.from_ezgal(fetch("bc03_ssp_z_0.02_salp.model", cache))
-        bands = [Bandpass.from_ecsv(fetch(f, cache), b) for f, b in zip(BAND_FILES, BANDS)]
+        bps = [Bandpass.from_ecsv(fetch(f, cache), b) for f, b in bands]
         inorm = Bandpass.from_ascii(fetch(NORM_BAND, cache), "angstrom", NORM_BAND)
         cosmo = Cosmology.create(Omega_m=OMEGA_M, h=H)
-        mags = np.asarray(passive_mags(ssp, bands, jnp.asarray(Z_GRID), ZF, TAU_GYR, cosmo,
+        mags = np.asarray(passive_mags(ssp, bps, jnp.asarray(z), ZF, TAU_GYR, cosmo,
                                        norm=(inorm, NORM_Z, NORM_MAG)), np.float64)
     if not np.all(np.isfinite(mags)):
         raise ValueError("non-finite model magnitudes")
+    return mags
+
+
+def build_bc03_tables(fset: FilterSet | str, cache=None) -> dict[str, tuple[dict, dict]]:
+    """{file name: (columns, header)}: the m*(z) tables and the adjacent-colour table of a filter set."""
+    fset = FILTER_SETS[fset] if isinstance(fset, str) else fset
+    z = fset.z_grid
+    mags = passive_population_mags(list(zip(fset.files, fset.bands)), z, cache)
     common = {"BUILDER": "rema.data.build", "MODEL": "BC03 exponential SFH (EzGal SSP grid)",
               "TAU": (TAU_GYR, "e-folding time [Gyr]"), "ZF": (ZF, "formation redshift"),
               "IMF": IMF, "METAL": (METALLICITY, "metallicity Z"),
               "NORMBAND": NORM_BAND, "NORMZ": NORM_Z, "NORMMAG": (NORM_MAG, "AB"),
               "OMEGAM": OMEGA_M, "H": H, "SSP": INPUTS["bc03_ssp_z_0.02_salp.model"].url,
-              "FILTERS": _SPECLITE}
-    mstar = ({"Z": Z_GRID.copy(), "MSTAR": mags[:, BANDS.index("z")]},
-             {**common, "BAND": "decam z"})
-    colors = ({"Z": Z_GRID.copy(), "COLOR": mags[:, :-1] - mags[:, 1:]},
-              {**common, "BANDS": ",".join(BANDS)})
-    return mstar, colors
+              "FILTERS": _SPECLITE, "FILTSET": fset.name, "FILTDESC": fset.description}
+    label = {"legacy": "decam"}.get(fset.name, fset.name)
+    out = {fset.mstar_file(b): ({"Z": z.copy(), "MSTAR": mags[:, fset.bands.index(b)]},
+                                {**common, "BAND": f"{label} {b}", "RESPONSE": fset.files[fset.bands.index(b)]})
+           for b in fset.mstar_bands}
+    out[fset.colors_file] = ({"Z": z.copy(), "COLOR": mags[:, :-1] - mags[:, 1:]},
+                             {**common, "BANDS": ",".join(fset.bands)})
+    return out
+
+
+def build_ezgal_tables(cache=None) -> tuple[tuple[dict, dict], tuple[dict, dict]]:
+    """(m*(z) in DECam z, adjacent colours g-r, r-i, i-z, z-W1) of the passive population."""
+    t = build_bc03_tables("legacy", cache)
+    return t["mstar_legacy_z_ezgal.fits"], t["colors_bc03_legacy_grizw1.fits"]
 
 
 def build_all(cache=None) -> dict[str, tuple[dict, dict]]:
     """{file name: (columns, header)} of every packaged model table."""
-    mstar, colors = build_ezgal_tables(cache)
-    return {"mstar_des_z03.fits": build_mstar_des_z03(cache),
-            "mstar_legacy_z_ezgal.fits": mstar,
-            "colors_bc03_legacy_grizw1.fits": colors}
+    out = {f"mstar_{n}.fits": build_mstar_redmapper(n, cache) for n in REDMAPPER_MSTAR}
+    for fset in FILTER_SETS.values():
+        out.update(build_bc03_tables(fset, cache))
+    return out
 
 
 def compare(tables: dict, ref_dir) -> dict[str, float]:

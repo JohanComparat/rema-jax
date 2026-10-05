@@ -146,7 +146,8 @@ def maxmag_from_mstar(mstar, lval: float = 0.2):
 class MStar:
     """m*(z) from a table (Z, MSTAR), natural-cubic-spline interpolated onto a fine grid.
 
-    ``name`` is a packaged table (``des_z03``, ``legacy_z_ezgal``) or a path to a FITS table.
+    ``name`` is a packaged table (``des_z03``, ``legacy_z_ezgal``, ``lsst_z03``, ``lsst_i_ezgal``,
+    ``euclid_h_ezgal``, ...; see ``rema/data/README.md``) or a path to a FITS table.
 
     >>> ms = MStar("des_z03")
     >>> round(float(ms(0.5)), 2)

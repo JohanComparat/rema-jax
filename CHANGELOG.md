@@ -4,6 +4,15 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+### Model tables
+
+- LSST and Euclid tables in `rema/data`, built by `python -m rema.data.build` like the DECam ones:
+  redMaPPer's m*(z) in LSST i, r, z (`mstar_lsst_{i,r,z}03`); the BC03 passive population's m*(z)
+  in every LSST band (`mstar_lsst_{u,g,r,i,z,y}_ezgal`, lsst/throughputs 1.9) and every Euclid band
+  (`mstar_euclid_{vis,y,j,h}_ezgal`), and its adjacent colours (`colors_bc03_lsst_ugrizy`,
+  `colors_bc03_euclid_visyjh`), at z = 0.01-2.50. The builder works per filter set
+  (`FILTER_SETS`, `build_bc03_tables`, `build_mstar_redmapper`); the DECam tables are unchanged.
+
 ### HPC
 
 - CC-IN2P3: region tasks request their GPU with `--gpus 1`; the cluster rejects `--gres`.

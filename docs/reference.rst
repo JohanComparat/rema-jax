@@ -66,7 +66,9 @@ The keys that are most often changed:
      - ``lupt``: asinh-magnitude χ². ``mag``: redMaPPer's colour χ².
    * - ``model.mstar``
      - des_z03
-     - m*(z) table: ``des_z03``, ``legacy_z_ezgal``, or a FITS file with Z and MSTAR
+     - m*(z) table: ``des_z03``, ``legacy_z_ezgal``, ``lsst_{i,r,z}03``,
+       ``lsst_{u,g,r,i,z,y}_ezgal``, ``euclid_{vis,y,j,h}_ezgal`` (``rema/data/README.md``), or a
+       FITS file with Z and MSTAR
    * - ``model.lval_reference``
      - 0.2
      - Luminosity cut of λ in L*, so m < m* + 1.75 (``lval_reference``)

@@ -14,6 +14,9 @@
 #
 # Each set goes into its own subdirectory, as on the server:
 #   DEST_DIR/11.0/sweep-*.fits  and  DEST_DIR/11.0-photo-z/sweep-*-pz.fits
+# The environment variable SUBDIRS chooses the sets (default "11.0 11.0-photo-z", one after
+# the other): SUBDIRS=11.0-photo-z in a second job gets the photo-z files while a first job
+# gets the sweeps. Never run two jobs on the same set at once.
 #
 # Safe to interrupt (Ctrl-C, lost connection, killed job) and re-run. In each
 # subdirectory:
@@ -25,7 +28,7 @@
 set -euo pipefail
 
 BASE_URL=${BASE_URL:-https://portal.nersc.gov/cfs/cosmo/data/legacysurvey/dr11/south/sweep}
-SUBDIRS=(11.0 11.0-photo-z)
+read -ra SUBDIRS <<< "${SUBDIRS:-11.0 11.0-photo-z}"
 DEST=${1:-${LEGACYSURVEY_DIR:+$LEGACYSURVEY_DIR/dr11/south/sweep}}
 DEST=${DEST:-.}
 NJOBS=${2:-4}

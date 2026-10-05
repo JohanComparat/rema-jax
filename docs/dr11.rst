@@ -28,7 +28,8 @@ the same through the Python API on one sweep and on one cluster.
 - ``scripts/get_dr11_south_sweeps.sh DEST NJOBS`` mirrors all 1,600 tiles (2.15 TB).
   ``scripts/get_dr11_south_randoms.sh DEST FILES NJOBS`` does the same for the randoms: 20
   files of 23 GB, each covering the whole footprint at 2,500 deg⁻². Both scripts resume and
-  check sha256 sums. With ``DEST`` empty or omitted they write to
+  check sha256 sums. ``SUBDIRS=11.0-photo-z`` makes the sweeps script get only the photo-z
+  files, in a second job running next to the one that gets the sweeps. With ``DEST`` empty or omitted they write to
   ``$LEGACYSURVEY_DIR/dr11/south/sweep`` and ``$LEGACYSURVEY_DIR/dr11/south/randoms`` when
   ``LEGACYSURVEY_DIR`` is set, else to the current directory.
 

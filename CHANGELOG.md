@@ -10,6 +10,8 @@ All notable changes to `rema` are documented here.
   New driver variable `GPUS` (sends `--gpus=N` instead of `--gres=GPU_GRES`).
   `ccin2p3.env` sets `GPUS=1` with 5 CPUs and 45G per V100 task, the cluster's per-GPU CPU
   limit, so four tasks share a node. It also keeps JAX on the CPU on login and CPU nodes.
+- `get_dr11_south_sweeps.sh`: `SUBDIRS=11.0-photo-z` gets only the photo-z files, in a second job
+  next to the one getting the sweeps.
 - `AREA_BOX` now also restricts the driver's bookkeeping (`rema todo --box`). `prepare` and `run`
   can then process part of the sky, for a test or while the download is incomplete.
 

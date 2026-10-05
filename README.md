@@ -32,11 +32,11 @@ in the redshift range is detected. With wcen centring, the optical centres at th
 match the redMaPPer DR10 ones for 80% of them. With the DR11 randoms footprint (mask and depth), z_λ matches
 92 spectroscopic cluster redshifts with NMAD 0.0055. The full DR11 south run happens on an HPC, as
 SLURM arrays of about 100 deg² regions driven by `scripts/slurm/rema_dr11_blind.sh` (see the
-HPC page of the documentation).
+[HPC page](https://rema-jax.readthedocs.io/en/latest/hpc.html) of the documentation).
 
-The documentation is at [rema-jax.readthedocs.io](https://rema-jax.readthedocs.io): install, a
+The documentation is at [rema-jax.readthedocs.io](https://rema-jax.readthedocs.io/en/latest/): install, a
 tour on mock data, DR11 end to end, HPC production, reference, API and DR11 notebooks. Design
-and validation notes are in [docs/design.md](https://github.com/JohanComparat/rema-jax/blob/main/docs/design.md).
+and validation notes are in [the design page](https://rema-jax.readthedocs.io/en/latest/design.html).
 
 ## Install
 

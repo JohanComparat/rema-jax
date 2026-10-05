@@ -47,7 +47,7 @@ docs = ["sphinx>=7", "sphinx-rtd-theme", "myst-nb>=1.0"]
 rema = "rema.cli:main"
 
 [project.urls]
-Documentation = "https://rema-jax.readthedocs.io"
+Documentation = "https://rema-jax.readthedocs.io/en/latest/"
 Source = "https://github.com/JohanComparat/rema-jax"
 Issues = "https://github.com/JohanComparat/rema-jax/issues"
 Changelog = "https://github.com/JohanComparat/rema-jax/blob/main/CHANGELOG.md"

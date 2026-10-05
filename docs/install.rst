@@ -111,6 +111,6 @@ The notebooks are stored with their outputs, so the build does not need the DR11
 On GitHub, the ``docs`` workflow (``.github/workflows/docs.yml``) builds the documentation, with
 warnings as errors, whenever a push touches the package or the docs. It keeps the HTML as the
 ``docs-html`` artifact of the run. The published documentation is built by Read the Docs
-(``.readthedocs.yaml``) at https://rema-jax.readthedocs.io. To publish on GitHub Pages as well,
+(``.readthedocs.yaml``) at https://rema-jax.readthedocs.io/en/latest/. To publish on GitHub Pages as well,
 set the repository variable ``DOCS_DEPLOY`` to ``true`` and choose "GitHub Actions" as the Pages
 source; pushes to ``main`` then deploy the site.

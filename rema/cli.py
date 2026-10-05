@@ -352,6 +352,19 @@ def cmd_calibrate(args):
     calibrate(args)
 
 
+def _survey_sweeps(directory) -> set[str]:
+    """Sweep names of a survey: the files in ``directory`` and those its checksum lists name."""
+    d = Path(directory)
+    names = {p.name for p in d.glob("sweep-*.fits") if not p.name.endswith("-pz.fits")}
+    for sums in d.glob("*.sha256sum"):
+        for line in sums.read_text().splitlines():
+            parts = line.split()
+            if len(parts) == 2 and parts[1].startswith("sweep-") and parts[1].endswith(".fits") \
+                    and not parts[1].endswith("-pz.fits"):
+                names.add(parts[1])
+    return names
+
+
 def cmd_regions(args):
     from .io.legacy import galaxy_counts
     from .pipeline import calib_suggest, plan_regions, required_buffer, uncovered_tiles, write_plan
@@ -373,6 +386,15 @@ def cmd_regions(args):
         return
     if args.index:
         missing = uncovered_tiles(counts, args.index, sky)
+        if missing and args.sweeps:
+            # Tiles without any sweep in the survey (the mirror's files and its checksum list) are
+            # outside the data: their few randoms are edge slivers. The others were not ingested.
+            known = _survey_sweeps(args.sweeps)
+            outside = [t for t in missing if t not in known]
+            if outside:
+                log.info("%d tiles with randoms have no sweep in %s (outside the survey's data): %s",
+                         len(outside), args.sweeps, ", ".join(outside))
+            missing = [t for t in missing if t in known]
         if missing:
             msg = f"{len(missing)} tiles have randoms but no galaxy table, e.g. {missing[:5]}"
             if not args.allow_uncovered:
@@ -592,6 +614,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--galaxies", required=True, help="directory of per-sweep tables")
     s.add_argument("--index", help="randoms index: tiles with randoms but no galaxies are an error")
     s.add_argument("--allow-uncovered", action="store_true")
+    s.add_argument("--sweeps", help="sweep directory: tiles with randoms but no sweep in the survey "
+                   "(files and *.sha256sum lists) are outside its data, not missing")
     boxes(s, "plan only this area (data boxes are cut to it)")
     s.add_argument("--target-area", type=float, default=100.0, help="own area per region (deg2)")
     s.add_argument("--buffer", type=float, default=2.0, help="data box = own box + buffer (deg)")

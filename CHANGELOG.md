@@ -11,6 +11,11 @@ All notable changes to `rema` are documented here.
   calibration; `rema todo` prints `ingest_done` and `randoms_done`, and `rema status` exits with a
   message when the plan is missing.
 
+- The region plan stopped on tiles that have DR11 randoms but no DR11 sweep at all (edge slivers,
+  e.g. 8 tiles with 0.6 deg² of randoms between RA 0 and 240). `rema regions --sweeps DIR`, which
+  the task script passes, treats tiles absent from the sweep directory and its checksum lists as
+  outside the data and logs them; a listed sweep without a galaxy table is still an error.
+  `ALLOW_UNCOVERED=1` passes `--allow-uncovered`.
 - `rema_dr11_blind.sh run` can be submitted while the calibration job of `prepare` is still queued
   or running (`CALIB=$OUTDIR/calib/calib.fits`): the regions and the merge wait for it
   (`afterok`). `status` reports that job instead of "calibration: none".

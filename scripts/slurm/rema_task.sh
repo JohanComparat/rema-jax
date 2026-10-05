@@ -16,7 +16,8 @@
 # plan and the region footprints; the region runs take the calibration's), CALIB (the calibration
 # of the region runs), CALIB_BOX ("RA0 RA1 DEC0 DEC1[;RA0 RA1 DEC0 DEC1...]"), PLAN, NRAND,
 # CHUNK, TARGET_AREA, BUFFER, BAND_HEIGHT, MAX_GAL, MAX_PAIRS, AREA_BOX ("RA0 RA1 DEC0 DEC1[;...]":
-# run on this area only, e.g. a test on a few sweeps), ALLOW_MISSING=1 (merge), CLUSTERS_DIR and
+# run on this area only, e.g. a test on a few sweeps), ALLOW_MISSING=1 (merge), ALLOW_UNCOVERED=1
+# (plan: accept tiles with randoms whose sweep is listed but not ingested), CLUSTERS_DIR and
 # MEMBERS_DIR (merge: clusters [$OUTDIR] and members [$CLUSTERS_DIR]), DEVICE (gpu|cpu),
 # JAX_COMPILATION_CACHE_DIR. Outputs are written atomically and existing ones are kept.
 set -euo pipefail
@@ -70,8 +71,10 @@ case $STAGE in
     opts=(--target-area "${TARGET_AREA:-100}" --buffer "${BUFFER:-2}" --band-height "${BAND_HEIGHT:-10}")
     [[ -n ${MAX_GAL:-} ]] && opts+=(--max-gal "$MAX_GAL")
     [[ -n ${MAX_PAIRS:-} ]] && opts+=(--max-pairs "$MAX_PAIRS")
+    [[ ${ALLOW_UNCOVERED:-0} == 1 ]] && opts+=(--allow-uncovered)
     opts+=("${area[@]}")
-    rema regions --galaxies "$OUTDIR/galaxies" --index "$OUTDIR/randoms_index" --out "$PLAN" "${opts[@]}" "${CFG[@]}" ;;
+    rema regions --galaxies "$OUTDIR/galaxies" --index "$OUTDIR/randoms_index" --sweeps "$DR11/sweep/11.0" \
+        --out "$PLAN" "${opts[@]}" "${CFG[@]}" ;;
   region)
     : "${CALIB:?set CALIB to the calibration of the run}"
     d=$OUTDIR/regions/$(printf %04d "$INDEX")

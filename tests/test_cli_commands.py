@@ -418,6 +418,18 @@ def test_cli_regions_status_merge_todo(tmp_path, capsys):
                   "--out", str(tmp_path / "p2.fits")])
     run("regions", "--galaxies", gal, "--index", tmp_path / "idx", "--allow-uncovered",
         "--target-area", 25, "--band-height", 5, "--buffer", 1.0, "--out", tmp_path / "p2.fits")
+    # --sweeps: a tile with no sweep in the survey is outside its data; a listed one is missing.
+    sdir = tmp_path / "survey"
+    sdir.mkdir()
+    (sdir / "sweep-000m005-005p000.fits").touch()
+    (sdir / "sweep-000m005-005p000-pz.fits").touch()
+    run("regions", "--galaxies", gal, "--index", tmp_path / "idx", "--sweeps", sdir,
+        "--target-area", 25, "--band-height", 5, "--buffer", 1.0, "--out", tmp_path / "p3.fits")
+    (sdir / "sums.sha256sum").write_text("abc  sweep-010m005-015p000.fits\nxyz  sweep-010m005-015p000-pz.fits\n"
+                                         "nothing to see\n")
+    with pytest.raises(SystemExit, match="sweep-010m005-015p000.fits"):
+        cli.main(["regions", "--galaxies", str(gal), "--index", str(tmp_path / "idx"), "--sweeps", str(sdir),
+                  "--out", str(tmp_path / "p4.fits")])
 
     # maps of a planned region needs its id.
     with pytest.raises(SystemExit, match="region-id"):

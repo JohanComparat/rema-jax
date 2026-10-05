@@ -99,8 +99,11 @@ It sets:
 - the work directory ``OUTDIR=/sps/lsst/users/$USER/rema_dr11``;
 - the products next to ``sweep/11.0`` and ``sweep/11.0-photo-z``: clusters in
   ``sweep/11.0-rm/`` and members in ``sweep/11.0-rm-mem/``;
-- ``htc`` for the CPU stages and ``gpu_v100`` with ``--gres=gpu:v100:1`` for the regions
-  (``PART_GPU=gpu_h100 GPU_GRES=gpu:h100:1`` for the H100 nodes);
+- ``htc`` for the CPU stages and ``gpu_v100`` for the regions, one GPU per task requested with
+  ``--gpus`` (``GPUS=1``; the cluster rejects ``--gres``), with 5 CPUs and 45 GB (``REGION_CPUS``,
+  ``REGION_MEM``), so that four tasks share a node of 4 GPUs, 24 CPUs and 191 GB. The cluster
+  allows at most 5 CPUs per V100 and 12 per H100: ``PART_GPU=gpu_h100 REGION_CPUS=12
+  REGION_MEM=96G`` for the H100 nodes;
 - ``--licenses=sps`` on every job, which the cluster requires for jobs that use ``/sps``.
 
 Variables exported before sourcing the file are kept. ``ACCOUNT`` defaults to your main group.
@@ -207,9 +210,10 @@ Devices and resources
 ---------------------
 
 ``DEVICE=gpu``
-    Region tasks request ``GPU_GRES`` (``gpu:1``), ``PART_GPU`` and ``GPU_CONSTRAINT`` (pin the
-    GPU model), with 8 CPUs, 96 GB and 8 h, and run JAX on the GPU. Blind mode is 4–5 times
-    faster on a laptop GPU than on 16 CPU threads.
+    Region tasks request ``GPU_GRES`` (``gpu:1``), or ``GPUS`` GPUs with ``--gpus`` when it is
+    set, ``PART_GPU`` and ``GPU_CONSTRAINT`` (pin the GPU model), with 8 CPUs, 96 GB and 8 h,
+    and run JAX on the GPU. Blind mode is 4–5 times faster on a laptop GPU than on 16 CPU
+    threads.
 ``DEVICE=cpu``
     Region tasks use ``PART_CPU``, with 16 CPUs, 64 GB and 24 h.
 
@@ -239,6 +243,11 @@ Run a pilot of about 10 regions with ``ARRAY=…``. Include:
 From their headers (NGAL, NCAND, NDEP, TTOTAL, PEAKRSS), check time and memory against the
 galaxy and pair counts. Set ``MAX_GAL`` or ``MAX_PAIRS`` if needed. Then delete the plan and
 run. The plan is fixed once the run starts.
+
+To run only part of the sky, for a test or while the download is incomplete, export
+``AREA_BOX="RA0 RA1 DEC0 DEC1[;...]"`` before ``prepare`` and keep it for ``run``. Every stage,
+and the driver's bookkeeping, then use only the sweeps overlapping that area. Use a separate
+``OUTDIR`` and ``CLUSTERS_DIR``, because a plan made for one area is not extended to another.
 
 Cost
 ----

@@ -130,7 +130,7 @@ python -m ipykernel install --user --name rema --display-name rema \
 Check that the GPU nodes see the GPU (one short job):
 
 ```bash
-srun -p gpu_v100 --gres=gpu:v100:1 -t 0-00:10 -c 4 --mem 8G -L sps \
+srun -p gpu_v100 --gpus 1 -t 0-00:10 -c 4 --mem 8G -L sps \
      python -c "import jax; print(jax.devices())"                  # [CudaDevice(id=0)]
 ```
 
@@ -170,7 +170,7 @@ $D/rema_dr11_blind.sh clean
   `CLUSTERS_DIR=$OUTDIR MEMBERS_DIR=$OUTDIR` before sourcing `ccin2p3.env`.
 - `ccin2p3.env` lists every setting (partitions, `--licenses=sps`, `NRAND=4` for the four
   randoms files on `/sps`); any of them can be exported before sourcing it. To use the H100
-  nodes: `PART_GPU=gpu_h100 GPU_GRES=gpu:h100:1`. See the HPC page of the documentation.
+  nodes: `PART_GPU=gpu_h100 REGION_CPUS=12 REGION_MEM=96G`. See the HPC page of the documentation.
 
 ## Credits
 

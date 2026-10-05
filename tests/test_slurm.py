@@ -72,14 +72,18 @@ def _randoms_index(out: Path, nrand: int):
         (d / f"randoms-south-1-{k}.json").write_text(json.dumps({"nside_index": 64, "nside_fine": 1024}))
 
 
-def _run(tmp, mode, **env):
+def _run(tmp, mode, source=None, **env):
     site = ("LEGACYSURVEY_DIR", "CLUSTERS_DIR", "MEMBERS_DIR", "EXTRA_SBATCH", "PART_CPU", "PART_GPU",
-            "GPU_GRES", "NRAND", "ACCOUNT", "CONFIG", "CALIB", "CALIB_BOX", "PLAN")
+            "GPU_GRES", "GPUS", "REGION_CPUS", "REGION_MEM", "NRAND", "ACCOUNT", "CONFIG", "CALIB",
+            "CALIB_BOX", "PLAN")
     e = {**{k: v for k, v in os.environ.items() if k not in site}, "PATH": f"{tmp / 'bin'}:{os.environ['PATH']}", "SB_LOG": str(tmp / "sbatch.log"),
          "SB_COUNT": str(tmp / "count"), "REMA_LOG": str(tmp / "rema.log"), "DR11": str(tmp / "dr11"),
          "OUTDIR": str(tmp / "run"), "JAX_PLATFORMS": "cpu", **env}
     (tmp / "sbatch.log").write_text("")
-    r = subprocess.run(["bash", str(DRIVER), mode], env=e, capture_output=True, text=True, timeout=600)
+    cmd = ["bash", str(DRIVER), mode]
+    if source is not None:                       # site settings sourced first, as on the cluster
+        cmd = ["bash", "-c", 'source "$1" && exec bash "$2" "$3"', "_", str(source), str(DRIVER), mode]
+    r = subprocess.run(cmd, env=e, capture_output=True, text=True, timeout=600)
     calls = [l for l in (tmp / "sbatch.log").read_text().splitlines() if l]
     return r, calls
 
@@ -213,3 +217,44 @@ def test_clean_needs_a_merge(tmp):
     keep.mkdir(parents=True)
     r = _task(tmp, "clean")
     assert r.returncode != 0 and "merge" in r.stderr and keep.exists()
+
+
+def test_ccin2p3_env_requests_gpus(tmp):
+    """CC-IN2P3 takes GPUs as --gpus (it rejects --gres), with at most 5 CPUs per V100."""
+    out = tmp / "run"
+    _galaxy_tables(out)
+    _randoms_index(out, 2)
+    calib = tmp / "calib.fits"
+    calib.write_bytes(b"calibration")
+    r, calls = _run(tmp, "run", source=ROOT / "scripts" / "slurm" / "ccin2p3.env", NRAND="2",
+                    TARGET_AREA="50", CALIB=str(calib), CLUSTERS_DIR=str(tmp / "merged"))
+    assert r.returncode == 0, r.stderr
+    prime, regions, merge = calls
+    for call in (prime, regions):
+        assert "--gpus=1" in call and "--gres" not in call and "--licenses=sps" in call
+        assert _opt(call, "partition") == "gpu_v100"
+        assert _opt(call, "cpus-per-task") == "5" and _opt(call, "mem") == "45G"
+    assert _opt(merge, "partition") == "htc" and "--gpus" not in merge
+    assert (tmp / "merged").is_dir()
+
+
+def test_area_box_limits_the_bookkeeping(tmp):
+    """AREA_BOX: only the ingest chunks holding sweeps of the area run, and only those count."""
+    area = "0 5 -10 0;355 360 -5 0"           # sweeps 0 and 1 (chunk 0) and 8 (chunk 2)
+    r, calls = _run(tmp, "prepare", NRAND="1", CHUNK="4", AREA_BOX=area)
+    assert r.returncode == 0, r.stderr
+    assert _opt(calls[0], "array") == "0,2%20" and calls[0].endswith("ingest")
+    # With the area's tables and the randoms index, run goes ahead (the other sweeps are ignored).
+    out = tmp / "run"
+    _galaxy_tables(out)
+    for s in SWEEPS:
+        if not s.startswith(("sweep-000m005", "sweep-000m010", "sweep-355m005")):
+            (out / "galaxies" / s).unlink()
+    _randoms_index(out, 1)
+    calib = tmp / "calib.fits"
+    calib.write_bytes(b"calibration")
+    r, calls = _run(tmp, "run", NRAND="1", AREA_BOX=area, CALIB=str(calib), TARGET_AREA="50")
+    assert r.returncode == 0, r.stderr
+    assert calls[-1].endswith("merge")
+    r, _ = _run(tmp, "run", NRAND="1", CALIB=str(calib))
+    assert r.returncode != 0 and "prepare" in r.stderr     # the whole sky is not ingested

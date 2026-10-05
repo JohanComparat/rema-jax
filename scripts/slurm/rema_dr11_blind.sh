@@ -27,8 +27,12 @@
 #   CALIB_BOX             calibration area(s) "RA0 RA1 DEC0 DEC1[;...]"; without it, phase 1 prints
 #                         suggestions once the galaxies are ingested
 #   NRAND [20]  CHUNK [20]  TARGET_AREA [100]  BUFFER [2]  MAX_GAL  MAX_PAIRS
+#   AREA_BOX              "RA0 RA1 DEC0 DEC1[;...]": run on this area only (a test, or the part of
+#                         the sky already downloaded); every stage and the bookkeeping use it
 #   DEVICE [gpu]          gpu or cpu, for the region tasks (ingest, randoms, calib, merge: CPU)
 #   ACCOUNT  PART_GPU  PART_CPU  GPU_GRES [gpu:1]  GPU_CONSTRAINT
+#   GPUS                  GPUs per region task as --gpus=N instead of --gres=GPU_GRES (sites
+#                         that take only --gpus, e.g. CC-IN2P3)
 #   REGION_CPUS / REGION_MEM / REGION_TIME   [gpu: 8, 96G, 8:00:00; cpu: 16, 64G, 24:00:00]
 #   GPAR [20]  RPAR [20]  BPAR [50]          concurrent tasks of the ingest/randoms/region arrays
 #   ARRAY                 override the region array (e.g. ARRAY=17,42 to rerun two regions)
@@ -59,7 +63,8 @@ common=(--parsable --export=ALL)
 cpu=("${common[@]}")
 [[ -n ${PART_CPU:-} ]] && cpu+=(--partition="$PART_CPU")
 if [[ $DEVICE == gpu ]]; then
-    region=("${common[@]}" --gres="${GPU_GRES:-gpu:1}" --cpus-per-task="${REGION_CPUS:-8}"
+    if [[ -n ${GPUS:-} ]]; then gpu=(--gpus="$GPUS"); else gpu=(--gres="${GPU_GRES:-gpu:1}"); fi
+    region=("${common[@]}" "${gpu[@]}" --cpus-per-task="${REGION_CPUS:-8}"
             --mem="${REGION_MEM:-96G}" --time="${REGION_TIME:-8:00:00}")
     [[ -n ${PART_GPU:-} ]] && region+=(--partition="$PART_GPU")
     [[ -n ${GPU_CONSTRAINT:-} ]] && region+=(--constraint="$GPU_CONSTRAINT")
@@ -69,6 +74,14 @@ else
 fi
 
 kv() { sed -n "s/^$1=//p"; }                       # value of key=value lines on stdin
+
+# AREA_BOX "RA0 RA1 DEC0 DEC1;..." -> --box RA0 RA1 DEC0 DEC1 --box ... (the task script does the same)
+area=()
+if [[ -n ${AREA_BOX:-} ]]; then
+    IFS=';' read -ra _boxes <<< "$AREA_BOX"
+    # shellcheck disable=SC2206
+    for b in "${_boxes[@]}"; do area+=(--box $b); done
+fi
 
 # Refuse to submit while jobs recorded in $JOBS/$1 are still queued or running.
 check_idle() {
@@ -95,7 +108,7 @@ case $MODE in
     check_idle prepare
     : > "$JOBS/prepare"
     todo=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" \
-                     --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND")
+                     --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND" "${area[@]}")
     garr=$(kv ingest_array <<< "$todo"); rarr=$(kv randoms_array <<< "$todo")
     deps=()
     if [[ -n $garr ]]; then
@@ -126,7 +139,7 @@ case $MODE in
         mkdir -p "$d" 2>/dev/null && [[ -w $d ]] || { echo "cannot write the merged products to $d" >&2; exit 1; }
     done
     todo=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" \
-                     --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND")
+                     --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND" "${area[@]}")
     if [[ -n $(kv ingest_array <<< "$todo") || -n $(kv randoms_array <<< "$todo") ]]; then
         echo "ingest or randoms index incomplete: run 'prepare' first" >&2; exit 1
     fi

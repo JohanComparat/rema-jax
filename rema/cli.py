@@ -425,8 +425,13 @@ def array_spec(ids) -> str:
 
 def cmd_todo(args):
     """Array specs of the ingest chunks and randoms files whose outputs are missing."""
+    from .sky.regions import sweep_box
+
     sweeps = _sweeps([args.sweeps])
-    chunks = [i // args.chunk for i, s in enumerate(sweeps) if not (Path(args.galaxies) / s.name).exists()]
+    sky = _sky(args.box)
+    # Chunks index the full sorted list, as in the ingest task, which skips sweeps off the area.
+    chunks = [i // args.chunk for i, s in enumerate(sweeps)
+              if (sky is None or sky.overlaps(sweep_box(s))) and not (Path(args.galaxies) / s.name).exists()]
     print(f"nsweeps={len(sweeps)} nchunks={(len(sweeps) + args.chunk - 1) // args.chunk}")
     print("ingest_array=" + array_spec(chunks))
     missing = [k for k in range(args.nrand)
@@ -607,6 +612,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--index", required=True, help="randoms index directory")
     s.add_argument("--chunk", type=int, default=20, help="sweeps per ingest task")
     s.add_argument("--nrand", type=int, default=20, help="randoms files to index")
+    boxes(s, "only the sweeps overlapping this area (the driver's AREA_BOX)")
     s.set_defaults(func=cmd_todo)
 
     s = sub.add_parser("merge", help="merge region catalogues, with QA")

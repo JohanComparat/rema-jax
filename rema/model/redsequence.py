@@ -203,12 +203,16 @@ class RSModel:
 
     @classmethod
     def from_template(cls, bands=("g", "r", "i", "z"), ref_band="z", template="bc03_legacy_grizw1",
-                      template_bands=("g", "r", "i", "z", "w1"), zrange=(0.05, 0.95),
+                      template_bands=None, zrange=(0.05, 0.95),
                       dz_mean=0.05, dz_other=0.1, sigma=0.05, mstar="des_z03",
                       pivot_offset=0.5) -> "RSModel":
         """Initial model from a template of adjacent colours (zero slope, constant scatter).
 
-        The pivot magnitude is m*(z) + ``pivot_offset``.
+        ``template`` is a packaged table (``colors_<template>.fits`` in :mod:`rema.data`, e.g.
+        ``bc03_legacy_grizw1``, ``bc03_lsst_ugrizy``, ``bc03_euclid_visyjh``) or a FITS file with
+        columns Z and COLOR. ``template_bands`` (default: the table's ``BANDS`` header, else
+        g, r, i, z, w1) are the bands of its adjacent colours; ``bands`` must be among them, in
+        the same order. The pivot magnitude is m*(z) + ``pivot_offset``.
         """
         from importlib import resources
 
@@ -221,8 +225,16 @@ class RSModel:
         with fits.open(path) as h:
             tz = np.asarray(h[1].data["Z"], np.float64)
             tc = np.asarray(h[1].data["COLOR"], np.float64)
+            header_bands = h[1].header.get("BANDS")
+        if template_bands is None:
+            template_bands = header_bands.split(",") if header_bands else ("g", "r", "i", "z", "w1")
         # Colours between our adjacent bands from the template's adjacent colours.
         tb = list(template_bands)
+        if len(tb) != tc.shape[1] + 1:
+            raise ValueError(f"{path}: {tc.shape[1]} colours for the bands {tb}")
+        idx = [tb.index(b) if b in tb else -1 for b in bands]
+        if min(idx) < 0 or idx != sorted(idx):
+            raise ValueError(f"bands {list(bands)} are not in the template's bands {tb} (in that order)")
         ncol = len(bands) - 1
         cols = np.zeros((tz.size, ncol))
         for j in range(ncol):

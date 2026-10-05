@@ -12,6 +12,10 @@ All notable changes to `rema` are documented here.
   (`mstar_euclid_{vis,y,j,h}_ezgal`), and its adjacent colours (`colors_bc03_lsst_ugrizy`,
   `colors_bc03_euclid_visyjh`), at z = 0.01-2.50. The builder works per filter set
   (`FILTER_SETS`, `build_bc03_tables`, `build_mstar_redmapper`); the DECam tables are unchanged.
+- `model.template` chooses the colour table that seeds the calibration (default
+  `bc03_legacy_grizw1`; `bc03_lsst_ugrizy`, `bc03_euclid_visyjh` or a FITS file).
+  `RSModel.from_template` reads the template's bands from its `BANDS` header and rejects bands
+  that are not among them. Calibrations written with this option are not readable by rema 0.1.0.
 
 ### HPC
 

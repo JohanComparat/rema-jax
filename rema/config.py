@@ -70,6 +70,7 @@ class ModelConfig:
 
     zrange: tuple[float, float] = (0.05, 0.90)
     mstar: str = "des_z03"              # packaged table name, or a path to a FITS table (Z, MSTAR)
+    template: str = "bc03_legacy_grizw1"  # colours seeding the calibration: packaged name or FITS table
     alpha: float = -1.0                 # calib_lumfunc_alpha
     lval_reference: float = 0.2         # luminosity cut of the richness, in L*
     chisq_max: float = 20.0

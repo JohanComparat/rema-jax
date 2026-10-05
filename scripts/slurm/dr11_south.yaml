@@ -46,6 +46,7 @@ model:
   - 0.05
   - 0.9
   mstar: des_z03
+  template: bc03_legacy_grizw1
   alpha: -1.0
   lval_reference: 0.2
   chisq_max: 20.0

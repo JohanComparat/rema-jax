@@ -121,3 +121,46 @@ def test_wcen_model_pivot_and_config_update():
     # replace() with a whole section object rather than a dict of changes.
     spec = cfg.spec.__class__(nboot=4)
     assert cfg.replace(spec=spec).spec.nboot == 4
+
+
+def test_template_bands_from_the_table_header(tmp_path):
+    """from_template takes the template's bands from its BANDS header and checks ours against them."""
+    from astropy.io import fits
+
+    rs = RSModel.from_template(bands=("g", "r", "i", "z", "y"), template="bc03_lsst_ugrizy", mstar="lsst_z03")
+    assert rs.ncol == 4
+    rs = RSModel.from_template(bands=("y", "h"), ref_band="h", template="bc03_euclid_visyjh",
+                               mstar="euclid_h_ezgal")
+    assert rs.ncol == 1
+    with pytest.raises(ValueError, match="not in the template"):
+        RSModel.from_template(bands=("g", "r", "i", "z", "w1"), template="bc03_lsst_ugrizy")
+    with pytest.raises(ValueError, match="not in the template"):
+        RSModel.from_template(bands=("r", "g"))                          # out of order
+    # A table without BANDS: the DECam bands, or the ones given.
+    z = np.linspace(0.01, 1.0, 50)
+    cols = [fits.Column("Z", "D", array=z), fits.Column("COLOR", "2D", array=np.tile([0.5, 0.3], (50, 1)))]
+    fits.BinTableHDU.from_columns(cols).writeto(tmp_path / "t.fits")
+    rs = RSModel.from_template(bands=("a", "b", "c"), template=str(tmp_path / "t.fits"),
+                               template_bands=("a", "b", "c"), ref_band="c")
+    np.testing.assert_allclose(np.asarray(rs.at(0.5).mean), [0.5, 0.3], atol=1e-6)
+    with pytest.raises(ValueError, match="2 colours"):
+        RSModel.from_template(bands=("g", "r"), template=str(tmp_path / "t.fits"))
+
+
+def test_calibration_seeds_from_the_configured_template(monkeypatch):
+    from rema.calib import driver
+
+    seen = {}
+
+    def fake(**kw):
+        seen.update(kw)
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr(driver.RSModel, "from_template", staticmethod(fake))
+    cfg = RemaConfig().replace(survey={"bands": ("g", "r", "i", "z", "y")},
+                               model={"template": "bc03_lsst_ugrizy", "mstar": "lsst_z03"})
+    with pytest.raises(RuntimeError, match="stop"):
+        driver.calibrate_region({}, cfg)
+    assert seen["template"] == "bc03_lsst_ugrizy" and seen["mstar"] == "lsst_z03"
+    assert tuple(seen["bands"]) == ("g", "r", "i", "z", "y")
+    assert RemaConfig().model.template == "bc03_legacy_grizw1"

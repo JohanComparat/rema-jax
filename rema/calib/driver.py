@@ -232,7 +232,8 @@ def calibrate_region(gal: dict, cfg: RemaConfig, footprint=None, rs0: RSModel | 
     zr = cfg.model.zrange
     if rs0 is None:
         rs0 = RSModel.from_template(bands=cfg.survey.bands, ref_band=cfg.survey.ref_band,
-                                    zrange=(zr[0], zr[1] + 0.05), mstar=cfg.model.mstar)
+                                    template=cfg.model.template, zrange=(zr[0], zr[1] + 0.05),
+                                    mstar=cfg.model.mstar)
     tb = tuple(cfg.survey.bands)
     bidx = [tb.index(b) for b in rs0.bands]
     spec = gal["ZSPEC"] > 0

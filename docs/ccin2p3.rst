@@ -145,8 +145,9 @@ succeeds (and never if it fails), with an unchecked calibration.
    $D/rema_dr11_blind.sh run
    $D/rema_dr11_blind.sh status
 
-The first ``run`` writes the region plan. Region 0, the most expensive, runs alone to fill the
-JAX cache; the others follow on the V100s, then the merge. Check region 0's ``PEAKRSS`` and
+The first ``run`` writes the region plan (RA 0–240°: 198 regions of about 100 deg²). One region
+runs alone to fill the JAX cache; the others follow on the V100s, two per array task to stay
+under the queue limit, then the merge. Check region 0's ``PEAKRSS`` and
 ``TTOTAL`` (its catalogue header) before the others run (:doc:`hpc`, "Before the full run").
 
 **4. Clean** once the merge is done. It deletes the galaxy tables, the randoms index and the
@@ -187,8 +188,12 @@ Cluster rules
        H100 nodes: ``PART_GPU=gpu_h100 REGION_CPUS=12 REGION_MEM=96G``.
    * - Jobs that read or write ``/sps`` declare it
      - ``--licenses=sps`` on every job (``EXTRA_SBATCH``)
-   * - ``htc``: at most 150 GB and 7 days per job; GPU partitions: 100 jobs per user
-     - The calibration asks for 128 GB and the merge for 128 GB; ``BPAR=50`` regions at a time
+   * - ``htc``: at most 150 GB and 7 days per job
+     - The calibration asks for 128 GB and the merge for 128 GB
+   * - GPU partitions: at most 100 queued jobs per user, an array task counting as one
+     - ``MAX_ARRAY=90``: with more regions, each task of the region array runs several in turn
+       (``$OUTDIR/jobs/batches``, logs ``batch_<task>.log``), with a time limit scaled to match;
+       ``BPAR=50`` tasks at a time
 
 A region of the 75 deg² test area peaked at 4–4.4 GB on a V100 (about 2.4 kB per galaxy of its
 data box); 45 GB leaves room for the densest regions.

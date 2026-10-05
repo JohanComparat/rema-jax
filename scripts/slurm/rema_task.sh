@@ -7,6 +7,7 @@
 #   calib                                    -> $OUTDIR/calib/{footprint,calib}.fits, plots/
 #   plan                                     -> $PLAN
 #   region  INDEX = region of the plan       -> $OUTDIR/regions/<NNNN>/{footprint,clusters}.fits
+#   batch   INDEX = line of $OUTDIR/jobs/batches (region ids), run one after the other
 #                                               (its checkpoint/ is deleted once clusters.fits is written)
 #   clean                                    deletes the intermediate products of a merged run
 #   merge                                    -> $CLUSTERS_DIR/clusters_dr11{,_regions}.fits, _qa.json
@@ -50,6 +51,36 @@ box_opts() {
 }
 mapfile -t area < <(box_opts "${AREA_BOX:-}")
 
+# One region: footprint, blind run, then the checkpoint is deleted. Returns non-zero on failure
+# (the checkpoint is then kept, so a rerun resumes).
+run_region() {
+    local id=$1 d
+    d=$OUTDIR/regions/$(printf %04d "$id")
+    mkdir -p "$d"
+    if [[ ! -s $d/footprint.fits ]]; then
+        rema maps --index "$OUTDIR/randoms_index" --nrand "$NRAND" --regions "$PLAN" --region-id "$id" \
+            --out "$d/footprint.fits" "${CFG[@]}" || return 1
+    fi
+    rema blind --galaxies "$OUTDIR/galaxies" --regions "$PLAN" --region-id "$id" --calib "$CALIB" \
+        --footprint "$d/footprint.fits" --checkpoint "$d/checkpoint" --specpost --out "$d/clusters.fits" \
+        || return 1
+    # clusters.fits is written: the checkpoint (resume data, the bulk of the region) is not needed.
+    rm -rf "$d/checkpoint"
+}
+
+# JAX writes cache entries in place, without locking: once the priming region has filled the
+# shared cache, each task compiles into a private copy in its job's TMPDIR, which concurrent
+# tasks never see.
+private_cache() {
+    shared=$JAX_COMPILATION_CACHE_DIR
+    if [[ -e $shared/.primed ]]; then
+        private=$(mktemp -d "${TMPDIR:-/tmp}/rema_jax.XXXXXX")
+        trap 'rm -rf "$private"' EXIT
+        cp -a "$shared/." "$private/"
+        export JAX_COMPILATION_CACHE_DIR=$private
+    fi
+}
+
 case $STAGE in
   ingest)
     mapfile -t sweeps < <(find "$DR11/sweep/11.0" -maxdepth 1 -name 'sweep-*.fits' ! -name '*-pz.fits' | LC_ALL=C sort)
@@ -77,25 +108,20 @@ case $STAGE in
         --out "$PLAN" "${opts[@]}" "${CFG[@]}" ;;
   region)
     : "${CALIB:?set CALIB to the calibration of the run}"
-    d=$OUTDIR/regions/$(printf %04d "$INDEX")
-    mkdir -p "$d"
-    [[ -s $d/footprint.fits ]] || rema maps --index "$OUTDIR/randoms_index" --nrand "$NRAND" \
-        --regions "$PLAN" --region-id "$INDEX" --out "$d/footprint.fits" "${CFG[@]}"
-    # JAX writes cache entries in place, without locking: once the priming region has filled the
-    # shared cache, each task compiles into a private copy in its job's TMPDIR, which concurrent
-    # tasks never see.
-    shared=$JAX_COMPILATION_CACHE_DIR
-    if [[ -e $shared/.primed ]]; then
-        private=$(mktemp -d "${TMPDIR:-/tmp}/rema_jax.XXXXXX")
-        trap 'rm -rf "$private"' EXIT
-        cp -a "$shared/." "$private/"
-        export JAX_COMPILATION_CACHE_DIR=$private
-    fi
-    rema blind --galaxies "$OUTDIR/galaxies" --regions "$PLAN" --region-id "$INDEX" --calib "$CALIB" \
-        --footprint "$d/footprint.fits" --checkpoint "$d/checkpoint" --specpost --out "$d/clusters.fits"
-    # clusters.fits is written: the checkpoint (resume data, the bulk of the region) is not needed.
-    rm -rf "$d/checkpoint"
+    private_cache
+    run_region "$INDEX"
     touch "$shared/.primed" ;;
+  batch)
+    : "${CALIB:?set CALIB to the calibration of the run}"
+    ids=$(sed -n "$((INDEX + 1))p" "$OUTDIR/jobs/batches")
+    [[ -n $ids ]] || { echo "batch $INDEX is empty"; exit 0; }
+    private_cache
+    failed=()
+    for id in $ids; do
+        echo "region $id"
+        run_region "$id" || failed+=("$id")
+    done
+    (( ${#failed[@]} == 0 )) || { echo "regions failed: ${failed[*]}" >&2; exit 1; } ;;
   merge)
     : "${CALIB:?set CALIB to the calibration of the run}"
     opts=()

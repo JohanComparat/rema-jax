@@ -16,6 +16,10 @@ All notable changes to `rema` are documented here.
   the task script passes, treats tiles absent from the sweep directory and its checksum lists as
   outside the data and logs them; a listed sweep without a galaxy table is still an error.
   `ALLOW_UNCOVERED=1` passes `--allow-uncovered`.
+- The GPU QoS at CC-IN2P3 refuses more than 100 queued jobs per user, so the 197-task region array of
+  the RA 0-240 run was rejected. With `MAX_ARRAY` (90 in `ccin2p3.env`) the driver gives each
+  array task several regions, run in turn by the new `batch` stage, with a scaled time limit.
+  The driver now stops when an `sbatch` fails, instead of going on with an empty job id.
 - `rema_dr11_blind.sh run` can be submitted while the calibration job of `prepare` is still queued
   or running (`CALIB=$OUTDIR/calib/calib.fits`): the regions and the merge wait for it
   (`afterok`). `status` reports that job instead of "calibration: none".

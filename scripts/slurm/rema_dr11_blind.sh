@@ -37,6 +37,9 @@
 #                         that take only --gpus, e.g. CC-IN2P3)
 #   REGION_CPUS / REGION_MEM / REGION_TIME   [gpu: 8, 96G, 8:00:00; cpu: 16, 64G, 24:00:00]
 #   GPAR [20]  RPAR [20]  BPAR [50]          concurrent tasks of the ingest/randoms/region arrays
+#   MAX_ARRAY             most tasks in the region array (a site's limit of queued jobs, e.g. 100
+#                         GPU jobs per user at CC-IN2P3); above it each task runs several regions in
+#                         turn ($OUTDIR/jobs/batches), with REGION_TIME (H:MM:SS) times that number
 #   ARRAY                 override the region array (e.g. ARRAY=17,42 to rerun two regions)
 #   EXTRA_SBATCH          extra sbatch options for every job (e.g. --licenses=sps at CC-IN2P3)
 #
@@ -77,6 +80,15 @@ fi
 
 kv() { sed -n "s/^$1=//p"; }                       # value of key=value lines on stdin
 
+# SLURM array specification -> ids, one per line ("0-2,5%50" -> 0 1 2 5).
+expand() {
+    local part
+    for part in ${1//,/ }; do
+        part=${part%%%*}
+        if [[ $part == *-* ]]; then seq "${part%-*}" "${part#*-}"; else echo "$part"; fi
+    done
+}
+
 # Job id of the calibration submitted by 'prepare', while it is queued or running.
 calib_job() {
     [[ -s $JOBS/prepare ]] || return 0
@@ -105,7 +117,7 @@ check_idle() {
 submit() {                                         # submit RECORD sbatch-args... ; prints the job id
     local rec=$1; shift
     local id
-    id=$(sbatch "$@")
+    id=$(sbatch "$@") || { echo "sbatch failed: $*" >&2; return 1; }
     id=${id%%;*}
     echo "$id" >> "$JOBS/$rec"
     echo "$id"
@@ -173,9 +185,26 @@ case $MODE in
         fi
         if [[ -n $arr ]]; then
             dep=("${calwait[@]}"); (( ${#deps[@]} )) && dep=(--dependency="afterany:${deps[0]}")
-            b=$(submit run "${region[@]}" "${dep[@]}" --job-name=rema-region --array="$arr%$BPAR" \
-                    --output="$OUTDIR/logs/region_%a.log" "$TASK" region)
-            deps+=("$b"); echo "regions: job $b, array $arr ($DEVICE)"
+            mapfile -t ids < <(expand "$arr")
+            if (( ${MAX_ARRAY:-0} > 0 && ${#ids[@]} > MAX_ARRAY )); then
+                # Too many tasks for the site: each task runs k regions in turn, k times as long.
+                k=$(( (${#ids[@]} + MAX_ARRAY - 1) / MAX_ARRAY ))
+                : > "$JOBS/batches"
+                for ((i = 0; i < ${#ids[@]}; i += k)); do echo "${ids[*]:i:k}" >> "$JOBS/batches"; done
+                nb=$(wc -l < "$JOBS/batches")
+                rt=${REGION_TIME:-$([[ $DEVICE == gpu ]] && echo 8:00:00 || echo 24:00:00)}
+                IFS=: read -r hh mm ss <<< "$rt"
+                t=$(( (10#$hh * 3600 + 10#$mm * 60 + 10#$ss) * k ))
+                tt="$((t / 3600)):$(printf %02d:%02d $((t % 3600 / 60)) $((t % 60)))"
+                b=$(submit run "${region[@]/#--time=*/--time=$tt}" "${dep[@]}" \
+                        --job-name=rema-region --array="0-$((nb - 1))%$BPAR" \
+                        --output="$OUTDIR/logs/batch_%a.log" "$TASK" batch)
+                deps+=("$b"); echo "regions: job $b, $nb tasks of up to $k regions (${#ids[@]} regions, $DEVICE)"
+            else
+                b=$(submit run "${region[@]}" "${dep[@]}" --job-name=rema-region --array="$arr%$BPAR" \
+                        --output="$OUTDIR/logs/region_%a.log" "$TASK" region)
+                deps+=("$b"); echo "regions: job $b, array $arr ($DEVICE)"
+            fi
         fi
     fi
     dep=("${calwait[@]}"); (( ${#deps[@]} )) && dep=(--dependency="afterany:$(IFS=:; echo "${deps[*]}")")

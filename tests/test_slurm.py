@@ -306,3 +306,52 @@ def test_run_waits_for_the_calibration_job(tmp):
     (out / "jobs" / "prepare").write_text("")
     r, calls = _run(tmp, "run", NRAND="2", CALIB=str(calib))
     assert r.returncode != 0 and "no calibration" in r.stderr and not calls
+
+
+def test_run_batches_regions_above_max_array(tmp):
+    """MAX_ARRAY: more regions than array tasks allowed -> each task runs several, for longer."""
+    out = tmp / "run"
+    _galaxy_tables(out)
+    _randoms_index(out, 2)
+    calib = tmp / "calib.fits"
+    calib.write_bytes(b"calibration")
+    r, calls = _run(tmp, "run", NRAND="2", TARGET_AREA="25", CALIB=str(calib), MAX_ARRAY="2")
+    assert r.returncode == 0, r.stderr
+    prime, regions, merge = calls
+    batches = (out / "jobs" / "batches").read_text().splitlines()
+    ids = [int(i) for line in batches for i in line.split()]
+    n = len(ids) + 1                                        # the batches and the priming region
+    k = -(-len(ids) // 2)
+    assert len(batches) <= 2 and all(len(line.split()) <= k for line in batches)
+    assert sorted(ids + [int(_opt(prime, "array"))]) == list(range(n))
+    assert regions.endswith("batch") and _opt(regions, "array") == f"0-{len(batches) - 1}%50"
+    assert _opt(regions, "time") == f"{8 * k}:00:00" and regions.count("--time=") == 1
+    assert f"{len(batches)} tasks of up to {k}" in r.stdout
+
+
+def test_batch_runs_its_regions_and_reports_failures(tmp):
+    (tmp / "bin" / "rema").write_text(
+        "#!/usr/bin/env bash\n"
+        'echo "rema $*" >> "$REMA_LOG"\n'
+        'case " $* " in *" --region-id 5 "*) [[ $1 == blind ]] && exit 3;; esac\n')
+    jobs = tmp / "run" / "jobs"
+    jobs.mkdir(parents=True)
+    (jobs / "batches").write_text("2 5 7\n9\n")
+    for rid in (2, 5, 7):
+        (tmp / "run" / "regions" / f"{rid:04d}" / "checkpoint").mkdir(parents=True)
+    r = _task(tmp, "batch", "0")
+    assert r.returncode != 0 and "regions failed: 5" in r.stderr
+    log = (tmp / "rema.log").read_text()
+    assert all(f"blind --galaxies {tmp}/run/galaxies --regions" in log and f"--region-id {i} " in log
+               for i in (2, 5, 7))
+    # A failed region keeps its checkpoint (a rerun resumes); the others are cleaned.
+    assert (tmp / "run" / "regions" / "0005" / "checkpoint").exists()
+    assert not (tmp / "run" / "regions" / "0002" / "checkpoint").exists()
+    assert _task(tmp, "batch", "1").returncode == 0
+    assert _task(tmp, "batch", "5").returncode == 0                     # past the end: nothing
+
+
+def test_driver_stops_when_sbatch_fails(tmp):
+    (tmp / "bin" / "sbatch").write_text("#!/usr/bin/env bash\necho 'QOSMaxSubmitJobPerUserLimit' >&2\nexit 1\n")
+    r, calls = _run(tmp, "prepare", NRAND="1", CHUNK="4")
+    assert r.returncode != 0 and "sbatch failed" in r.stderr and "ingest: job" not in r.stdout

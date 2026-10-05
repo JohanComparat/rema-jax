@@ -168,7 +168,17 @@ case $MODE in
             --time=4:00:00 --output="$OUTDIR/logs/merge.log" "$TASK" merge)
     echo "merge: job $m" ;;
   status)
-    rema status --plan "$PLAN" --runs "$OUTDIR/regions" ${CALIB:+--calib "$CALIB"} | head -1
+    if [[ -s $PLAN ]]; then
+        rema status --plan "$PLAN" --runs "$OUTDIR/regions" ${CALIB:+--calib "$CALIB"} | head -1
+    else                                           # phase 1: the plan is made by the first 'run'
+        todo=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" \
+                         --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND" "${area[@]}")
+        cal="none (rerun 'prepare' with CALIB_BOX)"
+        [[ -s $OUTDIR/calib/calib.fits ]] && cal=$OUTDIR/calib/calib.fits
+        echo "prepare: galaxy tables $(kv ingest_done <<< "$todo") sweeps," \
+             "randoms indexes $(kv randoms_done <<< "$todo"); calibration: $cal"
+        echo "no region plan yet ($PLAN): 'run' makes it"
+    fi
     for f in prepare run; do
         [[ -s $JOBS/$f ]] && squeue -h -j "$(paste -sd, "$JOBS/$f")" -o "%i %j %T %M" 2>/dev/null || true
     done ;;

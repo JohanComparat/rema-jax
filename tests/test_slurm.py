@@ -258,3 +258,24 @@ def test_area_box_limits_the_bookkeeping(tmp):
     assert calls[-1].endswith("merge")
     r, _ = _run(tmp, "run", NRAND="1", CALIB=str(calib))
     assert r.returncode != 0 and "prepare" in r.stderr     # the whole sky is not ingested
+
+
+def test_status_before_the_plan_reports_prepare(tmp):
+    """Phase 1 has no region plan yet: status reports the ingest, randoms and calibration."""
+    out = tmp / "run"
+    _galaxy_tables(out)
+    (out / "galaxies" / SWEEPS[0]).unlink()
+    _randoms_index(out, 1)
+    r, calls = _run(tmp, "status", NRAND="2")
+    assert r.returncode == 0, r.stderr
+    assert "galaxy tables 9/10 sweeps, randoms indexes 1/2; calibration: none" in r.stdout
+    assert "no region plan yet" in r.stdout and not calls
+    (out / "calib").mkdir()
+    (out / "calib" / "calib.fits").write_bytes(b"calibration")
+    r, _ = _run(tmp, "status", NRAND="2", AREA_BOX="0 5 -10 0")
+    assert "galaxy tables 1/2 sweeps" in r.stdout and f"calibration: {out}/calib/calib.fits" in r.stdout
+    # rema status itself: a clear message, no traceback.
+    r = subprocess.run([sys.executable, "-m", "rema.cli", "status", "--plan", str(out / "regions.fits"),
+                        "--runs", str(out / "regions")], capture_output=True, text=True,
+                       env={**os.environ, "JAX_PLATFORMS": "cpu"})
+    assert r.returncode != 0 and "no region plan" in r.stderr and "Traceback" not in r.stderr

@@ -399,6 +399,9 @@ def cmd_status(args):
     from . import __version__
     from .pipeline import region_status
 
+    if not Path(args.plan).exists():
+        raise SystemExit(f"no region plan at {args.plan}: it is made by the first 'run' of the driver "
+                         "(rema regions), after 'prepare'")
     st = region_status(args.plan, args.runs, args.calib, __version__ if args.check_version else None)
     prime = "" if st["prime"] is None else st["prime"]
     print(f"done={len(st['done'])} missing={len(st['missing'])} stale={len(st['stale'])} prime={prime}")
@@ -430,13 +433,16 @@ def cmd_todo(args):
     sweeps = _sweeps([args.sweeps])
     sky = _sky(args.box)
     # Chunks index the full sorted list, as in the ingest task, which skips sweeps off the area.
-    chunks = [i // args.chunk for i, s in enumerate(sweeps)
-              if (sky is None or sky.overlaps(sweep_box(s))) and not (Path(args.galaxies) / s.name).exists()]
+    area = [(i, s) for i, s in enumerate(sweeps) if sky is None or sky.overlaps(sweep_box(s))]
+    todo = [(i, s) for i, s in area if not (Path(args.galaxies) / s.name).exists()]
+    chunks = [i // args.chunk for i, _ in todo]
     print(f"nsweeps={len(sweeps)} nchunks={(len(sweeps) + args.chunk - 1) // args.chunk}")
     print("ingest_array=" + array_spec(chunks))
     missing = [k for k in range(args.nrand)
                if not (Path(args.index) / f"randoms-south-1-{k}.json").exists()]
     print("randoms_array=" + array_spec(missing))
+    print(f"ingest_done={len(area) - len(todo)}/{len(area)}")
+    print(f"randoms_done={args.nrand - len(missing)}/{args.nrand}")
 
 
 def cmd_merge(args):

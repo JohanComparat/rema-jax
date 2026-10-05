@@ -11,6 +11,10 @@ All notable changes to `rema` are documented here.
   calibration; `rema todo` prints `ingest_done` and `randoms_done`, and `rema status` exits with a
   message when the plan is missing.
 
+- `rema_dr11_blind.sh run` can be submitted while the calibration job of `prepare` is still queued
+  or running (`CALIB=$OUTDIR/calib/calib.fits`): the regions and the merge wait for it
+  (`afterok`). `status` reports that job instead of "calibration: none".
+
 ### Documentation
 
 - New page "DR11 blind run at CC-IN2P3": install, data download and completeness check, a run on

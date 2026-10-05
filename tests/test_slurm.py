@@ -279,3 +279,30 @@ def test_status_before_the_plan_reports_prepare(tmp):
                         "--runs", str(out / "regions")], capture_output=True, text=True,
                        env={**os.environ, "JAX_PLATFORMS": "cpu"})
     assert r.returncode != 0 and "no region plan" in r.stderr and "Traceback" not in r.stderr
+
+
+def test_run_waits_for_the_calibration_job(tmp):
+    """CALIB not written yet but its job from 'prepare' queued: run submits the regions after it."""
+    out = tmp / "run"
+    _galaxy_tables(out)
+    _randoms_index(out, 2)
+    (out / "jobs").mkdir(parents=True)
+    (out / "jobs" / "prepare").write_text("555\n")
+    (tmp / "bin" / "squeue").write_text('#!/usr/bin/env bash\ncase " $* " in *" -n rema-calib "*) echo 555;; esac\n')
+    calib = out / "calib" / "calib.fits"
+    r, calls = _run(tmp, "status", NRAND="2")
+    assert "calibration: job 555 queued or running" in r.stdout
+    r, calls = _run(tmp, "run", NRAND="2", TARGET_AREA="50", CALIB=str(calib))
+    assert r.returncode == 0, r.stderr
+    assert "calibration job 555 is not finished" in r.stdout
+    prime, regions, merge = calls
+    assert _opt(prime, "dependency") == "afterok:555"
+    assert _opt(regions, "dependency") == "afterany:101" and _opt(merge, "dependency") == "afterany:101:102"
+    r, _ = _run(tmp, "status", NRAND="2", CALIB=str(calib))     # plan made, calibration not yet
+    assert r.returncode == 0 and r.stdout.startswith("done=0 missing=")
+    # Another calibration path, or no calibration job: refused.
+    r, calls = _run(tmp, "run", NRAND="2", CALIB=str(tmp / "other.fits"))
+    assert r.returncode != 0 and "no calibration" in r.stderr and not calls
+    (out / "jobs" / "prepare").write_text("")
+    r, calls = _run(tmp, "run", NRAND="2", CALIB=str(calib))
+    assert r.returncode != 0 and "no calibration" in r.stderr and not calls

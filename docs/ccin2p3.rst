@@ -133,7 +133,9 @@ spectroscopy, then calibrate on one (one CPU job, a few hours):
    CALIB_BOX="RA0 RA1 DEC0 DEC1" $D/rema_dr11_blind.sh prepare
 
 Check ``$OUTDIR/calib/plots/`` and the header of ``$OUTDIR/calib/calib.fits`` (:doc:`dr11`,
-step 4).
+step 4). To go on without waiting, step 3 can be submitted while the calibration job is still
+queued or running: with ``CALIB=$OUTDIR/calib/calib.fits`` the regions then start once it
+succeeds (and never if it fails), with an unchecked calibration.
 
 **3. Regions and merge:**
 

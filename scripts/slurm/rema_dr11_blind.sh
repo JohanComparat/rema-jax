@@ -6,7 +6,9 @@
 #                                randoms file once, and, when CALIB_BOX is set, calibrate
 #   (check $OUTDIR/calib/plots and the calibration header, then set CALIB explicitly)
 #   rema_dr11_blind.sh run       plan the regions, run them (one array task per region, the
-#                                first one alone to fill the JAX cache), then merge
+#                                first one alone to fill the JAX cache), then merge; while the
+#                                calibration job of 'prepare' is still queued or running (and
+#                                CALIB is its $OUTDIR/calib/calib.fits), the regions wait for it
 #   rema_dr11_blind.sh status    progress of the run
 #   rema_dr11_blind.sh clean     once the merge is complete, delete the intermediate products
 #                                (per-sweep galaxy tables, randoms index, JAX cache, checkpoints)
@@ -75,6 +77,12 @@ fi
 
 kv() { sed -n "s/^$1=//p"; }                       # value of key=value lines on stdin
 
+# Job id of the calibration submitted by 'prepare', while it is queued or running.
+calib_job() {
+    [[ -s $JOBS/prepare ]] || return 0
+    squeue -h -j "$(paste -sd, "$JOBS/prepare")" -n rema-calib -o %i 2>/dev/null | head -1
+}
+
 # AREA_BOX "RA0 RA1 DEC0 DEC1;..." -> --box RA0 RA1 DEC0 DEC1 --box ... (the task script does the same)
 area=()
 if [[ -n ${AREA_BOX:-} ]]; then
@@ -133,7 +141,13 @@ case $MODE in
     fi ;;
   run)
     : "${CALIB:?set CALIB to the checked calibration (e.g. $OUTDIR/calib/calib.fits)}"
-    [[ -s $CALIB ]] || { echo "no calibration at $CALIB" >&2; exit 1; }
+    calwait=()
+    if [[ ! -s $CALIB ]]; then
+        cj=$(calib_job)
+        [[ -n $cj && $CALIB == "$OUTDIR/calib/calib.fits" ]] || { echo "no calibration at $CALIB" >&2; exit 1; }
+        calwait=(--dependency="afterok:$cj")
+        echo "calibration job $cj is not finished: the regions start once it succeeds (unchecked calibration)"
+    fi
     check_idle run
     for d in "${CLUSTERS_DIR:-$OUTDIR}" "${MEMBERS_DIR:-${CLUSTERS_DIR:-$OUTDIR}}"; do
         mkdir -p "$d" 2>/dev/null && [[ -w $d ]] || { echo "cannot write the merged products to $d" >&2; exit 1; }
@@ -144,36 +158,40 @@ case $MODE in
         echo "ingest or randoms index incomplete: run 'prepare' first" >&2; exit 1
     fi
     [[ -s $PLAN ]] || "$TASK" plan
-    st=$(rema status --plan "$PLAN" --runs "$OUTDIR/regions" --calib "$CALIB")
+    calopt=(); [[ -s $CALIB ]] && calopt=(--calib "$CALIB")
+    st=$(rema status --plan "$PLAN" --runs "$OUTDIR/regions" "${calopt[@]}")
     echo "$st" | head -1
     if [[ -n ${ARRAY:-} ]]; then arr=$ARRAY; prime=""; else arr=$(kv todo_array <<< "$st"); prime=$(kv prime <<< "$st"); fi
     : > "$JOBS/run"
     deps=()
     if [[ -n $arr ]]; then
         if [[ -n $prime && ! -e $JAX_COMPILATION_CACHE_DIR/.primed ]]; then
-            p=$(submit run "${region[@]}" --job-name=rema-prime --array="$prime" \
+            p=$(submit run "${region[@]}" "${calwait[@]}" --job-name=rema-prime --array="$prime" \
                     --output="$OUTDIR/logs/region_%a.log" "$TASK" region)
             deps+=("$p"); echo "priming region $prime: job $p"
             arr=$(kv todo_array_noprime <<< "$st")
         fi
         if [[ -n $arr ]]; then
-            dep=(); (( ${#deps[@]} )) && dep=(--dependency="afterany:${deps[0]}")
+            dep=("${calwait[@]}"); (( ${#deps[@]} )) && dep=(--dependency="afterany:${deps[0]}")
             b=$(submit run "${region[@]}" "${dep[@]}" --job-name=rema-region --array="$arr%$BPAR" \
                     --output="$OUTDIR/logs/region_%a.log" "$TASK" region)
             deps+=("$b"); echo "regions: job $b, array $arr ($DEVICE)"
         fi
     fi
-    dep=(); (( ${#deps[@]} )) && dep=(--dependency="afterany:$(IFS=:; echo "${deps[*]}")")
+    dep=("${calwait[@]}"); (( ${#deps[@]} )) && dep=(--dependency="afterany:$(IFS=:; echo "${deps[*]}")")
     m=$(submit run "${cpu[@]}" "${dep[@]}" --job-name=rema-merge --cpus-per-task=8 --mem=128G \
             --time=4:00:00 --output="$OUTDIR/logs/merge.log" "$TASK" merge)
     echo "merge: job $m" ;;
   status)
     if [[ -s $PLAN ]]; then
-        rema status --plan "$PLAN" --runs "$OUTDIR/regions" ${CALIB:+--calib "$CALIB"} | head -1
+        calopt=(); [[ -n ${CALIB:-} && -s $CALIB ]] && calopt=(--calib "$CALIB")
+        rema status --plan "$PLAN" --runs "$OUTDIR/regions" "${calopt[@]}" | head -1
     else                                           # phase 1: the plan is made by the first 'run'
         todo=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" \
                          --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND" "${area[@]}")
         cal="none (rerun 'prepare' with CALIB_BOX)"
+        cj=$(calib_job)
+        [[ -n $cj ]] && cal="job $cj queued or running"
         [[ -s $OUTDIR/calib/calib.fits ]] && cal=$OUTDIR/calib/calib.fits
         echo "prepare: galaxy tables $(kv ingest_done <<< "$todo") sweeps," \
              "randoms indexes $(kv randoms_done <<< "$todo"); calibration: $cal"

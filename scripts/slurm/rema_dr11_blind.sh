@@ -187,11 +187,16 @@ case $MODE in
             dep=("${calwait[@]}"); (( ${#deps[@]} )) && dep=(--dependency="afterany:${deps[0]}")
             mapfile -t ids < <(expand "$arr")
             if (( ${MAX_ARRAY:-0} > 0 && ${#ids[@]} > MAX_ARRAY )); then
-                # Too many tasks for the site: each task runs k regions in turn, k times as long.
+                # Too many tasks for the site: each task runs up to k regions in turn, k times as
+                # long. Regions are numbered by decreasing cost: deal them out in turn, so that
+                # every task gets a mix of expensive and cheap ones.
                 k=$(( (${#ids[@]} + MAX_ARRAY - 1) / MAX_ARRAY ))
+                nb=$(( (${#ids[@]} + k - 1) / k ))
                 : > "$JOBS/batches"
-                for ((i = 0; i < ${#ids[@]}; i += k)); do echo "${ids[*]:i:k}" >> "$JOBS/batches"; done
-                nb=$(wc -l < "$JOBS/batches")
+                for ((j = 0; j < nb; j++)); do
+                    line=(); for ((i = j; i < ${#ids[@]}; i += nb)); do line+=("${ids[i]}"); done
+                    echo "${line[*]}" >> "$JOBS/batches"
+                done
                 rt=${REGION_TIME:-$([[ $DEVICE == gpu ]] && echo 8:00:00 || echo 24:00:00)}
                 IFS=: read -r hh mm ss <<< "$rt"
                 t=$(( (10#$hh * 3600 + 10#$mm * 60 + 10#$ss) * k ))

@@ -324,6 +324,8 @@ def test_run_batches_regions_above_max_array(tmp):
     k = -(-len(ids) // 2)
     assert len(batches) <= 2 and all(len(line.split()) <= k for line in batches)
     assert sorted(ids + [int(_opt(prime, "array"))]) == list(range(n))
+    order = sorted(ids)                                     # dealt out in turn: costs are mixed
+    assert batches[0].split() == [str(i) for i in order[::len(batches)]]
     assert regions.endswith("batch") and _opt(regions, "array") == f"0-{len(batches) - 1}%50"
     assert _opt(regions, "time") == f"{8 * k}:00:00" and regions.count("--time=") == 1
     assert f"{len(batches)} tasks of up to {k}" in r.stdout

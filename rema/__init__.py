@@ -8,6 +8,6 @@ model calibrated on DR11.
 Subpackages are imported on demand, so ``import rema`` stays light.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = ["__version__"]

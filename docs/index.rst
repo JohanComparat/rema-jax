@@ -76,6 +76,7 @@ What differs from redMaPPer
    :caption: Reference
 
    reference
+   tables
    api
    design
    changelog

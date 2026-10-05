@@ -3,7 +3,9 @@
 Small tables used by the red-sequence model. All are FITS binary tables with a column `Z`.
 `python -m rema.data.build` rebuilds them from public inputs (downloaded once from fixed
 commits, checked against their SHA-256 and cached in `~/.cache/rema/inputs`, about 14 MB);
-`python -m rema.data.build --check` compares the rebuilt tables with these.
+`python -m rema.data.build --check` compares the rebuilt tables with these. The documentation
+page "Model tables" (https://rema-jax.readthedocs.io/en/latest/tables.html) shows them and how
+to calibrate with them.
 
 | File | Columns | Content |
 |---|---|---|

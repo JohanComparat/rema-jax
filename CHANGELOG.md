@@ -4,6 +4,11 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-05
+
+Model tables for LSST and Euclid, the calibration's colour template in the configuration, and
+the fixes found by the first runs at CC-IN2P3.
+
 ### Model tables
 
 - LSST and Euclid tables in `rema/data`, built by `python -m rema.data.build` like the DECam ones:
@@ -15,7 +20,14 @@ All notable changes to `rema` are documented here.
 - `model.template` chooses the colour table that seeds the calibration (default
   `bc03_legacy_grizw1`; `bc03_lsst_ugrizy`, `bc03_euclid_visyjh` or a FITS file).
   `RSModel.from_template` reads the template's bands from its `BANDS` header and rejects bands
-  that are not among them. Calibrations written with this option are not readable by rema 0.1.0.
+  that are not among them. Calibrations written by 0.2.0 store `model.template` in their
+  configuration, which rema 0.1.0 cannot read.
+
+### Documentation
+
+- New page "Model tables": every packaged table with its bands, redshift range and source,
+  figures and values, and how to calibrate with LSST or Euclid photometry or another band
+  combination.
 
 ### HPC
 

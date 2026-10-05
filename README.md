@@ -139,7 +139,7 @@ srun -p gpu_v100 --gpus 1 -t 0-00:10 -c 4 --mem 8G -L sps \
 ```bash
 source /sps/lsst/users/$USER/miniforge3/etc/profile.d/conda.sh
 conda activate /sps/lsst/users/$USER/envs/rema       # the jobs inherit this environment
-export OUTDIR=/sps/lsst/users/$USER/rema_dr11_v0.1.0  # one work directory per calibration and version
+export OUTDIR=/sps/lsst/users/$USER/rema_dr11_v0.2.0  # one work directory per calibration and version
 source $HOME/software/rema-jax/scripts/slurm/ccin2p3.env
 D=$REMA/scripts/slurm
 

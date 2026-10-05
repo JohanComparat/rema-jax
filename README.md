@@ -1,7 +1,7 @@
 # rema
 
-[![PyPI](https://img.shields.io/pypi/v/rema-jax.svg)](https://pypi.org/project/rema-jax/)
-[![Python](https://img.shields.io/pypi/pyversions/rema-jax.svg)](https://pypi.org/project/rema-jax/)
+[![PyPI](https://img.shields.io/pypi/v/rema-jax)](https://pypi.org/project/rema-jax/)
+[![Python](https://img.shields.io/pypi/pyversions/rema-jax)](https://pypi.org/project/rema-jax/)
 [![tests](https://github.com/JohanComparat/rema-jax/actions/workflows/tests.yml/badge.svg)](https://github.com/JohanComparat/rema-jax/actions/workflows/tests.yml)
 [![coverage](https://codecov.io/gh/JohanComparat/rema-jax/graph/badge.svg)](https://codecov.io/gh/JohanComparat/rema-jax)
 [![docs](https://readthedocs.org/projects/rema-jax/badge/?version=latest)](https://rema-jax.readthedocs.io/en/latest/)

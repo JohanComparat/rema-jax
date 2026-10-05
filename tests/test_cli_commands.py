@@ -469,7 +469,8 @@ def test_cli_regions_status_merge_todo(tmp_path, capsys):
     run("todo", "--sweeps", sweeps, "--galaxies", gal, "--index", tmp_path / "idx", "--chunk", 2,
         "--nrand", 3)
     out = capsys.readouterr().out.splitlines()
-    assert out == ["nsweeps=5 nchunks=3", "ingest_array=2", "randoms_array=1-2"]
+    assert out == ["nsweeps=5 nchunks=3", "ingest_array=2", "randoms_array=1-2", "ingest_done=4/5",
+                   "randoms_done=1/3"]
 
 
 def test_cli_warnings(mock_run, calibrated, tmp_path, caplog):

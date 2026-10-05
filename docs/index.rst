@@ -60,6 +60,7 @@ What differs from redMaPPer
    tour
    dr11
    hpc
+   ccin2p3
 
 .. _notebooks:
 

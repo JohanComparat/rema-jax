@@ -4,6 +4,19 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- `rema_dr11_blind.sh status` failed with a traceback during `prepare`, before the region plan
+  exists. It now reports the ingest (galaxy tables done in the area), the randoms indexes and the
+  calibration; `rema todo` prints `ingest_done` and `randoms_done`, and `rema status` exits with a
+  message when the plan is missing.
+
+### Documentation
+
+- New page "DR11 blind run at CC-IN2P3": install, data download and completeness check, a run on
+  part of the sky (`AREA_BOX`), the full sky, the cluster's rules, monitoring, and the
+  validation on the development area.
+
 ## [0.2.0] - 2026-10-05
 
 Model tables for LSST and Euclid, the calibration's colour template in the configuration, and

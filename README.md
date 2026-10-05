@@ -102,7 +102,9 @@ spectroscopic post-processing adds `SPEC_Z_BOOT`, `VDISP`, `BEST_Z`, .... All se
 
 ## Running at CC-IN2P3
 
-The full DR11 south blind run on the [CC-IN2P3](https://doc.cc.in2p3.fr) SLURM cluster. The
+The full DR11 south blind run on the [CC-IN2P3](https://doc.cc.in2p3.fr) SLURM cluster; the
+[CC-IN2P3 page](https://rema-jax.readthedocs.io/en/latest/ccin2p3.html) of the documentation has
+the step-by-step version (data download, a run on part of the sky, cluster rules). The
 inputs are read from `/sps/lsst/datasets/desi/legacysurveys/dr11/south`; the merged clusters
 are written to `sweep/11.0-rm/` and the members to `sweep/11.0-rm-mem/`, next to `sweep/11.0`
 and `sweep/11.0-photo-z`. `$HOME` is small: the Python environment, the caches and the work

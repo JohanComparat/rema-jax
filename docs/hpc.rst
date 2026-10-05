@@ -107,8 +107,8 @@ It sets:
 - ``--licenses=sps`` on every job, which the cluster requires for jobs that use ``/sps``.
 
 Variables exported before sourcing the file are kept. ``ACCOUNT`` defaults to your main group.
-It also moves the pip and matplotlib caches out of ``$HOME``, which is small. The README gives
-the install on ``/sps`` and the commands of one full run.
+It also moves the pip and matplotlib caches out of ``$HOME``, which is small. :doc:`ccin2p3`
+gives the install on ``/sps``, the data download and the commands of a run, step by step.
 
 Parallel jobs and disk space
 ----------------------------

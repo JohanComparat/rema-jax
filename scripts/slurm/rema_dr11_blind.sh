@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+# Driver of the full DR11 south blind run on a SLURM cluster, in two phases with a check of the
+# calibration in between:
+#
+#   rema_dr11_blind.sh prepare   ingest every sweep once (one table per sweep), index every
+#                                randoms file once, and, when CALIB_BOX is set, calibrate
+#   (check $OUTDIR/calib/plots and the calibration header, then set CALIB explicitly)
+#   rema_dr11_blind.sh run       plan the regions, run them (one array task per region, the
+#                                first one alone to fill the JAX cache), then merge
+#   rema_dr11_blind.sh status    progress of the run
+#   rema_dr11_blind.sh clean     once the merge is complete, delete the intermediate products
+#                                (per-sweep galaxy tables, randoms index, JAX cache, checkpoints)
+#
+# Both phases submit only what is missing (or stale: made with another plan or calibration), so
+# after failures or timeouts simply call them again. They refuse to submit while jobs they
+# submitted before are still queued or running.
+#
+# Environment (defaults in brackets):
+#   DR11 [$LEGACYSURVEY_DIR/dr11/south]  dr11/south directory (sweep/11.0, sweep/11.0-photo-z,
+#                         randoms/); one of DR11 or LEGACYSURVEY_DIR is required
+#   LEGACYSURVEY_DIR      Legacy Surveys root holding dr11/ (CC-IN2P3: /sps/lsst/datasets/desi/legacysurveys)
+#   OUTDIR [required]     run directory; one per calibration and rema version
+#   CONFIG [scripts/slurm/dr11_south.yaml]  configuration (E(B-V) < 0.2 cut)
+#   CALIB                 calibration of the region runs (phase 2; e.g. $OUTDIR/calib/calib.fits)
+#   CLUSTERS_DIR [$OUTDIR]  MEMBERS_DIR [$CLUSTERS_DIR]   where the merge writes the clusters
+#                         (with the _regions and _qa files) and the members
+#   CALIB_BOX             calibration area(s) "RA0 RA1 DEC0 DEC1[;...]"; without it, phase 1 prints
+#                         suggestions once the galaxies are ingested
+#   NRAND [20]  CHUNK [20]  TARGET_AREA [100]  BUFFER [2]  MAX_GAL  MAX_PAIRS
+#   DEVICE [gpu]          gpu or cpu, for the region tasks (ingest, randoms, calib, merge: CPU)
+#   ACCOUNT  PART_GPU  PART_CPU  GPU_GRES [gpu:1]  GPU_CONSTRAINT
+#   REGION_CPUS / REGION_MEM / REGION_TIME   [gpu: 8, 96G, 8:00:00; cpu: 16, 64G, 24:00:00]
+#   GPAR [20]  RPAR [20]  BPAR [50]          concurrent tasks of the ingest/randoms/region arrays
+#   ARRAY                 override the region array (e.g. ARRAY=17,42 to rerun two regions)
+#   EXTRA_SBATCH          extra sbatch options for every job (e.g. --licenses=sps at CC-IN2P3)
+#
+# Site settings: source scripts/slurm/ccin2p3.env first on the CC-IN2P3 cluster.
+set -euo pipefail
+
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+MODE=${1:?usage: rema_dr11_blind.sh prepare|run|status|clean}
+DR11=${DR11:-${LEGACYSURVEY_DIR:+$LEGACYSURVEY_DIR/dr11/south}}
+: "${DR11:?set DR11 or LEGACYSURVEY_DIR}" "${OUTDIR:?set OUTDIR}"
+export DR11 OUTDIR
+export CONFIG=${CONFIG:-$HERE/dr11_south.yaml}
+export PLAN=${PLAN:-$OUTDIR/regions.fits}
+export NRAND=${NRAND:-20} CHUNK=${CHUNK:-20} TARGET_AREA=${TARGET_AREA:-100} BUFFER=${BUFFER:-2}
+export DEVICE=${DEVICE:-gpu}
+export JAX_COMPILATION_CACHE_DIR=${JAX_COMPILATION_CACHE_DIR:-$OUTDIR/jax_cache/$DEVICE}
+GPAR=${GPAR:-20} RPAR=${RPAR:-20} BPAR=${BPAR:-50}
+TASK=$HERE/rema_task.sh
+JOBS=$OUTDIR/jobs
+mkdir -p "$OUTDIR/logs" "$JOBS"
+
+common=(--parsable --export=ALL)
+[[ -n ${ACCOUNT:-} ]] && common+=(--account="$ACCOUNT")
+# shellcheck disable=SC2206
+[[ -n ${EXTRA_SBATCH:-} ]] && common+=($EXTRA_SBATCH)
+cpu=("${common[@]}")
+[[ -n ${PART_CPU:-} ]] && cpu+=(--partition="$PART_CPU")
+if [[ $DEVICE == gpu ]]; then
+    region=("${common[@]}" --gres="${GPU_GRES:-gpu:1}" --cpus-per-task="${REGION_CPUS:-8}"
+            --mem="${REGION_MEM:-96G}" --time="${REGION_TIME:-8:00:00}")
+    [[ -n ${PART_GPU:-} ]] && region+=(--partition="$PART_GPU")
+    [[ -n ${GPU_CONSTRAINT:-} ]] && region+=(--constraint="$GPU_CONSTRAINT")
+else
+    region=("${cpu[@]}" --cpus-per-task="${REGION_CPUS:-16}" --mem="${REGION_MEM:-64G}"
+            --time="${REGION_TIME:-24:00:00}")
+fi
+
+kv() { sed -n "s/^$1=//p"; }                       # value of key=value lines on stdin
+
+# Refuse to submit while jobs recorded in $JOBS/$1 are still queued or running.
+check_idle() {
+    local f=$JOBS/$1 ids
+    [[ -s $f ]] || return 0
+    ids=$(paste -sd, "$f")
+    if [[ -n $(squeue -h -j "$ids" 2>/dev/null) ]]; then
+        echo "jobs $ids of a previous '$1' are still queued or running; wait or scancel them" >&2
+        exit 1
+    fi
+}
+
+submit() {                                         # submit RECORD sbatch-args... ; prints the job id
+    local rec=$1; shift
+    local id
+    id=$(sbatch "$@")
+    id=${id%%;*}
+    echo "$id" >> "$JOBS/$rec"
+    echo "$id"
+}
+
+case $MODE in
+  prepare)
+    check_idle prepare
+    : > "$JOBS/prepare"
+    todo=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" \
+                     --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND")
+    garr=$(kv ingest_array <<< "$todo"); rarr=$(kv randoms_array <<< "$todo")
+    deps=()
+    if [[ -n $garr ]]; then
+        g=$(submit prepare "${cpu[@]}" --job-name=rema-ingest --array="$garr%$GPAR" --cpus-per-task=4 \
+                --mem=16G --time=6:00:00 --output="$OUTDIR/logs/ingest_%a.log" "$TASK" ingest)
+        deps+=("$g"); echo "ingest: job $g, chunks $garr"
+    fi
+    if [[ -n $rarr ]]; then
+        r=$(submit prepare "${cpu[@]}" --job-name=rema-randoms --array="$rarr%$RPAR" --cpus-per-task=2 \
+                --mem=24G --time=4:00:00 --output="$OUTDIR/logs/randoms_%a.log" "$TASK" randoms)
+        deps+=("$r"); echo "randoms index: job $r, files $rarr"
+    fi
+    if [[ -n ${CALIB_BOX:-} && ! -s $OUTDIR/calib/calib.fits ]]; then
+        dep=(); (( ${#deps[@]} )) && dep=(--dependency="afterok:$(IFS=:; echo "${deps[*]}")")
+        c=$(submit prepare "${cpu[@]}" "${dep[@]}" --job-name=rema-calib --cpus-per-task=32 --mem=128G \
+                --time=24:00:00 --output="$OUTDIR/logs/calib.log" "$TASK" calib)
+        echo "calibration: job $c, area $CALIB_BOX"
+    elif [[ -z ${CALIB_BOX:-} ]]; then
+        echo "no CALIB_BOX: once the galaxies are ingested, list candidate areas with"
+        echo "  rema regions --galaxies $OUTDIR/galaxies --calib-suggest 400 --config $CONFIG"
+        echo "then rerun 'prepare' with CALIB_BOX=\"RA0 RA1 DEC0 DEC1[;...]\""
+    fi ;;
+  run)
+    : "${CALIB:?set CALIB to the checked calibration (e.g. $OUTDIR/calib/calib.fits)}"
+    [[ -s $CALIB ]] || { echo "no calibration at $CALIB" >&2; exit 1; }
+    check_idle run
+    for d in "${CLUSTERS_DIR:-$OUTDIR}" "${MEMBERS_DIR:-${CLUSTERS_DIR:-$OUTDIR}}"; do
+        mkdir -p "$d" 2>/dev/null && [[ -w $d ]] || { echo "cannot write the merged products to $d" >&2; exit 1; }
+    done
+    todo=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" \
+                     --index "$OUTDIR/randoms_index" --chunk "$CHUNK" --nrand "$NRAND")
+    if [[ -n $(kv ingest_array <<< "$todo") || -n $(kv randoms_array <<< "$todo") ]]; then
+        echo "ingest or randoms index incomplete: run 'prepare' first" >&2; exit 1
+    fi
+    [[ -s $PLAN ]] || "$TASK" plan
+    st=$(rema status --plan "$PLAN" --runs "$OUTDIR/regions" --calib "$CALIB")
+    echo "$st" | head -1
+    if [[ -n ${ARRAY:-} ]]; then arr=$ARRAY; prime=""; else arr=$(kv todo_array <<< "$st"); prime=$(kv prime <<< "$st"); fi
+    : > "$JOBS/run"
+    deps=()
+    if [[ -n $arr ]]; then
+        if [[ -n $prime && ! -e $JAX_COMPILATION_CACHE_DIR/.primed ]]; then
+            p=$(submit run "${region[@]}" --job-name=rema-prime --array="$prime" \
+                    --output="$OUTDIR/logs/region_%a.log" "$TASK" region)
+            deps+=("$p"); echo "priming region $prime: job $p"
+            arr=$(kv todo_array_noprime <<< "$st")
+        fi
+        if [[ -n $arr ]]; then
+            dep=(); (( ${#deps[@]} )) && dep=(--dependency="afterany:${deps[0]}")
+            b=$(submit run "${region[@]}" "${dep[@]}" --job-name=rema-region --array="$arr%$BPAR" \
+                    --output="$OUTDIR/logs/region_%a.log" "$TASK" region)
+            deps+=("$b"); echo "regions: job $b, array $arr ($DEVICE)"
+        fi
+    fi
+    dep=(); (( ${#deps[@]} )) && dep=(--dependency="afterany:$(IFS=:; echo "${deps[*]}")")
+    m=$(submit run "${cpu[@]}" "${dep[@]}" --job-name=rema-merge --cpus-per-task=8 --mem=128G \
+            --time=4:00:00 --output="$OUTDIR/logs/merge.log" "$TASK" merge)
+    echo "merge: job $m" ;;
+  status)
+    rema status --plan "$PLAN" --runs "$OUTDIR/regions" ${CALIB:+--calib "$CALIB"} | head -1
+    for f in prepare run; do
+        [[ -s $JOBS/$f ]] && squeue -h -j "$(paste -sd, "$JOBS/$f")" -o "%i %j %T %M" 2>/dev/null || true
+    done ;;
+  clean)
+    check_idle run
+    "$TASK" clean ;;
+  *) echo "usage: rema_dr11_blind.sh prepare|run|status|clean" >&2; exit 1 ;;
+esac

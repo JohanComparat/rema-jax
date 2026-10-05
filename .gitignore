@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+docs/_build/
+
+# Run products (galaxy tables, maps, calibrations, catalogues) live outside the repository.
+runs/
+outputs/
+*.fits
+*.fit
+*.fits.gz
+*.fit.gz
+!rema/data/*.fits
+.benchmarks/

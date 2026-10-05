@@ -1,0 +1,21 @@
+# mamba env create -f environment.yml && mamba activate rema && pip install -e ".[dev]"
+# The CUDA wheels are only used when JAX_PLATFORMS=cuda (or unset) and a GPU is present;
+# on a CPU-only machine replace "jax[cuda12]" by "jax".
+name: rema
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - scipy
+  - astropy
+  - healpy
+  - pyyaml
+  - matplotlib
+  - pytest
+  - pytest-cov
+  - pip
+  - pip:
+      - "jax[cuda12]>=0.9"
+      - "optax>=0.2.5"
+      - "ggah_mod>=1.0"

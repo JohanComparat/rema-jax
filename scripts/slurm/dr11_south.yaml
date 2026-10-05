@@ -1,0 +1,164 @@
+# Production configuration of the full DR11 south blind run (scripts/slurm/rema_dr11_blind.sh):
+# the defaults plus survey.ebv_max = 0.2 (galaxies and randoms with E(B-V) >= 0.2 are cut).
+# Ingest, the randoms index, the footprints and the calibration use it; the region runs
+# inherit it from the calibration.
+survey:
+  bands:
+  - g
+  - r
+  - i
+  - z
+  ref_band: z
+  zeropoint: 22.5
+  maskbits_reject:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 17
+  - 18
+  keep_largegalaxy: true
+  reject_psf: true
+  nobs_min: 1
+  ref_snr_min: 5.0
+  mag_max: null
+  ebv_max: 0.2
+  flux_floor: 0.015
+  zspec_range:
+  - 0.001
+  - 3.0
+  zspec_exclude_surveys:
+  - COSMOS2015
+cosmology:
+  Omega_m: 0.3
+  h: 0.7
+model:
+  zrange:
+  - 0.05
+  - 0.9
+  mstar: des_z03
+  alpha: -1.0
+  lval_reference: 0.2
+  chisq_max: 20.0
+  chisq_mode: lupt
+  zbin_coarse: 0.005
+  zbin_fine: 0.001
+  nfw_rs: 0.15
+  nfw_rcore: 0.1
+  rsig: 0.05
+background:
+  zbinsize: 0.02
+  chisqbinsize: 0.5
+  refmagbinsize: 0.2
+  zredbinsize: 0.01
+  lmax_faint: 0.1
+  min_counts: 50.0
+  smooth_z: 0.02
+  smooth_m: 0.2
+zred:
+  use_lndet: false
+  zred_e_min: 0.005
+  nrefine: 2
+richness:
+  firstpass:
+    r0: 0.5
+    beta: 0.0
+  likelihoods:
+    r0: 1.0
+    beta: 0.2
+  percolation:
+    r0: 1.0
+    beta: 0.2
+  zscan:
+    r0: 0.5
+    beta: 0.0
+  lambda_bounds:
+  - 0.5
+  - 2000.0
+  n_grid: 32
+  n_newton: 4
+  firstpass_niter: 1
+  minlambda: 3.0
+  maxrad_factor: 1.2
+mask:
+  nside_coverage: 128
+  nside_fine: 1024
+  randoms_density: 2500.0
+  n_r: 24
+  n_phi: 16
+  n_mag: 24
+  max_maskfrac: 0.2
+zlambda:
+  topfrac: 0.7
+  pcol_soft: 0.04
+  maxiter: 5
+  tol: 0.0002
+  ngrid: 21
+  half_width: 0.03
+  npzbins: 21
+  pivot: 30.0
+centering:
+  method: auto
+  maxcen: 5
+  pbcg_cut: 0.5
+  scan_maxrad: 0.4
+  wcen_rsoft: 0.05
+  wcen_pivot: 30.0
+  wcen_maxlambda: 100.0
+  wcen_zred_chisq_max: 100.0
+  wcen_uselum: true
+  wcen_ncand: 64
+  wcen_minlambda: 10.0
+  wcen_cal_zrange:
+  - 0.05
+  - 0.6
+percolation:
+  rmask_0: 1.5
+  rmask_beta: 0.2
+  rmask_gamma: 0.0
+  rmask_zpivot: 0.3
+  lmask: 0.1
+  niter: 2
+  member_pmin: 0.01
+seeds:
+  chisq_max: 20.0
+  dmag_max: 1.75
+scan:
+  zrange:
+  - 0.05
+  - 1.0
+  zstep: 0.005
+spec:
+  min_members: 3
+  vmax_init: 5000.0
+  nsigma_clip: 3.0
+  niter: 20
+  gapper_nmax: 15
+  c_location: 6.0
+  c_scale: 9.0
+  nboot: 64
+  seed: 12345
+calib:
+  niter: 3
+  pcut: 0.3
+  color_pcut: 0.7
+  minlambda: 5.0
+  nsig_trunc: 1.5
+  color_nodesize: 0.05
+  slope_nodesize: 0.1
+  scatter_nodesize: 0.1
+  pivot_nodesize: 0.1
+  corr_nodesize: 0.15
+  smooth_prior: 1.0
+  wcen: true
+  wcen_niter: 1
+  seed: 12345

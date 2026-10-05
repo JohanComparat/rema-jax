@@ -1,0 +1,235 @@
+DR11 end to end
+===============
+
+These commands run the whole chain on Legacy Surveys DR11 south. They are the commands used on
+the 75 deg² development area: RA 0–5°, Dec −15–0°, three sweeps. Each step writes a FITS file
+that the next one reads, so steps can be rerun separately. The :ref:`notebooks <notebooks>` do
+the same through the Python API on one sweep and on one cluster.
+
+1. Data
+-------
+
+.. code-block:: bash
+
+   export LEGACYSURVEY_DIR=/path/to/legacysurvey    # CC-IN2P3: /sps/lsst/datasets/desi/legacysurveys
+   export DR11=$LEGACYSURVEY_DIR/dr11/south
+   B=https://portal.nersc.gov/cfs/cosmo/data/legacysurvey/dr11/south
+   for s in sweep-000m005-005p000 sweep-000m010-005m005 sweep-000m015-005m010; do
+       wget -c -P $DR11/sweep/11.0         $B/sweep/11.0/$s.fits
+       wget -c -P $DR11/sweep/11.0-photo-z $B/sweep/11.0-photo-z/$s-pz.fits
+   done
+   scripts/get_dr11_south_randoms.sh "" 0       # one randoms file, 23 GB, into $DR11/randoms
+
+- Keep the DR11 layout, with ``sweep/11.0/`` next to ``sweep/11.0-photo-z/``. The ingest finds
+  each sweep's row-matched photo-z file, which carries ``Z_SPEC``, from the sweep's path.
+- ``LEGACYSURVEY_DIR`` is the Legacy Surveys root, the directory that holds ``dr11/``. On the
+  CC-IN2P3 cluster DR11 south is already there, at ``/sps/lsst/datasets/desi/legacysurveys``
+  (all sweeps and photo-z sweeps, randoms files 0 to 3), so nothing needs downloading.
+- ``scripts/get_dr11_south_sweeps.sh DEST NJOBS`` mirrors all 1,600 tiles (2.15 TB).
+  ``scripts/get_dr11_south_randoms.sh DEST FILES NJOBS`` does the same for the randoms: 20
+  files of 23 GB, each covering the whole footprint at 2,500 deg⁻². Both scripts resume and
+  check sha256 sums. With ``DEST`` empty or omitted they write to
+  ``$LEGACYSURVEY_DIR/dr11/south/sweep`` and ``$LEGACYSURVEY_DIR/dr11/south/randoms`` when
+  ``LEGACYSURVEY_DIR`` is set, else to the current directory.
+
+2. Galaxies
+-----------
+
+.. code-block:: bash
+
+   rema ingest $DR11/sweep/11.0/sweep-000m005-005p000.fits \
+               $DR11/sweep/11.0/sweep-000m010-005m005.fits \
+               $DR11/sweep/11.0/sweep-000m015-005m010.fits --out galaxies.fits
+   # or a directory and a box (RA0 RA1 DEC0 DEC1, degrees):
+   rema ingest $DR11/sweep/11.0 --box 0 5 -15 0 --out galaxies.fits
+
+The selection, set in the ``survey`` section of the configuration:
+
+- MASKBITS: bright and medium stars, saturation and all-mask in griz, bailouts, SGA large
+  galaxies, globular clusters, resolved dwarfs and the Magellanic Clouds are rejected.
+  Objects fitted as SGA galaxies (FITBITS bit 9) are kept, because they can be BCGs.
+- ``TYPE != PSF``, and NOBS ≥ 1 in g, r, i and z.
+- z-band S/N ≥ 5, and REFMAG < m*(1.0) + 2.5, the faint end of the background.
+- The other bands get no flux cut, so negative g fluxes stay with their errors. The rule of
+  the redMaPPer DR10 input catalogue (every flux > 0 and σ_m < 1) loses 12% of the red galaxies at z = 0.8–0.9.
+- Fluxes and inverse variances are dereddened with MW_TRANSMISSION. ``ID`` is LS_ID_DR11.
+  ``ZSPEC`` is the photo-z sweep's ``Z_SPEC``, set to −1 when it is absent, outside
+  0.001–3, or a COSMOS2015 photometric redshift.
+
+The three sweeps give 3,476,500 galaxies in 10 s.
+
+For large areas, ``rema ingest SWEEPS --outdir galaxies/`` writes one table per sweep instead.
+Every command that takes ``--galaxies`` also accepts that directory, together with ``--box``
+(repeatable, for a union of boxes) or ``--regions PLAN --region-id I``; see :doc:`hpc`.
+
+3. Footprint
+------------
+
+.. code-block:: bash
+
+   rema maps $DR11/randoms/randoms-south-1-0.fits --box 0 5 -15 0 --out footprint.fits
+
+This writes a NESTED HEALPix map at nside 1024 with ``NRAND``, ``COVER``, ``FRACGOOD`` (the
+fraction of randoms that pass the galaxy cuts, times the coverage of the box) and
+``SIGF_<band>``. ``SIGF_<band>`` is the dereddened 1σ flux error of a canonical galaxy,
+1/√GALDEPTH/MW_TRANSMISSION, in nanomaggies. The 5σ depth is 22.5 − 2.5 log10(5 σ_f).
+
+- Use the box of the galaxy table. Outside it the map is empty, so an aperture that runs off the
+  data gets MASKFRAC > 0 instead of silently losing λ.
+- Several randoms files can be given; the density then scales with their number.
+- On the development area this gives 70.9 deg² unmasked out of 75. The median 5σ galaxy depths
+  are g 24.65, r 24.29, i 23.83 and z 23.40. The map takes about 1 min to build, reading the
+  23 GB file in chunks.
+
+4. Calibration
+--------------
+
+.. code-block:: bash
+
+   rema calibrate --galaxies galaxies.fits --footprint footprint.fits \
+                  --out calib.fits --plots calib_plots
+
+This is redMaPPer's calibration written as EM (:doc:`design`, section 13):
+
+1. **Initial red sequence:** the BC03 griz template, refined on spectroscopic red galaxies
+   (``--init-pars`` starts from a redMaPPer ``*_pars.fit`` file instead).
+2. **E-step:**
+
+   - zred and the χ² background from the current model;
+   - spectroscopic seeds (m < m* + 1, χ²(z_spec) < 20) run at fixed z = z_spec through the
+     likelihood pass and an exact percolation;
+   - the member weights are pmem in clusters with λ ≥ 5.
+3. **M-step:** one L-BFGS fit of all red-sequence nodes in float64, with a smoothness prior.
+4. **After ``calib.niter`` = 3 iterations:**
+
+   - the zred and z_λ corrections, fitted against the spectroscopic redshifts;
+   - the zred background;
+   - the wcen centring model (redMaPPer's WcenCalibrator, on BCG-centred clusters).
+
+On the development area it used 40,850 spectroscopic galaxies and 2,763 clusters. Before its
+correction, z_λ matched the seeds' spec-z with NMAD 0.010. The wcen fit used 589 training
+clusters. It ran in 17 min on the CPU. ``calib_plots/`` holds ``redsequence.png`` and
+``zlambda.png``. The file's header summarises the fit:
+
+.. code-block:: python
+
+   from rema.calibration import Calibration
+   cal = Calibration.read("calib.fits")
+   print(cal.meta)        # REMAVER, BANDS, REFBAND, CHI2MODE, NCLUSTER, NSPECGAL, ZLNMAD, NWCEN
+   print(cal.wcen)        # DELTA0, DELTA1, SIGMA_M, LNW_{CEN,SAT,FG}_{MEAN,SIGMA}, PHI1_*
+   cal.config.to_yaml("run.yaml")   # the configuration, which the runs below use by default
+
+.. warning::
+
+   **The calibration sets the λ scale.** On 75 deg², rema's λ is 10–15% above DR10's at
+   z < 0.7. It moved by 7% when a third sweep's 6,000 redshifts joined the calibration. For
+   production, calibrate on a few hundred deg² rich in spectroscopy (:doc:`hpc`).
+
+To start from a redMaPPer calibration instead, run
+``rema calib-import pars.fit --out calib.fits``, which imports the red sequence and the zred
+correction. Then add the χ² and zred backgrounds with
+``rema background --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits --out calib.fits``.
+With the redMaPPer DR10 grz calibration, set ``model.chisq_mode: mag`` to reproduce redMaPPer's χ².
+
+5. Blind cluster finding
+------------------------
+
+.. code-block:: bash
+
+   rema blind --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits \
+              --own 0 5 -15 0 --checkpoint ckpt --specpost --out clusters.fits
+
+``--own``
+    Keep the clusters centred in this box: the region without its buffer (:doc:`hpc`).
+``--checkpoint DIR``
+    Store the first-pass and likelihood results. A rerun with the same seeds, model,
+    backgrounds, wcen model and configuration resumes after them. Different inputs are
+    detected and recomputed. Percolation always runs again.
+``--centering {auto,bcg,wcen}``
+    ``auto``, the default, uses wcen when the calibration has a wcen model. With ``bcg``, the
+    log warns when a wcen model goes unused.
+``--specpost``
+    Add the spectroscopic post-processing, see step 7.
+
+The log reports the stages, and at the end of the percolation why candidates were dropped
+(``seed``, ``zlambda``, ``centre``, ``centre_pfree``, ``lambda``, as in redMaPPer's
+``RunPercolation``):
+
+.. code-block:: text
+
+   rema INFO centring: wcen
+   rema.modes.blind INFO seeds: 516288
+   rema.modes.blind INFO first pass: 174560 candidates (103.6s)
+   rema.modes.blind INFO likelihood: 171901 candidates (198.2s)
+   rema.modes.blind INFO percolation: 171901 candidates, 56988788 dependencies
+   rema.modes.blind INFO percolation: 13780 clusters (905.6s)
+   rema INFO wrote clusters.fits (12888 clusters, 273805 members)
+
+The times in brackets are cumulative. The timings are from an RTX 3060 Laptop GPU.
+Consolidation keeps 12,888 of the 13,780 percolated clusters.
+
+.. note::
+
+   **Purity at high redshift.** The catalogue keeps clusters down to λ/S = 3, which favours
+   completeness. At z_λ > 0.75, a null test with randomised galaxy positions produces 40–60% as
+   many λ ≥ 5 detections as the data, but almost none with λ ≥ 10. Use λ ≥ 10 for samples that
+   reach z_λ > 0.75 (:doc:`design`, section 14).
+
+6. Scan mode at given positions
+-------------------------------
+
+.. code-block:: bash
+
+   rema scan --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits \
+             --positions act_dr5.fits --ra-col RA --dec-col DEC --id-col NAME \
+             --specpost --out scan.fits
+
+- ``--positions`` takes any FITS table. Column names are case-insensitive. The ``--id-col``
+  values, numbers or strings, become ``MEM_MATCH_ID``, and without it the row number is used.
+- ``--box RA0 RA1 DEC0 DEC1`` keeps only the positions in a box, for runs split by region.
+- At the 25 ACT DR5 clusters of the development area, Z_LAMBDA_OPT matches the ACT redshifts
+  with NMAD 0.0034 (1+z). The optical centre is the redMaPPer DR10 one for 80% of them.
+
+7. Spectroscopic post-processing
+--------------------------------
+
+``--specpost`` on ``blind`` and ``scan``, or afterwards on any catalogue with ``CLUSTERS`` and
+``MEMBERS`` HDUs:
+
+.. code-block:: bash
+
+   rema specpost clusters.fits --out clusters_spec.fits
+
+It works on the members with ``ZSPEC > 0`` and follows the Clerc et al. (2016) velocity clipping:
+
+- a biweight location, a 5000 km/s window, and 20 iterations of 3σ clipping;
+- σ_v from the gapper estimator below 15 members, and the biweight scale above;
+- 64 bootstrap resamples with a fixed seed.
+
+``BEST_Z`` takes ``SPEC_Z_BOOT`` when at least 3 members survive the clipping and σ_v is not
+flagged. Otherwise it falls back to the central galaxy's spec-z (``CG_SPEC_Z``), then to
+``Z_LAMBDA``; ``BEST_Z_TYPE`` says which one was used.
+
+8. A first look at the catalogue
+--------------------------------
+
+.. code-block:: python
+
+   import numpy as np
+   from rema.io.tables import read_table
+
+   cat = read_table("clusters.fits", hdu="CLUSTERS")   # dict of numpy arrays
+   mem = read_table("clusters.fits", hdu="MEMBERS")
+   sel = (cat["LAMBDA"] >= 20) & (cat["N_MEMBERS"] >= 3)
+   zs = cat["SPEC_Z_BOOT"][sel]
+   dz = (cat["Z_LAMBDA"][sel] - zs) / (1 + zs)
+   print(sel.sum(), np.median(dz), 1.4826 * np.median(np.abs(dz - np.median(dz))))
+
+   richest = cat["MEM_MATCH_ID"][np.argmax(cat["LAMBDA"])]
+   m = mem["MEM_MATCH_ID"] == richest
+   print(mem["PMEM"][m].sum(), mem["CENT_RANK"][m].max())   # sum of pmem; centre candidates
+
+On the development area this gives 111 clusters, a bias of +0.0013 and an NMAD of 0.0051 in
+Δz/(1+z), and the largest offset is 0.043. The calibration was fitted on the same area, so this
+is not an independent test. ``read_table`` returns plain numpy arrays. ``astropy.table.Table``
+works too, but it masks NaN values.

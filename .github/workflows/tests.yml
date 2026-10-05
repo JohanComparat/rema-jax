@@ -1,0 +1,48 @@
+# Runs the test suite on the CPU: unit tests and doctests on every supported Python, and the full
+# suite (end-to-end runs on mock clusters included) with coverage on one of them. The coverage
+# report goes to Codecov; tests marked "data" (local DR11 files) and "gpu" are skipped.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    env:
+      JAX_PLATFORMS: cpu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install rema with the dev extra
+        run: pip install ".[dev]"
+      - name: Unit tests and doctests
+        if: matrix.python-version != '3.12'
+        run: pytest -m "not slow and not data and not gpu"
+      - name: Full suite with coverage
+        if: matrix.python-version == '3.12'
+        run: pytest -m "not data and not gpu" --cov=rema --cov-report=xml --cov-report=term
+      - if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

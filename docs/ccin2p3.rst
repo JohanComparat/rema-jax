@@ -45,6 +45,12 @@ their common boundaries (RA 0° and 240° above Dec −85°, and Dec −85° bet
 a cluster's data stop at the boundary, so its λ may be low. ``MEM_MATCH_ID`` is unique within a
 part only.
 
+The catalogues cover E(B−V) < 0.2 (cut on the galaxies and the randoms) and \|b\| ≥ 15°: the merge
+keeps the clusters at \|b\| ≥ 15° (header ``GLATMIN``, QA ``n_clusters_low_glat``), regions lying
+entirely at \|b\| < 15° were not run, and regions reaching below 15° that failed were not rerun
+(the QA lists them as missing). Near the Galactic plane stellar contamination makes most
+seeds survive the first pass, and percolation runs out of memory.
+
 The :ref:`notebooks <notebooks>` read these files by default at CC-IN2P3: the calibration of
 the run, and the merged catalogues to compare with.
 

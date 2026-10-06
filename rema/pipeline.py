@@ -95,9 +95,27 @@ def _ra_runs(cols: np.ndarray, k: int) -> list[tuple[float, float]]:
             for g in groups]
 
 
+def galactic_latitude(ra, dec) -> np.ndarray:
+    """Galactic latitude b [deg] of ICRS positions [deg]."""
+    import astropy.units as u
+    from astropy.coordinates import SkyCoord
+
+    return SkyCoord(np.asarray(ra, float) * u.deg, np.asarray(dec, float) * u.deg, frame="icrs").galactic.b.deg
+
+
+def box_abs_glat(box: Box, n: int = 41) -> tuple[float, float]:
+    """(smallest, largest) |b| [deg] over an n x n grid of ``box``."""
+    ra = np.linspace(box.ra_min, box.ra_max, n) % 360.0
+    dec = np.linspace(box.dec_min, box.dec_max, n)
+    r, d = np.meshgrid(ra, dec)
+    b = np.abs(galactic_latitude(r.ravel(), d.ravel()))
+    return float(b.min()), float(b.max())
+
+
 def plan_regions(counts: Table, *, target_area: float = 100.0, buffer: float = 2.0,
                  band_height: float = 10.0, polar_cap: float = 85.0, max_gal: float | None = None,
-                 max_pairs: float | None = None, sky: Box | BoxUnion | None = None):
+                 max_pairs: float | None = None, sky: Box | BoxUnion | None = None,
+                 glat_min: float | None = None):
     """Regions for a blind run over the tiles in ``counts``. Returns (plan table, meta dict).
 
     Parameters
@@ -110,6 +128,8 @@ def plan_regions(counts: Table, *, target_area: float = 100.0, buffer: float = 2
     band_height : height of the Dec bands (deg, a multiple of 5).
     polar_cap : |Dec| above which a cap is one full-RA region.
     max_gal, max_pairs : split regions whose data box exceeds these estimates.
+    glat_min : drop the regions whose own box lies entirely at |b| < ``glat_min`` deg (the
+        catalogue is then cut at |b| >= ``glat_min`` by :func:`cut_glat`).
     """
     ra0 = np.asarray(counts["RA0"], np.float64)
     dec0 = np.asarray(counts["DEC0"], np.float64)
@@ -182,6 +202,11 @@ def plan_regions(counts: Table, *, target_area: float = 100.0, buffer: float = 2
         else:
             todo += [describe(p) for p in parts]
 
+    if glat_min is not None:
+        low = [d for d in done if box_abs_glat(d["own"])[1] < glat_min]
+        if low:
+            log.info("%d regions lie entirely at |b| < %g deg and are left out", len(low), glat_min)
+        done = [d for d in done if box_abs_glat(d["own"])[1] >= glat_min]
     done.sort(key=lambda d: (-d["PAIRS_EST"], d["own"].dec_min, d["own"].ra_min))
     plan = {"REGION_ID": np.arange(len(done), dtype=np.int64)}
     for name, key in (("OWN", "own"), ("DATA", "data")):
@@ -195,6 +220,8 @@ def plan_regions(counts: Table, *, target_area: float = 100.0, buffer: float = 2
             "MAXGAL": -1.0 if max_gal is None else float(max_gal),
             "MAXPAIR": -1.0 if max_pairs is None else float(max_pairs),
             "NREGION": len(done), **sky_header(sky)}
+    if glat_min is not None:
+        meta["GLATMIN"] = float(glat_min)
     h = hashlib.sha1(json.dumps({k: (float(v) if isinstance(v, (int, float, np.floating)) else v)
                                  for k, v in meta.items()}, sort_keys=True).encode())
     for k in sorted(plan):
@@ -380,6 +407,19 @@ def _zstats(cat: Table) -> tuple[int, float, float]:
     d = (cat["Z_LAMBDA"][sel] - zs) / (1 + zs)
     b = float(np.median(d))
     return int(sel.sum()), b, float(1.4826 * np.median(np.abs(d - b)))
+
+
+def cut_glat(cat: Table, mem: Table, glat_min: float) -> tuple[Table, Table, int]:
+    """Clusters at |b| >= ``glat_min`` deg and their members; also returns the number removed."""
+    if not cat:
+        return cat, mem, 0
+    keep = np.abs(galactic_latitude(cat["RA"], cat["DEC"])) >= glat_min
+    ids = np.asarray(cat["MEM_MATCH_ID"])[keep]
+    cat = {k: np.asarray(v)[keep] for k, v in cat.items()}
+    if mem:
+        km = np.isin(np.asarray(mem["MEM_MATCH_ID"]), ids)
+        mem = {k: np.asarray(v)[km] for k, v in mem.items()}
+    return cat, mem, int(np.sum(~keep))
 
 
 def merge_regions(plan_path: str | Path, runs_dir: str | Path, *, allow_missing: bool = False,

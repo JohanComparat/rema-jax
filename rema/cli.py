@@ -408,7 +408,8 @@ def cmd_regions(args):
              cfg.model.zrange[0], need["exact"])
     plan, meta = plan_regions(counts, target_area=args.target_area, buffer=args.buffer,
                               band_height=args.band_height, polar_cap=args.polar_cap,
-                              max_gal=args.max_gal, max_pairs=args.max_pairs, sky=sky)
+                              max_gal=args.max_gal, max_pairs=args.max_pairs, sky=sky,
+                              glat_min=args.glat_min)
     write_plan(args.out, plan, meta)
     a, g, pp = plan["AREA_OWN"], plan["NGAL_DATA"], plan["PAIRS_EST"]
     log.info("wrote %s: %d regions; own area %.0f-%.0f deg2 (median %.0f); galaxies in the data box "
@@ -471,14 +472,19 @@ def cmd_merge(args):
     import json
 
     from .io.tables import write_table
-    from .pipeline import edge_profile, merge_regions, read_plan
+    from .pipeline import cut_glat, edge_profile, merge_regions, read_plan
 
     cat, mem, regions, qa = merge_regions(args.plan, args.runs, allow_missing=args.allow_missing,
                                           calib=args.calib)
+    extra = {"MODE": "merged", "NREGION": qa["n_done"]}
+    if args.glat_min is not None:
+        cat, mem, removed = cut_glat(cat, mem, args.glat_min)
+        qa.update(glat_min=args.glat_min, n_clusters_low_glat=removed,
+                  n_clusters=len(next(iter(cat.values()), [])) if cat else 0)
+        extra["GLATMIN"] = args.glat_min
     out = Path(args.out)
     members_out = args.members_out or str(out.with_name(out.stem + "_members.fits"))
-    _write_catalog(out, cat, mem, None, {"MODE": "merged", "NREGION": qa["n_done"]},
-                   members_path=members_out)
+    _write_catalog(out, cat, mem, None, extra, members_path=members_out)
     write_table(out.with_name(out.stem + "_regions.fits"), regions, extname="REGIONS")
     if cat:
         plan, meta = read_plan(args.plan)
@@ -623,6 +629,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--polar-cap", type=float, default=85.0, help="|Dec| above which a cap is one region")
     s.add_argument("--max-gal", type=float, help="split regions with more data-box galaxies")
     s.add_argument("--max-pairs", type=float, help="split regions with more estimated pairs")
+    s.add_argument("--glat-min", type=float, help="leave out regions entirely at |b| < this [deg]")
     s.add_argument("--calib-suggest", type=float, metavar="AREA",
                    help="instead of planning, print calibration boxes of about AREA deg2")
     s.add_argument("--out", help="plan file (FITS)")
@@ -652,6 +659,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--members-out", help="merged members (default <out>_members.fits)")
     s.add_argument("--calib", help="treat regions made with another calibration as stale")
     s.add_argument("--allow-missing", action="store_true")
+    s.add_argument("--glat-min", type=float, help="keep the clusters (and members) at |b| >= this [deg]")
     s.set_defaults(func=cmd_merge)
     return p
 

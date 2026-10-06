@@ -14,7 +14,8 @@ from rema.model.redsequence import RSModel
 from rema.modes.blind import consolidate, run_blind
 from rema.modes.common import Region
 from rema.modes.scan import run_scan
-from rema.pipeline import (_zstats, calib_suggest, close_pairs, plan_regions, region_status,
+from rema.pipeline import (_zstats, box_abs_glat, calib_suggest, close_pairs, cut_glat, galactic_latitude,
+                           plan_regions, region_status,
                            uncovered_tiles, write_plan)
 from rema.sky.neighbors import unit_vectors
 from rema.sky.regions import Box
@@ -138,3 +139,22 @@ def test_status_close_pairs_and_zstats(tmp_path):
     assert nz == 5 and bias == pytest.approx(0.01 / 1.3) and nmad == pytest.approx(0.0, abs=1e-12)
     nz, bias, _ = _zstats({k: v[:2] for k, v in cat.items()})
     assert nz == 2 and np.isnan(bias)
+
+
+def test_galactic_latitude_cut():
+    """|b| of positions and boxes; regions entirely at low latitude are left out of a plan, and
+    the catalogue cut keeps the clusters (and members) at |b| >= the limit."""
+    b = galactic_latitude([192.85948, 266.40500], [27.12825, -28.93617])     # north pole, centre
+    np.testing.assert_allclose(b, [90.0, 0.0], atol=0.01)
+    lo, hi = box_abs_glat(Box(265.0, 270.0, -30.0, -25.0))
+    assert lo < 2 and hi < 5
+    assert box_abs_glat(Box(190.0, 195.0, 25.0, 30.0))[1] > 85
+    counts = _counts([(265, -30, 1e5), (190, 25, 1e5)])
+    plan, meta = plan_regions(counts, target_area=25, band_height=5, glat_min=15)
+    assert len(plan["REGION_ID"]) == 1 and plan["OWN_RA0"][0] == 190 and meta["GLATMIN"] == 15
+    assert "GLATMIN" not in plan_regions(counts, target_area=25, band_height=5)[1]
+    cat = {"RA": np.array([192.86, 266.40]), "DEC": np.array([27.13, -28.94]), "MEM_MATCH_ID": np.array([7, 8])}
+    mem = {"MEM_MATCH_ID": np.array([7, 7, 8]), "ID": np.array([1, 2, 3])}
+    c, m, removed = cut_glat(cat, mem, 15.0)
+    assert removed == 1 and list(c["MEM_MATCH_ID"]) == [7] and list(m["ID"]) == [1, 2]
+    assert cut_glat({}, {}, 15.0) == ({}, {}, 0)

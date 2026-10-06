@@ -29,6 +29,8 @@
 #   CALIB_BOX             calibration area(s) "RA0 RA1 DEC0 DEC1[;...]"; without it, phase 1 prints
 #                         suggestions once the galaxies are ingested
 #   NRAND [20]  CHUNK [20]  TARGET_AREA [100]  BUFFER [2]  MAX_GAL  MAX_PAIRS
+#   GLAT_MIN              Galactic latitude cut [deg]: regions entirely at |b| < GLAT_MIN are not
+#                         run, and the merged catalogue keeps the clusters at |b| >= GLAT_MIN
 #   AREA_BOX              "RA0 RA1 DEC0 DEC1[;...]": run on this area only (a test, or the part of
 #                         the sky already downloaded); every stage and the bookkeeping use it
 #   DEVICE [gpu]          gpu or cpu, for the region tasks (ingest, randoms, calib, merge: CPU)

@@ -188,6 +188,10 @@ def test_merge_writes_clusters_and_members_dirs(tmp):
     call = (tmp / "rema.log").read_text()
     assert f"--out {tmp}/dr11/sweep/11.0-rm/clusters_dr11.fits" in call
     assert f"--members-out {tmp}/dr11/sweep/11.0-rm-mem/clusters_dr11_members.fits" in call
+    assert "--glat-min" not in call
+    r = _task(tmp, "merge", GLAT_MIN="15", ALLOW_MISSING="1")
+    assert r.returncode == 0, r.stderr
+    assert "--allow-missing --glat-min 15" in (tmp / "rema.log").read_text()
 
 
 def test_region_deletes_checkpoint_and_compiles_privately(tmp):

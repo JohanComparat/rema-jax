@@ -471,6 +471,14 @@ def test_cli_regions_status_merge_todo(tmp_path, capsys):
     qa = json.loads(out.with_name("clusters_qa.json").read_text())
     assert qa["n_clusters"] == 9 and qa["missing"] == [rids[-1]] and qa["duplicate_ids"] == 0
     assert qa["members_without_cluster"] == 0 and len(qa["edge_profile"]["n"]) > 0
+    # --glat-min: these mock clusters lie at |b| of about 60 deg.
+    out2 = tmp_path / "merged" / "clusters_b70.fits"
+    run("merge", "--plan", plan_path, "--runs", runs, "--out", out2, "--calib", calib, "--allow-missing",
+        "--glat-min", 70)
+    qa2 = json.loads(out2.with_name("clusters_b70_qa.json").read_text())
+    assert qa2["glat_min"] == 70 and qa2["n_clusters_low_glat"] == 9 and qa2["n_clusters"] == 0
+    assert read_catalog(out2, members=False)[2]["GLATMIN"] == 70
+    assert read_table(out2.with_name("clusters_b70_members.fits"), hdu="MEMBERS")["ID"].size == 0
 
     # todo: chunks of sweeps without a galaxy table, randoms files without an index.
     sweeps = tmp_path / "sweeps"

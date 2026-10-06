@@ -8,9 +8,10 @@ Execution needs the DR11 data and the ``rema`` Jupyter kernel
 (``python -m ipykernel install --user --name rema``); run it on a GPU with
 ``JAX_PLATFORMS=cuda``. The order matters: ``pipeline`` compares its merged catalogue with the
 one-region catalogue of ``blind`` (same sweeps, same calibration). Paths come from the
-environment variables REMA_DR11_DIR (or LEGACYSURVEY_DIR), REMA_CALIB and REMA_WORK;
-without them the CC-IN2P3 locations are used when /sps is mounted (defaults below). The markdown
-avoids run numbers; the cells print them.
+environment variables REMA_DR11_DIR (or LEGACYSURVEY_DIR), REMA_PRODUCTS, REMA_CALIB and
+REMA_WORK; without them the DR11 data system at CC-IN2P3 is used when /sps is mounted: the sweeps,
+the randoms, and the calibration and merged catalogues of the DR11 south production run next to
+them (defaults below). The markdown avoids run numbers; the cells print them.
 """
 
 import argparse
@@ -66,17 +67,26 @@ jax.config.update("jax_compilation_cache_dir",
                   os.environ.get("JAX_COMPILATION_CACHE_DIR") or os.path.expanduser("~/.cache/rema/jax"))
 jax.config.update("jax_persistent_cache_min_compile_time_secs", 1.0)
 
-# Paths: the environment variables, else the CC-IN2P3 locations when /sps is mounted (the Jupyter
-# kernels there do not read ~/.bashrc), else a local copy.
+# Paths: the environment variables, else the DR11 data system at CC-IN2P3 when /sps is mounted
+# (the Jupyter kernels there do not read ~/.bashrc), else a local copy with the same layout.
 CC = Path("/sps/lsst/datasets/desi/legacysurveys")
-if CC.exists():
-    LS_DIR, WORK_ROOT = CC, Path("/sps/lsst/users") / os.environ.get("USER", "") / "rema"
-else:
-    LS_DIR, WORK_ROOT = Path("/home/comparat/data/legacysurvey"), Path("/home/comparat/data/rema")
-LS_DIR = Path(os.environ.get("LEGACYSURVEY_DIR", LS_DIR))
+LS_DIR = Path(os.environ.get("LEGACYSURVEY_DIR", CC if CC.exists() else Path.home() / "data" / "legacysurvey"))
 DR11 = Path(os.environ.get("REMA_DR11_DIR", LS_DIR / "dr11" / "south"))
-CALIB = Path(os.environ.get("REMA_CALIB", WORK_ROOT / "calib_dr11_griz_strip_zrmod.fits"))
-EXAMPLES = Path(os.environ.get("REMA_WORK", WORK_ROOT / "examples"))
+# The DR11 south production run (rema 0.2.0) next to the sweeps: two parts that meet at RA 0 and
+# 240 deg and at Dec -85 deg, with one calibration.
+PRODUCTS = Path(os.environ.get("REMA_PRODUCTS", DR11 / "rema"))
+RUNS = [PRODUCTS / "rema_dr11_v0.2.0_ra0-240", PRODUCTS / "rema_dr11_v0.2.0_ra240-360"]
+CALIB = Path(os.environ.get("REMA_CALIB", RUNS[0] / "calib" / "calib.fits"))
+EXAMPLES = Path(os.environ.get("REMA_WORK", PRODUCTS / "notebooks"))   # what the notebooks write
+RANDOMS = sorted((DR11 / "randoms").glob("randoms-south-1-*.fits"))     # every randoms file present
+
+
+def read_all_randoms(cfg, box):
+    """The randoms of every file in RANDOMS inside ``box``, and their density per deg²."""
+    from rema.sky.maps import read_randoms
+
+    parts = [read_randoms(f, cfg, box) for f in RANDOMS]
+    return {k: np.concatenate([q[k] for q in parts]) for k in parts[0]}, cfg.mask.randoms_density * len(parts)
 '''
 
 SWEEPS_DEFAULT = '''
@@ -156,8 +166,8 @@ def blind_cells():
     are handled by the footprint (apertures that leave the data get MASKFRAC > 0, and clusters
     with MASKFRAC ≥ 0.2 are dropped).
 
-    The inputs are the sweeps with their row-matched photo-z sweeps (for Z_SPEC), one DR11
-    randoms file and a DR11 griz calibration made with `rema calibrate`. The steps are:
+    The inputs are the sweeps with their row-matched photo-z sweeps (for Z_SPEC), the DR11
+    randoms files and the DR11 griz calibration of the production run. The steps are:
 
     - the galaxy selection, written as one table per sweep (as on the HPC);
     - the mask and depth maps from the randoms;
@@ -168,16 +178,18 @@ def blind_cells():
       the members' Z_SPEC.
 
     Larger areas run as many regions on an HPC (`scripts/slurm/rema_dr11_blind.sh`). The
-    pipeline notebook runs the same sweeps that way and compares the two catalogues. On an
-    RTX 3060 laptop GPU, three sweeps (75 deg²) take about 20 min, mostly percolation.
+    pipeline notebook runs the same sweeps that way and compares the two catalogues, and the
+    last section compares this catalogue with the DR11 south production catalogue.
     """))
 
     c.append(md("""
     ## Setup and parameters
 
-    `SWEEPS` lists the sweep files, by name. Paths can be set with the environment variables
-    `REMA_DR11_DIR`, `REMA_CALIB` and `REMA_WORK`. Run products go to `WORK`, and the per-sweep
-    galaxy tables to `GALDIR`, which the pipeline notebook shares.
+    `SWEEPS` lists the sweep files, by name. At CC-IN2P3 the defaults read the data system:
+    the sweeps and the randoms of DR11 south, and the calibration and catalogues of the
+    production run next to them (`PRODUCTS`). Elsewhere, set the environment variables
+    `REMA_DR11_DIR`, `REMA_PRODUCTS` (or `REMA_CALIB`) and `REMA_WORK`. Run products go to
+    `WORK`, and the per-sweep galaxy tables to `GALDIR`, which the pipeline notebook shares.
     """))
 
     c.append(code(SETUP_COMMON + SWEEPS_DEFAULT + '''
@@ -201,6 +213,7 @@ SKY = sweep_union(SWEEPS)          # a Box when the sweeps tile a rectangle, els
 BOUND = SKY.bounding()
 print(f"rema {rema.__version__}, jax {jax.__version__}, devices: {jax.devices()}")
 print(f"{len(SWEEPS)} sweeps, {SKY.area_deg2():.1f} deg², sky: {SKY}")
+print(f"data: {DR11}; {len(RANDOMS)} randoms files; calibration: {CALIB}")
 '''))
 
     c.append(code(STYLE))
@@ -218,9 +231,10 @@ print(f"{len(SWEEPS)} sweeps, {SKY.area_deg2():.1f} deg², sky: {SKY}")
     - ZLNMAD: the NMAD of their z_λ against the seeds' redshifts, before the z_λ correction;
     - NWCEN: the training clusters of wcen.
 
-    The configuration read from the file drives every step below. The default calibration was
-    fitted on the 75 deg² strip RA 0–5°, Dec −15° to 0°. When the sweeps lie in that strip,
-    the comparison of z_λ with spectroscopic redshifts below is not independent.
+    The configuration read from the file drives every step below. The default calibration is
+    the one of the DR11 south production run, fitted on RA 160–180° and 190–210°,
+    Dec −10° to 10°. When the sweeps lie in that area, the comparison of z_λ with spectroscopic
+    redshifts below is not independent.
     """))
 
     c.append(code('''
@@ -288,22 +302,23 @@ print(f"{spec.sum():,} with ZSPEC > 0: " + ", ".join(f"{name} {k:,}"
     randoms per file, so FRACGOOD is coarse per pixel, but λ uses it integrated over the cluster
     aperture.
 
-    The rows of a randoms file are in random sky order, so `read_randoms` scans the whole 23 GB
-    file. The HPC pipeline indexes every file once (`rema randoms-index`), as the pipeline
-    notebook shows.
+    Every randoms file present is used, as in the production run, and the density scales with
+    their number. The rows of a randoms file are in random sky order, so `read_randoms` scans the
+    whole 23 GB file. The HPC pipeline indexes every file once (`rema randoms-index`), as the
+    pipeline notebook shows.
     """))
 
     c.append(code('''
 t0 = time.perf_counter()
-rnd = read_randoms(DR11 / "randoms" / "randoms-south-1-0.fits", cfg, BOUND)
-fp = build_footprint(rnd, cfg, box=SKY, density=cfg.mask.randoms_density)
+rnd, density = read_all_randoms(cfg, BOUND)
+fp = build_footprint(rnd, cfg, box=SKY, density=density)
 fp.write(WORK / "footprint.fits")
 T["footprint"] = time.perf_counter() - t0
 
 v = fp.fine.values
 good = v["FRACGOOD"] > 0.5
 depth = {b.lower(): np.median(22.5 - 2.5 * np.log10(5 * v[f"SIGF_{b}"][good])) for b in fp.bands}
-print(f"{rnd['RA'].size:,} randoms in {fp.fine.pixels.size:,} pixels (nside {fp.nside}), "
+print(f"{rnd['RA'].size:,} randoms from {len(RANDOMS)} files in {fp.fine.pixels.size:,} pixels (nside {fp.nside}), "
       f"in {T['footprint']:.0f} s")
 print(f"unmasked area {fp.area_deg2():.2f} deg² of {SKY.area_deg2():.2f} deg²")
 print("median 5σ depth: " + ", ".join(f"{b} {d:.2f}" for b, d in depth.items()))
@@ -621,6 +636,70 @@ else:
     """))
 
     c.append(md("""
+    ## The production catalogue
+
+    The DR11 south production run used the same calibration, configuration, galaxies and
+    randoms over the whole footprint, as regions of about 100 deg² with 2° buffers. Its merged
+    catalogues are on the data system next to the sweeps (`PRODUCTS`), in two parts that meet at
+    RA 0° and 240° and at Dec −85°. Inside these sweeps, its clusters should be the clusters of
+    this notebook. Near the edges of the sweeps they may differ: the production run also had the
+    galaxies beyond them, except across the boundaries of the two parts.
+
+    The cell matches the clusters by their central galaxy (ID_CENT[0]) and compares them as a
+    function of the distance to the edge of the sweeps (of their bounding box when they do not
+    tile a rectangle).
+    """))
+
+    c.append(code('''
+import json
+
+from rema.io.tables import read_catalog
+
+
+def production_catalogue(sky):
+    """Clusters of the production parts centred in ``sky``, with the part number (PART)."""
+    parts = []
+    for k, run in enumerate(RUNS):
+        f = run / "clusters_dr11.fits"
+        if not f.exists():
+            print(f"{run.name}: not available yet")
+            continue
+        pc, _, _ = read_catalog(f, members=False)
+        qa = json.loads((run / "clusters_dr11_qa.json").read_text())
+        keep = sky.contains(pc["RA"], pc["DEC"])
+        parts.append({**{c: np.asarray(v)[keep] for c, v in pc.items()}, "PART": np.full(int(keep.sum()), k)})
+        same = qa.get("calibrations") == [file_sha1(CALIB)]
+        print(f"{run.name}: {len(pc['RA']):,} clusters, {int(keep.sum()):,} in these sweeps; "
+              f"{'same' if same else 'another'} calibration")
+    return {c: np.concatenate([q[c] for q in parts]) for c in parts[0]} if parts else None
+
+
+prod = production_catalogue(SKY)
+if prod is not None and len(prod["RA"]):
+    where = {k: i for i, k in enumerate(np.asarray(prod["ID_CENT"])[:, 0])}
+    j = np.array([where.get(k, -1) for k in np.asarray(cat["ID_CENT"])[:, 0]])
+    b = SKY.bounding()
+    cosd = np.cos(np.radians(cat["DEC"]))
+    edge = np.minimum.reduce([cat["DEC"] - b.dec_min, b.dec_max - cat["DEC"],
+                              (cat["RA"] - b.ra_min) * cosd, (b.ra_max - cat["RA"]) * cosd])
+    rows = []
+    for lo, hi in ((0.0, 1.0), (1.0, 2.3), (2.3, 99.0)):
+        s = (lam >= 20) & (edge >= lo) & (edge < hi)
+        m = s & (j >= 0)
+        rel = np.abs(prod["LAMBDA"][j[m]] / lam[m] - 1)
+        dz = np.abs(prod["Z_LAMBDA"][j[m]] - zl[m])
+        rows.append((f"{lo:.1f}-{hi:.1f}", int(s.sum()), m.sum() / max(s.sum(), 1),
+                     np.median(rel) if m.any() else np.nan, dz.max() if m.any() else np.nan))
+    tab = Table(rows=rows, names=("EDGE_DEG", "N_LAMBDA_GE_20", "SAME_CENTRE", "MEDIAN_DLAMBDA_REL", "MAX_DZ"))
+    for col, fmt in (("SAME_CENTRE", ".1%"), ("MEDIAN_DLAMBDA_REL", ".2e"), ("MAX_DZ", ".1e")):
+        tab[col].format = fmt
+    tab.pprint(max_width=-1)
+    lp = np.asarray(prod["LAMBDA"])
+    print(f"production clusters with λ ≥ 20 in these sweeps: {int(np.sum(lp >= 20))}, "
+          f"this notebook: {int(np.sum(lam >= 20))}")
+'''))
+
+    c.append(md("""
     ## Runtimes
     """))
 
@@ -638,7 +717,7 @@ print(f"{'total':10s} {sum(T.values()):7.1f} s on {jax.devices()[0].device_kind}
     ```bash
     rema ingest DR11/sweep/11.0/sweep-000m005-005p000.fits DR11/sweep/11.0/sweep-000m010-005m005.fits \\
          DR11/sweep/11.0/sweep-000m015-005m010.fits --outdir galaxies
-    rema maps DR11/randoms/randoms-south-1-0.fits --box 0 5 -15 0 --out footprint.fits
+    rema maps DR11/randoms/randoms-south-1-*.fits --box 0 5 -15 0 --out footprint.fits
     rema blind --galaxies galaxies --box 0 5 -15 0 --calib CALIB --footprint footprint.fits \\
          --checkpoint checkpoint --specpost --out clusters.fits
     ```
@@ -688,7 +767,7 @@ def pipeline_cells():
     its `galaxies/` points to the per-sweep tables that the blind notebook wrote. The stages run
     the task script with the environment variables the driver would set. `AREA_BOX` restricts
     the run to the sweeps, `TARGET_AREA=25` with `BAND_HEIGHT=5` gives one region per sweep, and
-    `NRAND=1` uses one randoms file.
+    `NRAND` is the number of randoms files present, as in the production run.
     """))
 
     c.append(code(SETUP_COMMON + SWEEPS_DEFAULT + '''
@@ -715,7 +794,7 @@ area_box = ";".join(f"{b.ra_min:g} {b.ra_max:g} {b.dec_min:g} {b.dec_max:g}" for
 ENV = {**os.environ, "DR11": str(DR11), "OUTDIR": str(OUTDIR), "CALIB": str(CALIB),
        "CLUSTERS_DIR": str(OUTDIR), "MEMBERS_DIR": str(OUTDIR),
        "AREA_BOX": area_box, "TARGET_AREA": "25", "BAND_HEIGHT": "5", "BUFFER": "2",
-       "NRAND": "1", "CHUNK": "100000", "DEVICE": "gpu" if jax.default_backend() == "gpu" else "cpu",
+       "NRAND": str(len(RANDOMS)), "CHUNK": "100000", "DEVICE": "gpu" if jax.default_backend() == "gpu" else "cpu",
        "PATH": f"{Path(sys.executable).parent}:{os.environ['PATH']}"}
 
 
@@ -755,9 +834,13 @@ print(f"device for the regions: {ENV['DEVICE']}")
 
     c.append(code('''
 T["ingest"] = stage("ingest", 0)
-T["randoms"] = stage("randoms", 0)
+t0 = time.perf_counter()
+for k in range(len(RANDOMS)):
+    stage("randoms", k)
+T["randoms"] = time.perf_counter() - t0
 idx = OUTDIR / "randoms_index"
-print(f"randoms index: {json.loads((idx / 'randoms-south-1-0.json').read_text())['nrows']:,} rows")
+rows = [json.loads((idx / f"randoms-south-1-{k}.json").read_text())["nrows"] for k in range(len(RANDOMS))]
+print(f"randoms index: {len(rows)} files, {sum(rows):,} rows")
 '''))
 
     c.append(md("""
@@ -1050,8 +1133,9 @@ def scan_cells():
     c.append(md("""
     ## Setup and parameters
 
-    Paths can be set with the environment variables `REMA_DR11_DIR`, `REMA_CALIB` and
-    `REMA_WORK`. The ACT redshift is used only for the comparison at the end.
+    At CC-IN2P3 the defaults read the DR11 data system (sweeps, randoms, and the calibration and
+    catalogues of the production run); elsewhere set `REMA_DR11_DIR`, `REMA_PRODUCTS` (or
+    `REMA_CALIB`) and `REMA_WORK`. The ACT redshift is used only for the comparisons at the end.
     """))
 
     c.append(code(SETUP_COMMON + '''
@@ -1116,8 +1200,8 @@ print(f"{gal['ID'].size:,} galaxies, {np.sum(gal['ZSPEC'] > 0):,} with ZSPEC > 0
       f"in {T['ingest']:.0f} s")
 
 t0 = time.perf_counter()
-rnd = read_randoms(DR11 / "randoms" / "randoms-south-1-0.fits", cfg, box)
-fp = build_footprint(rnd, cfg, box=box, density=cfg.mask.randoms_density)
+rnd, density = read_all_randoms(cfg, box)
+fp = build_footprint(rnd, cfg, box=box, density=density)
 fp.write(WORK / "footprint.fits")
 T["footprint"] = time.perf_counter() - t0
 print(f"footprint: {rnd['RA'].size:,} randoms, unmasked area {fp.area_deg2():.2f} deg², "
@@ -1127,8 +1211,8 @@ print(f"footprint: {rnd['RA'].size:,} randoms, unmasked area {fp.area_deg2():.2f
     c.append(md("""
     ## Calibration and zred
 
-    The DR11 griz calibration made with `rema calibrate` on the 75 deg² strip RA 0–5°,
-    Dec −15° to 0°: red sequence, zred correction, χ² and zred backgrounds, z_λ correction and
+    The DR11 griz calibration of the production run, fitted on RA 160–180° and 190–210°,
+    Dec −10° to 10°: red sequence, zred correction, χ² and zred backgrounds, z_λ correction and
     the wcen centring model. `Region.build` computes zred for every galaxy.
     """))
 
@@ -1334,6 +1418,41 @@ members = Table({k: mem[k][top] for k in ("REFMAG", "ZRED", "ZSPEC", "R", "PMEM"
 for col, fmt in (("REFMAG", ".2f"), ("ZRED", ".3f"), ("ZSPEC", ".4f"), ("R", ".3f"), ("PMEM", ".3f")):
     members[col].format = fmt
 members.pprint(max_width=-1)
+'''))
+
+    c.append(md("""
+    ## The production catalogue
+
+    The DR11 south production run found clusters blind over the whole footprint with the same
+    calibration (merged catalogues on the data system, `PRODUCTS`). The cell lists the
+    production clusters centred within 3′ of the input position: scan mode, which starts from
+    the position, and blind mode, which starts from its own seeds, should find the same system.
+    """))
+
+    c.append(code('''
+from rema.io.tables import read_catalog
+
+target = SkyCoord(RA, DEC, unit="deg")
+found = False
+for run in RUNS:
+    f = run / "clusters_dr11.fits"
+    if not f.exists():
+        print(f"{run.name}: not available yet")
+        continue
+    pc, _, _ = read_catalog(f, members=False)
+    sep = SkyCoord(pc["RA"], pc["DEC"], unit="deg").separation(target).arcmin
+    near = np.flatnonzero(sep < 3)
+    if near.size == 0:
+        continue
+    found = True
+    near = near[np.argsort(sep[near])]
+    tab = Table({"PART": [run.name] * near.size, "SEP_ARCMIN": sep[near],
+                 **{k: np.asarray(pc[k])[near] for k in ("LAMBDA", "Z_LAMBDA", "SPEC_Z_BOOT", "N_MEMBERS")}})
+    for col, fmt in (("SEP_ARCMIN", ".2f"), ("LAMBDA", ".1f"), ("Z_LAMBDA", ".4f"), ("SPEC_Z_BOOT", ".4f")):
+        tab[col].format = fmt
+    tab.pprint(max_width=-1)
+print(f"scan mode: LAMBDA_OPT {cl['LAMBDA_OPT']:.1f}, Z_LAMBDA_OPT {cl['Z_LAMBDA_OPT']:.4f}" if found
+      else "no production cluster within 3′")
 '''))
 
     c.append(md("""

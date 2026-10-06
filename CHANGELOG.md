@@ -26,6 +26,10 @@ All notable changes to `rema` are documented here.
 
 ### Documentation
 
+- The DR11 notebooks read the data system at CC-IN2P3 by default: the sweeps, every randoms
+  file present (the footprints of the production run), and the calibration and merged
+  catalogues of the DR11 south production run (`dr11/south/rema/`). The blind and scan
+  notebooks compare their clusters with the production catalogue.
 - New page "DR11 blind run at CC-IN2P3": install, data download and completeness check, a run on
   part of the sky (`AREA_BOX`), the full sky, the cluster's rules, monitoring, and the
   validation on the development area.

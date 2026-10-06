@@ -16,6 +16,38 @@ paths, rules and checks.
   to the sweeps, in ``sweep/11.0-rm/`` and ``sweep/11.0-rm-mem/``; a partial run keeps them in its
   work directory.
 
+Products of the DR11 south run
+------------------------------
+
+The DR11 south run of rema 0.2.0 is on the data system, next to the sweeps, in
+``/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 38 62
+
+   * - Directory
+     - Content
+   * - ``rema_dr11_v0.2.0_ra0-240/``
+     - RA 0–240°, Dec −85° to 40° (1026 sweeps, 198 regions): ``clusters_dr11.fits``,
+       ``clusters_dr11_members.fits``, ``clusters_dr11_regions.fits``, ``clusters_dr11_qa.json``,
+       the plan ``regions.fits``, ``logs/`` and the calibration ``calib/calib.fits`` with its
+       plots
+   * - ``rema_dr11_v0.2.0_ra240-360/``
+     - RA 240–360° and the polar cap below Dec −85° (574 sweeps, 94 regions), the same files,
+       with the same calibration
+   * - ``notebooks/``
+     - what the DR11 notebooks write when run at CC-IN2P3
+
+The calibration was fitted on RA 160–180° and 190–210°, Dec −10° to 10° (1.29 M
+spectroscopic redshifts, 49,524 clusters). The two parts were run separately: within 2.33° of
+their common boundaries (RA 0° and 240° above Dec −85°, and Dec −85° between RA 0° and 240°)
+a cluster's data stop at the boundary, so its λ may be low. ``MEM_MATCH_ID`` is unique within a
+part only.
+
+The :ref:`notebooks <notebooks>` read these files by default at CC-IN2P3: the calibration of
+the run, and the merged catalogues to compare with.
+
 Install, once
 -------------
 

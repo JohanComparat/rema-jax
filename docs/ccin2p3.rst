@@ -198,6 +198,46 @@ Cluster rules
 A region of the 75 deg² test area peaked at 4–4.4 GB on a V100 (about 2.4 kB per galaxy of its
 data box); 45 GB leaves room for the densest regions.
 
+Disk space
+----------
+
+``/sps`` quotas are per group, but each user directory has its own quota:
+``spsquotalist /sps/lsst/users/$USER`` prints its use and limit (updated every 30 minutes;
+``du`` is exact but slow). The work directory of the RA 0–240° run (1026 sweeps, 198 regions)
+measured:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 25 35
+
+   * - Part
+     - Size
+     - Kept by ``clean``
+   * - ``galaxies/``, one table per sweep
+     - 50 GB (49 MB per sweep)
+     - no
+   * - ``randoms_index/``, one per randoms file
+     - 8.1 GB (2 GB per file)
+     - no
+   * - ``jax_cache/``
+     - 1.4 GB
+     - no
+   * - ``regions/NNNN/checkpoint``, while a region runs
+     - about 100 MB each
+     - deleted when the region is written
+   * - ``regions/NNNN/{clusters,footprint}.fits``
+     - 53 MB per region (10.5 GB)
+     - yes
+   * - merged catalogues
+     - about 10–15 GB
+     - yes
+
+The whole sky takes about 80 GB of galaxy tables. A run of another area or the full sky with
+the same configuration can reuse the galaxy tables and the randoms index: move ``galaxies/``
+and ``randoms_index/`` into the new ``OUTDIR`` before ``clean`` deletes them, and ``prepare``
+then ingests only the missing sweeps (tables made with another survey configuration are
+detected by their ``SURVHASH`` and ingested again).
+
 Monitoring and reruns
 ---------------------
 

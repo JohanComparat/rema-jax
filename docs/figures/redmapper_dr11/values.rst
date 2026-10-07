@@ -8,28 +8,28 @@
      - DR11 (rema)
      - Literature
    * - Area of the run [deg²]
-     - 13,141
+     - 18,491
      - SDSS DR8 10,134 (R16); DES Y1 1,437; LS DR10 grz 19,342 (K24)
    * - Median 10σ z-band depth [mag]
-     - 22.26
+     - 22.24
      - —
    * - Median z_vlim (0.2 L*, 10σ) at the clusters
-     - 0.695
+     - 0.692
      - ≈ 0.7 (K24, grz)
    * - z_vlim − ZVLIM_02 of K24 at the eRASS1 clusters
-     - +0.004
+     - +0.006
      - 0 if the depth maps agree
    * - Clusters λ ≥ 20 with z_λ < z_vlim, per deg² of the run
-     - 5.03
+     - 4.91
      - SDSS DR8 2.6, DES SV 6.8 (R16); LS DR10 5.8 for λ_norm > 16 (K24)
    * - Comoving density, λ ≥ 20, 0.15 < z < 0.55 [h³ Mpc⁻³]
-     - 1.20e-05
+     - 1.17e-05
      - ≈ 1.2 × 10⁻⁵ at z < 0.35 (R14 Fig. 18)
    * - z_λ bias, median Δz/(1+z), λ ≥ 20, z < 0.6
-     - +0.0022
+     - +0.0023
      - < 0.005 (R16 DR8); +0.0004 at 0.05–0.4 (K24)
    * - z_λ scatter, NMAD of Δz/(1+z)
-     - 0.0066
+     - 0.0067
      - 0.006–0.02 (R14); ≈ 0.01 (R16)
    * - Mean σ_zλ/(1+z)
      - 0.0066
@@ -38,16 +38,16 @@
      - 2.2%
      - ≈ 1% (R14); 1.1% (R16 DR8)
    * - 4σ outliers, ≥ 2 spectroscopic members
-     - 1.0%
+     - 0.9%
      - ≲ 0.2% (R14)
    * - Σ P(z) against N(z_spec), λ ≥ 20: χ² / bins
-     - 216 / 85
+     - 239 / 85
      - —
    * - Empirical / formal z_λ error (K24 sample)
-     - 0.92
+     - 0.93
      - ≈ 1, up to 2 at z > 0.8 (K24)
    * - ⟨P_cen⟩, λ ≥ 20
-     - 0.82
+     - 0.81
      - 0.82 predicted (R16)
    * - Well-centred fraction ρ0, eRASS1 X-ray
      - 0.63
@@ -56,7 +56,7 @@
      - 0.79
      - —
    * - Well-centred fraction ρ0, SPT-SZ
-     - 0.86
+     - 0.83
      - —
    * - Miscentring width σ1 [R_λ], eRASS1
      - 0.39
@@ -65,35 +65,35 @@
      - 78.5%
      - —
    * - Same central as SDSS DR8 redMaPPer
-     - 74.0%
+     - 73.6%
      - —
    * - λ / λ(DES Y1), median, λ_DES ≥ 20
-     - 0.90
+     - 0.89
      - 0.79 for LS DR10 λ_norm (K24)
    * - λ / λ(SDSS DR8), median, λ_SDSS ≥ 20
-     - 0.91
+     - 0.90
      - 1/(1.04 + 0.17 e^{5.4(z−0.36)}) (IC20)
    * - λ / λ_norm (K24, eRASS1 positions)
      - 1.13
      - 1.039 expected (griz vs grz, K24)
    * - λ–σ_v slope (orthogonal fit, ≥ 15 members)
-     - 2.68
+     - 2.62
      - 2.40 (K24)
    * - Recovered ACT DR6 clusters
-     - 93.3%
+     - 92.6%
      - > 95% (K24, scan mode)
    * - Recovered SPT-SZ 2500d clusters
-     - 95.6%
+     - 95.2%
      - > 95% (K24, scan mode)
    * - Recovered Planck PSZ2 clusters
-     - 88.4%
+     - 88.8%
      - > 95% (K24, scan mode)
    * - Recovered eRASS1 clusters (PCONT < 0.5)
-     - 87.3%
+     - 87.4%
      - —
    * - Recovered MCXC clusters
-     - 86.8%
+     - 87.5%
      - —
    * - λ ≥ 20 clusters with a Wen & Han (2024) counterpart
-     - 79.3%
+     - 70.8%
      - —

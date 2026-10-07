@@ -357,6 +357,22 @@ def test_batch_runs_its_regions_and_reports_failures(tmp):
     assert _task(tmp, "batch", "5").returncode == 0                     # past the end: nothing
 
 
+def test_region_and_batch_stages_run_jax_on_the_gpu(tmp):
+    # A batch task runs regions like a region task: JAX on the GPU (DEVICE=gpu, the default), not
+    # the CPU that the login-node settings select; the other stages always use the CPU.
+    (tmp / "bin" / "rema").write_text('#!/usr/bin/env bash\necho "$1 $JAX_PLATFORMS" >> "$REMA_LOG"\n')
+    jobs = tmp / "run" / "jobs"
+    jobs.mkdir(parents=True)
+    (jobs / "batches").write_text("3\n")
+    for stage, index, want in (("batch", "0", "cuda"), ("region", "4", "cuda")):
+        (tmp / "rema.log").write_text("")
+        assert _task(tmp, stage, index, JAX_PLATFORMS="cpu").returncode == 0
+        assert {line.split()[1] for line in (tmp / "rema.log").read_text().splitlines()} == {want}, stage
+    (tmp / "rema.log").write_text("")
+    assert _task(tmp, "batch", "0", JAX_PLATFORMS="cpu", DEVICE="cpu").returncode == 0
+    assert {line.split()[1] for line in (tmp / "rema.log").read_text().splitlines()} == {"cpu"}
+
+
 def test_driver_stops_when_sbatch_fails(tmp):
     (tmp / "bin" / "sbatch").write_text("#!/usr/bin/env bash\necho 'QOSMaxSubmitJobPerUserLimit' >&2\nexit 1\n")
     r, calls = _run(tmp, "prepare", NRAND="1", CHUNK="4")

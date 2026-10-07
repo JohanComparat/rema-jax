@@ -3,7 +3,9 @@
 rema rewrites the redMaPPer cluster finder as a
 JAX package. This document gives the algorithm, the places where rema differs from
 redMaPPer v0.7.7 (the `jacobic/redmapper` fork) and why, and the validation
-done so far.
+on the development area. The DR11 south production catalogue and its validation against the
+literature are on the pages "The DR11 south catalogue at CC-IN2P3" and "redMaPPer blind mode on
+DR11".
 
 ## 1. Scope
 
@@ -418,7 +420,9 @@ The calibration file holds the model, the corrections, the background and the co
     only 3–8% of the randoms around them. On the HPC, regions overlap.
   - **λ normalisation:** rema λ is 10–15% above DR10 at z < 0.7. It moved by about +7% when the
     calibration gained the third sweep's 6,000 spectroscopic redshifts. A calibration on 75 deg²
-    is noisy; the production calibration on the HPC sets the scale.
+    is noisy. With the production calibration (400 deg²), rema λ is 0.89 times DES Y1 redMaPPer,
+    0.90 times SDSS DR8 (decreasing with z as SDSS becomes shallow) and 1.13 times the λ_norm
+    of Kluge et al. (2024) (page "redMaPPer blind mode on DR11").
   - **Depth correction:** rema's catalogue reaches S/N 5 in z (5σ depth 23.4), deeper than
     m*+1.75 at z = 0.9. So SCALEVAL stays near 1 where redMaPPer's 10σ-limited counting needs
     1.1–1.6. For the ACT clusters (an SZ selection, independent of both catalogues), rema's λ at
@@ -527,8 +531,9 @@ The calibration file holds the model, the corrections, the background and the co
   That is 9× slower than the GPU for the first pass and 5× for percolation. Neighbour arrays
   are now padded to powers of 2 on CPUs instead of powers of 4, which makes CPU percolation
   1.7× faster: 17.3 against 30.1 ms per candidate on 9,915 candidates of the strip, with the
-  same clusters. That brings the run to about 45 min, and a full DR11 south run
-  (≈ 20,000 deg²) to about 200 such CPU-hours.
+  same clusters. That brings the run to about 45 min. The DR11 south production (18,500 deg²,
+  270 regions of 100 deg² with 2° buffers) took 990 task-hours on 5 CPU cores each, and about
+  1 h per region on a V100.
 - wcen centring in percolation: 839 s against 659 s with BCG for the 166,000 candidates of the
   strip (RTX 3060), so 27% more. The kernel compiles in under a second.
 - Scan mode on an RTX 3060: 4,000 positions in 72 s (18 ms each, for 191 redshift steps and two

@@ -124,7 +124,9 @@ clusters. It ran in 17 min on the CPU. ``calib_plots/`` holds ``redsequence.png`
 
    **The calibration sets the λ scale.** On 75 deg², rema's λ is 10–15% above DR10's at
    z < 0.7. It moved by 7% when a third sweep's 6,000 redshifts joined the calibration. For
-   production, calibrate on a few hundred deg² rich in spectroscopy (:doc:`hpc`).
+   production, calibrate on a few hundred deg² rich in spectroscopy (:doc:`hpc`). The DR11 south
+   production, calibrated on 400 deg², gives λ = 0.89 λ(DES Y1) and 1.13 λ_norm(Kluge et al.
+   2024) (:doc:`redmapper_dr11`).
 
 To start from a redMaPPer calibration instead, run
 ``rema calib-import pars.fit --out calib.fits``, which imports the red sequence and the zred

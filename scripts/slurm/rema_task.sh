@@ -32,7 +32,7 @@ PLAN=${PLAN:-$OUTDIR/regions.fits}
 NRAND=${NRAND:-20}
 CHUNK=${CHUNK:-20}
 DEVICE=${DEVICE:-gpu}
-[[ $STAGE == region ]] || DEVICE=cpu               # only the region runs use the GPU
+[[ $STAGE == region || $STAGE == batch ]] || DEVICE=cpu   # only the region runs use the GPU
 CFG=()
 [[ -n ${CONFIG:-} ]] && CFG=(--config "$CONFIG")
 export JAX_COMPILATION_CACHE_DIR=${JAX_COMPILATION_CACHE_DIR:-$OUTDIR/jax_cache/$DEVICE}

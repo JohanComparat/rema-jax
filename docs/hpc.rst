@@ -35,7 +35,7 @@ of `scripts/slurm/rema_task.sh`, which also runs without SLURM. The pipeline not
      - inline
      - ``rema regions``: the region plan, from the galaxy counts.
    * - region
-     - 1 + about 450
+     - 1 + about 300
      - ``rema maps --index --regions … --region-id i`` builds the region's footprint, then
        ``rema blind --galaxies galaxies/ --regions … --region-id i --specpost``. One region runs
        first to fill the shared JAX compilation cache.
@@ -151,8 +151,8 @@ Regions and boundaries
 - **Caps:** regions above ``MAX_GAL`` galaxies, or ``MAX_PAIRS`` estimated percolation pairs,
   in their data box are split.
 - **Order:** regions are numbered by decreasing cost.
-- **Size:** for DR11 south this gives about 320–450 regions. The data box of a median region
-  holds about 5 M galaxies, and the densest up to about 16 M.
+- **Size:** DR11 south at \|b\| ≥ 15° gives 292 regions. The data box of a median region holds
+  6–7 M galaxies, and the densest 13 M.
 
 **Clusters across sweeps and regions.**
 
@@ -161,7 +161,8 @@ Regions and boundaries
   therefore seen whole.
 - A cluster is kept only by the region whose *own box* contains its final centre, so the merged
   catalogue has no duplicates. ``MEM_MATCH_ID = region << 32 | rank`` is unique, and
-  ``MEM_MATCH_ID >> 32`` gives the region.
+  ``MEM_MATCH_ID >> 32`` gives the region. Runs over separate parts of the sky are combined with
+  ``PART << 40`` added (``scripts/dr11/combine_dr11.py``).
 - Members are concatenated as they are. A galaxy can be a member of clusters owned by two
   regions, as in a run over the whole sky.
 
@@ -219,9 +220,10 @@ Devices and resources
 
 Override any of these with ``REGION_CPUS``, ``REGION_MEM`` and ``REGION_TIME``.
 
-A region process peaked at 4–5 GB of memory for 1.4–2.1 M galaxies in its data box on the GPU,
-about 2.4 kB per galaxy. Check the pilot's ``PEAKRSS`` before relying on that for the densest
-regions.
+In the DR11 south production (:doc:`ccin2p3`), a region peaked at a median of 18 GB of memory
+(90% below 37 GB, 2.4–3 kB per galaxy of its data box); a region at the edge of the Galactic
+bulge, with 1.06 M candidates, reached 84 GB. Rerun such regions with ``REGION_MEM``. A region
+took about 1 h on a V100 and 4 h on its 5 CPU cores.
 
 - **Other stages:** ingest, randoms, calib and merge always run on CPUs.
 - **Throttles:** ``GPAR``, ``RPAR`` and ``BPAR`` limit the concurrent tasks of the arrays.
@@ -252,7 +254,7 @@ and the driver's bookkeeping, then use only the sweeps overlapping that area. Us
 Cost
 ----
 
-Rough figures for DR11 south:
+The DR11 south production of rema 0.2.0 (:doc:`ccin2p3`):
 
 .. list-table::
    :header-rows: 1
@@ -265,23 +267,21 @@ Rough figures for DR11 south:
    * - ingest
      - about 80
      - about 80 core-h
-     - 2.2 TB / 120 GB
+     - 2.2 TB / 80 GB
    * - randoms
-     - 20
-     - about 10 core-h, 16–24 GB each
-     - 0.46 TB / 60 GB
+     - 4
+     - 16–24 GB each
+     - 92 GB / 8 GB
    * - calib
      - 1
-     - 2–4 h on 32 cores, 64–128 GB
+     - a few hours on 32 cores, 128 GB
      - —
    * - region
-     - 320–450
-     - 150–250 GPU-h (laptop RTX 3060 class); about 1,000 task-h on 16 CPU cores
-     - about 1 TB / 60 GB
+     - 292 (270 merged)
+     - 990 task-hours, median 4 h and 18 GB per region (on CPU cores, see :doc:`ccin2p3`);
+       about 1 h per region on a V100
+     - — / 53 MB per region
    * - merge
-     - 1
-     - about 1 h
-     - — / about 15 GB (about 4 M clusters, 90 M member rows)
-
-The GPU and CPU figures are extrapolated from the 75 deg² development area, with the buffers
-doubling the processed area.
+     - 2
+     - a few minutes, 128 GB
+     - — / 14 GB (3.5 M clusters, 88 M member rows)

@@ -8,14 +8,21 @@ model, zred, richness λ, z_λ, BCG and wcen centring, percolation and redshift 
 positions (zscan), and adds the Clerc et al. (2016) velocity clipping. The kernels are batched JAX that run on CPU or GPU, λ has exact
 derivatives, and the package installs with ``pip``.
 
+**The DR11 south catalogue is done:** 3,481,608 clusters with λ ≥ 3 (145,133 with λ ≥ 20) over
+18,500 deg², on the CC-IN2P3 data system (:doc:`ccin2p3`). :doc:`redmapper_dr11` validates it in
+the figures of the redMaPPer papers.
+
 These pages are for readers who know redMaPPer, and they are hands-on: every command and code
-block has been run. Start with :doc:`tour` (mock data, two minutes on a laptop). Then follow
-:doc:`dr11` for the real data, the :ref:`notebooks <notebooks>` (a set of sweeps as one region,
-the same sweeps through the HPC pipeline, one cluster in scan mode, the figures of the production
-catalogue) and :doc:`hpc` for the full
-DR11 run. :doc:`redmapper_dr11` shows the DR11 production catalogue in the figures of the
-redMaPPer papers. :doc:`design` gives the algorithm, the deviations from redMaPPer and the
-validation.
+block has been run.
+
+- :doc:`install`, including :ref:`the notebooks at CC-IN2P3 <cc-notebooks>` on the Jupyter
+  platform https://notebook.cc.in2p3.fr;
+- :doc:`tour`: mock data, two minutes on a laptop;
+- :doc:`dr11`: the chain on three DR11 sweeps, step by step;
+- the :ref:`notebooks <notebooks>`: a set of sweeps as one region, the same sweeps through the
+  HPC pipeline, one cluster in scan mode, and the figures of the production catalogue;
+- :doc:`hpc` and :doc:`ccin2p3`: the production on an HPC, and the DR11 catalogue at CC-IN2P3;
+- :doc:`design`: the algorithm, the deviations from redMaPPer and the validation.
 
 What differs from redMaPPer
 ---------------------------
@@ -56,13 +63,19 @@ What differs from redMaPPer
 
 .. toctree::
    :maxdepth: 2
+   :caption: The DR11 south catalogue
+
+   ccin2p3
+   redmapper_dr11
+
+.. toctree::
+   :maxdepth: 2
    :caption: Hands-on
 
    install
    tour
    dr11
    hpc
-   ccin2p3
 
 .. _notebooks:
 
@@ -74,12 +87,6 @@ What differs from redMaPPer
    notebooks/pipeline_dr11
    notebooks/scan_dr11
    notebooks/redmapper_dr11
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Results
-
-   redmapper_dr11
 
 .. toctree::
    :maxdepth: 2

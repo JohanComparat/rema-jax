@@ -4,6 +4,31 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-07
+
+### Fixed
+
+- The `batch` stage of `scripts/slurm/rema_task.sh` (the region tasks grouped under a site's job
+  limit, `MAX_ARRAY`) ran JAX on the CPU: it now uses the GPU like the `region` stage. In the DR11
+  south production the batched regions took 4 h each on the 5 CPU cores of their V100 node,
+  against about 1 h on the GPU; the catalogue does not depend on the device.
+- `rema merge --glat-min`: the QA counts the members after the cut.
+
+### Added
+
+- `scripts/dr11/combine_dr11.py` and `scripts/dr11/finalize_rema.sh`, the scripts that combined
+  the two parts of the DR11 south production and moved them to the data system.
+
+### Documentation
+
+- The DR11 south catalogue is done (3,481,608 clusters, 18,500 deg²): the CC-IN2P3 page now
+  describes the products, how they were made and how to run the pipeline again; the HPC page and
+  the design notes give the measured production costs; the README and the front page lead with
+  the catalogue.
+- The setup of the notebooks on the CC-IN2P3 Jupyter platform (https://notebook.cc.in2p3.fr) is a
+  section of the Installation page, linked from the front page.
+- The redMaPPer figures page uses both parts of the run.
+
 ## [0.3.0] - 2026-10-07
 
 ### Added
@@ -37,7 +62,6 @@ All notable changes to `rema` are documented here.
   as `GLATMIN` and in the QA (`n_clusters_low_glat`). The driver passes `GLAT_MIN` to both. Near
   the Galactic plane, stellar contamination makes most seeds survive the first pass (76% instead of
   about a third) and percolation ran out of memory.
-  The QA's `n_members` also counts the members after the cut.
 - The region plan stopped on tiles that have DR11 randoms but no DR11 sweep at all (edge slivers,
   e.g. 8 tiles with 0.6 deg² of randoms between RA 0 and 240). `rema regions --sweeps DIR`, which
   the task script passes, treats tiles absent from the sweep directory and its checksum lists as

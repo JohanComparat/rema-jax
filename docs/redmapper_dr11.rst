@@ -9,18 +9,13 @@ spectroscopy, X-ray, SZ and other optical catalogues (list at the end). Each cap
 figure it reproduces. The scripts that make the figures, and a notebook built from them, are
 described under `Reproduce`_.
 
-.. note::
-
-   The figures were made on 2026-10-07 from the first part of the run (RA 0–240°, 13,141 deg²,
-   2.45 million clusters at λ ≥ 3, 48 million members with P ≥ 0.05). The second part (RA
-   240–360°) was still running; the scripts read it as soon as it is next to the first one.
-
 Catalogue and footprint
 -----------------------
 
-- **Catalogue.** ``clusters_dr11.fits`` and ``clusters_dr11_members.fits`` of the production run
-  (:doc:`ccin2p3`): blind mode with one red-sequence calibration in g, r, i, z (z-band
-  reference), clusters with λ ≥ 3 and MASKFRAC ≤ 0.2.
+- **Catalogue.** The two parts of the production run (:doc:`ccin2p3`), read with their
+  ``PART``: 3,481,608 clusters with λ ≥ 3 and MASKFRAC ≤ 0.2 over 18,491 deg², and the 69.6 M
+  members with P ≥ 0.05 or a spectroscopic redshift. Blind mode with one red-sequence
+  calibration in g, r, i, z (z-band reference).
 - **Footprint.** The DR11 randoms cut like the galaxies (mask bits, at least one exposure in g,
   r, i and z, E(B−V) < 0.2), at \|b\| ≥ 15°, inside the own boxes of the regions that finished.
   The area quoted below is the number of such randoms over their density (2500 per deg² in one
@@ -95,8 +90,8 @@ Cluster redshifts
 
    Fraction of 3σ, 4σ and 5σ outliers against z_λ (R14 Fig. 11), for λ ≥ 20 (solid) and the clean
    sample (dashed), outside the calibration area. The 4σ fraction is 1–4%, about twice that of
-   SDSS DR8 (R14, R16), and peaks near z ≈ 0.3 and 0.45. In the clean sample it is about 1%,
-   half that of the full sample.
+   SDSS DR8 (R14, R16), and peaks near z ≈ 0.3 and 0.45. In the clean sample it is below 1%,
+   less than half that of the full sample.
 
 .. figure:: figures/redmapper_dr11/zl_nz.png
    :alt: Histograms of spectroscopic and photometric cluster redshifts and of the summed P(z)
@@ -104,7 +99,7 @@ Cluster redshifts
    Redshift distribution of the clusters with λ ≥ 20 and a central spectroscopic redshift (R14
    Fig. 12): z_spec (black), z_λ (blue) and the sum of the P(z) (yellow, with the Poisson band). The
    summed P(z) follows the z_spec histogram more closely than z_λ, whose histogram has spikes
-   (e.g. at 0.38) and an excess at 0.8–0.87; the χ² of the comparison (table) is still about 2.5 per
+   (e.g. at 0.38) and an excess at 0.8–0.87; the χ² of the comparison (table) is still about 3 per
    bin, so the P(z) are somewhat too narrow or slightly biased at some redshifts.
 
 .. figure:: figures/redmapper_dr11/zl_bias_error.png
@@ -151,7 +146,7 @@ Richness
 
    λ of rema against the λ of DES Y1, SDSS DR8 and the eRASS1 λ_norm of K24 (K24 Fig. 11; DES Y3
    Fig. 3), for one-to-one matches within 1.5′ and \|Δz\|/(1+z) < 0.02 (MASKFRAC < 0.1), coloured by
-   z_λ; bottom: the ratio against z_λ. rema λ is 0.90 times DES Y1 in the median (K24 found 0.79 for
+   z_λ; bottom: the ratio against z_λ. rema λ is 0.89 times DES Y1 in the median (K24 found 0.79 for
    their DR10 λ_norm), from ≈ 1.05 at z = 0.2 to ≈ 0.85 at z = 0.6. Against SDSS the ratio drops above z = 0.3, where SDSS becomes
    too shallow, and follows the relation of Ider Chitham et al. (2020). rema λ is 13% above λ_norm
    (K24 run at the eRASS1 positions on DR10), 9% more than their griz/grz normalisation (1.039).
@@ -189,7 +184,7 @@ Depth, volume limit and abundance
 
    Area of the run with z_vlim above a given redshift (K24 Fig. 3), in total and in the
    eRASS1-DE half of the sky (Galactic longitude > 180°). The catalogue is volume limited to
-   z = 0.6 over almost the whole area and to z = 0.8 over a third of it.
+   z = 0.6 over 96% of the area, to z = 0.7 over half and to z = 0.8 over a quarter.
 
 .. figure:: figures/redmapper_dr11/density_z.png
    :alt: Cluster density per deg2 and comoving density against redshift for three richness cuts
@@ -229,10 +224,10 @@ Depth, volume limit and abundance
    density decreases by ≈ 12% from the shallowest to the deepest pixels (the DES area), the
    effect seen in the previous figures. The pixels of lowest extinction, mostly in the deep DES
    area, are 10% below the mean; the trend with seeing stays within ±5%, and the most masked
-   pixels are 7% low.
+   pixels are 8% low.
    The edge profile, relative to points spread uniformly over the own boxes (which ignore the
-   mask), rises by 8% towards the internal edges; part of the rise can come from the footprint
-   geometry (the outer edges of the survey count as region interiors).
+   mask), rises by 8% (part 0) to 13% (part 1) towards the internal edges; part of the rise can
+   come from the footprint geometry (the outer edges of the survey count as region interiors).
 
 Centring
 --------
@@ -251,7 +246,7 @@ Centring
    Offsets between the rema centre and the eRASS1 X-ray, ACT DR6 SZ and SPT-SZ centres, in units of
    R_λ, with the two-component model of R16 (Figs. 11–12; Zhang et al. 2019 Fig. 3): a fraction
    ρ0 well centred (width σ0, the positional errors) and the rest miscentred (width σ1). With
-   ACT and SPT, ρ0 = 0.79 and 0.86, within the 0.78 ± 0.11 of R16; σ1 ≈ 0.4 R_λ. The eRASS1 fit
+   ACT and SPT, ρ0 = 0.79 and 0.83, within the 0.78 ± 0.11 of R16; σ1 ≈ 0.4 R_λ. The eRASS1 fit
    gives a lower ρ0 (0.63): its positional errors are tens of arcseconds, not a fixed fraction of
    R_λ, and spread the well-centred peak into the miscentred component.
 
@@ -271,17 +266,16 @@ Comparison with SZ, X-ray and optical catalogues
    Recovery of external clusters in the footprint (K24 Fig. 10; Rozo & Rykoff 2014 Fig. 4): a
    rema cluster with λ ≥ 5 within 1 h⁻¹ Mpc and \|Δz\|/(1+z) < 0.05. Top: redshift distributions
    (lines) and recovered clusters (filled); bottom: recovered fraction against redshift and
-   mass. 93–96% of the ACT and SPT clusters are recovered at all redshifts; Planck PSZ2, MCXC and
-   eRASS1 reach 87–88%. The eRASS1 recovery drops below z = 0.1, above z = 0.7 and below
-   M500 ≈ 2 × 10¹⁴ M☉. K24 found > 95% in scan mode, where the external position and redshift are
-   given.
+   mass. 93–95% of the ACT and SPT clusters are recovered at all redshifts; Planck PSZ2, MCXC and
+   eRASS1 reach 87–89%. The eRASS1 recovery drops below z = 0.1 and above z = 0.7. K24 found
+   > 95% in scan mode, where the external position and redshift are given.
 
 .. figure:: figures/redmapper_dr11/external_zconsistency.png
    :alt: Fraction of matched external clusters with consistent redshift against lambda
 
    Fraction of ACT DR6, SPT and MCXC clusters whose rema counterpart (matched by position) has a
    consistent redshift, for tolerances 0.02–0.10 in \|Δz\|/(1+z), against λ (K24 Fig. 7). Above
-   λ = 20, 88% agree within 0.02 and 96% within 0.05; below, the counterpart is often a
+   λ = 20, 87% agree within 0.02 and 96% within 0.05; below, the counterpart is often a
    projected poor system at another redshift.
 
 .. figure:: figures/redmapper_dr11/external_mass.png
@@ -299,9 +293,9 @@ Comparison with SZ, X-ray and optical catalogues
    Cross-identification with the 1.58 million clusters of Wen & Han (2024) in the Legacy Surveys
    (their Fig. 10; Zou et al. 2021 Fig. 9). Left: fraction of rema clusters with a Wen & Han
    counterpart against λ; right: fraction of Wen & Han clusters with a rema counterpart against
-   their mass. Both reach 90–95% for rich clusters (λ ≳ 30, M500 ≳ 2 × 10¹⁴ M☉) below z = 0.7.
-   At 0.7 < z < 0.9 only 50–75% of the rema clusters have a Wen & Han counterpart, while 95% of the
-   massive Wen & Han clusters have a rema counterpart.
+   their mass. 93–97% of the Wen & Han clusters with M500 ≳ 2 × 10¹⁴ M☉ have a rema counterpart
+   at every redshift. 85–90% of the rema clusters with λ ≳ 30 have a Wen & Han counterpart below
+   z = 0.5, 80% at 0.5–0.7 and 50–60% at 0.7–0.9.
 
 Members
 -------

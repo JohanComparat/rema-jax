@@ -17,26 +17,23 @@ runs on CPU or GPU, it is differentiable (λ carries exact implicit derivatives)
 with `pip`. It needs no compiler, Spark, Java, GSL, esutil or healsparse.
 
 Status: an early public release (0.x); the interface may still change before 1.0. Implemented:
+ingestion of DR11 sweeps, footprint and depth maps from the randoms, the DR11 griz red-sequence
+calibration (`rema calibrate`), zred, backgrounds, richness, z_λ, BCG or wcen centring, blind
+mode, scan mode and spectroscopic post-processing, and SLURM drivers for the HPC.
 
-- ingestion of DR11 sweeps, and footprint and depth maps from the randoms;
-- zred, χ² and zred backgrounds, richness, z_λ, and BCG or wcen centring (redMaPPer's
-  CenteringWcenZred, calibrated by `rema calibrate`);
-- scan mode, blind mode and spectroscopic post-processing;
-- the DR11 griz red-sequence calibration (`rema calibrate`).
+**The DR11 south catalogue is done.** The blind run of rema 0.2.0 over Legacy Surveys DR11 south
+found 3,481,608 clusters with λ ≥ 3 (145,133 with λ ≥ 20) and 87.7 M members over 18,500 deg²
+(E(B−V) < 0.2, |b| ≥ 15°). It is on the CC-IN2P3 data system in
+`/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/rema_dr11_v0.2.0/`. Its z_λ scatter
+against spectroscopic redshifts is 0.0067 (1+z) below z = 0.6, and it recovers 93–95% of the ACT
+and SPT clusters in its footprint; the
+[results page](https://rema-jax.readthedocs.io/en/latest/redmapper_dr11.html) compares it with
+the redMaPPer, eROMaPPer, SZ and X-ray catalogues in 30 figures.
 
-On a 75 deg² development area (three DR11 sweeps, no footprint yet), blind mode takes 12 min
-on a laptop GPU. Against the redMaPPer DR10 catalogue at 0.1 < z < 0.7 and λ ≥ 20, rema's λ
-agrees to +4% ± 17% and z_λ to 0.001 ± 0.006, and 95% of rema's clusters are in DR10 within 3′.
-z_λ matches the clusters' spectroscopic redshifts with NMAD 0.0065, and every ACT DR5 cluster
-in the redshift range is detected. With wcen centring, the optical centres at the ACT clusters
-match the redMaPPer DR10 ones for 80% of them. With the DR11 randoms footprint (mask and depth), z_λ matches
-92 spectroscopic cluster redshifts with NMAD 0.0055. The full DR11 south run happens on an HPC, as
-SLURM arrays of about 100 deg² regions driven by `scripts/slurm/rema_dr11_blind.sh` (see the
-[HPC page](https://rema-jax.readthedocs.io/en/latest/hpc.html) of the documentation).
-
-The documentation is at [rema-jax.readthedocs.io](https://rema-jax.readthedocs.io/en/latest/): install, a
-tour on mock data, DR11 end to end, HPC production, reference, API and DR11 notebooks. Design
-and validation notes are in [the design page](https://rema-jax.readthedocs.io/en/latest/design.html).
+The documentation is at [rema-jax.readthedocs.io](https://rema-jax.readthedocs.io/en/latest/): install
+(including the CC-IN2P3 notebook platform), a tour on mock data, DR11 end to end, HPC production,
+the DR11 catalogue and its validation, reference, API and DR11 notebooks. Design and validation
+notes are in [the design page](https://rema-jax.readthedocs.io/en/latest/design.html).
 
 ## Install
 
@@ -100,83 +97,18 @@ spectroscopic post-processing adds `SPEC_Z_BOOT`, `VDISP`, `BEST_Z`, .... All se
 (`rema.config.RemaConfig`; write the defaults with
 `python -c "from rema.config import RemaConfig; print(RemaConfig().to_yaml())"`).
 
-## Running at CC-IN2P3
+## At CC-IN2P3
 
-The full DR11 south blind run on the [CC-IN2P3](https://doc.cc.in2p3.fr) SLURM cluster; the
-[CC-IN2P3 page](https://rema-jax.readthedocs.io/en/latest/ccin2p3.html) of the documentation has
-the step-by-step version (data download, a run on part of the sky, cluster rules). The
-inputs are read from `/sps/lsst/datasets/desi/legacysurveys/dr11/south`; the merged clusters
-are written to `sweep/11.0-rm/` and the members to `sweep/11.0-rm-mem/`, next to `sweep/11.0`
-and `sweep/11.0-photo-z`. `$HOME` is small: the Python environment, the caches and the work
-directory all live on `/sps`.
-
-**Once: install.**
-
-```bash
-ssh cca.in2p3.fr
-SPS=/sps/lsst/users/$USER
-git clone https://github.com/JohanComparat/rema-jax.git $HOME/software/rema-jax
-# Miniforge and the environment on /sps (several GB with the CUDA libraries)
-curl -L -o /tmp/mf.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-bash /tmp/mf.sh -b -p $SPS/miniforge3 && rm /tmp/mf.sh
-source $SPS/miniforge3/etc/profile.d/conda.sh
-conda create -y -p $SPS/envs/rema python=3.12 pip
-conda activate $SPS/envs/rema
-pip install --no-cache-dir -e "$HOME/software/rema-jax[cuda,plots]" ipykernel pyzmq   # JAX from the PyPI wheels
-# Jupyter kernel for the notebook platform (https://notebook.cc.in2p3.fr), with the CC paths;
-# sessions and troubleshooting: "Jupyter notebooks" on the CC-IN2P3 page of the documentation
-mkdir -p $SPS/rema_notebooks
-python -m ipykernel install --user --name rema --display-name rema \
-    --env LEGACYSURVEY_DIR /sps/lsst/datasets/desi/legacysurveys \
-    --env REMA_WORK $SPS/rema_notebooks \
-    --env JAX_COMPILATION_CACHE_DIR $SPS/.cache/rema/jax \
-    --env XLA_PYTHON_CLIENT_PREALLOCATE false
-```
-
-Check that the GPU nodes see the GPU (one short job):
-
-```bash
-srun -p gpu_v100 --gpus 1 -t 0-00:10 -c 4 --mem 8G -L sps \
-     python -c "import jax; print(jax.devices())"                  # [CudaDevice(id=0)]
-```
-
-**Each run.** In a fresh login shell:
-
-```bash
-source /sps/lsst/users/$USER/miniforge3/etc/profile.d/conda.sh
-conda activate /sps/lsst/users/$USER/envs/rema       # the jobs inherit this environment
-export OUTDIR=/sps/lsst/users/$USER/rema_dr11_v0.2.0  # one work directory per calibration and version
-source $HOME/software/rema-jax/scripts/slurm/ccin2p3.env
-D=$REMA/scripts/slurm
-
-# 1. ingest every sweep and index the randoms (CPU arrays on htc)
-$D/rema_dr11_blind.sh prepare
-$D/rema_dr11_blind.sh status                          # or: squeue -u $USER
-# 2. when the ingest is done, choose a calibration area among the suggested boxes ...
-rema regions --galaxies $OUTDIR/galaxies --calib-suggest 400 --config $D/dr11_south.yaml
-# ... and calibrate on it (one CPU job)
-CALIB_BOX="150 170 -5 15" $D/rema_dr11_blind.sh prepare
-# 3. check $OUTDIR/calib/plots and the header of $OUTDIR/calib/calib.fits, then run the
-#    regions (one V100 job per region) and the merge
-export CALIB=$OUTDIR/calib/calib.fits
-$D/rema_dr11_blind.sh run
-$D/rema_dr11_blind.sh status
-# 4. once the merge job is done: delete the intermediate products (galaxy tables, randoms
-#    index, JAX cache); the plan, calibration, logs and region catalogues are kept
-$D/rema_dr11_blind.sh clean
-```
-
-- `prepare` and `run` submit only what is missing or stale: after failures or timeouts, call
-  them again (in a shell set up as above, with the same `OUTDIR` and `CALIB`).
-- Parallel jobs never write the same file: one galaxy table per sweep, one index per randoms
-  file, one directory per region, one log per task. Each region task compiles into a private
-  copy of the JAX cache and deletes its checkpoint once its catalogue is written.
-- The merged products in `sweep/11.0-rm*/` have fixed names (`clusters_dr11.fits`,
-  `clusters_dr11_members.fits`): a later run overwrites them. For a test, export
-  `CLUSTERS_DIR=$OUTDIR MEMBERS_DIR=$OUTDIR` before sourcing `ccin2p3.env`.
-- `ccin2p3.env` lists every setting (partitions, `--licenses=sps`, `NRAND=4` for the four
-  randoms files on `/sps`); any of them can be exported before sourcing it. To use the H100
-  nodes: `PART_GPU=gpu_h100 REGION_CPUS=12 REGION_MEM=96G`. See the HPC page of the documentation.
+- **The catalogue:** `/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/` holds the combined
+  catalogue `rema_dr11_v0.2.0/`, the two parts of the run with their calibration and logs, and
+  the external catalogues of the results page. See the
+  [CC-IN2P3 page](https://rema-jax.readthedocs.io/en/latest/ccin2p3.html).
+- **Notebooks:** the DR11 notebooks run on the Jupyter platform https://notebook.cc.in2p3.fr with
+  a `rema` kernel registered once from an environment on `/sps`; see
+  [the notebooks at CC-IN2P3](https://rema-jax.readthedocs.io/en/latest/install.html#cc-notebooks).
+- **Running it again:** `scripts/slurm/rema_dr11_blind.sh` with `scripts/slurm/ccin2p3.env`
+  (`prepare`, `run`, `status`, `clean`); the commands are on the CC-IN2P3 page and the driver on
+  the [HPC page](https://rema-jax.readthedocs.io/en/latest/hpc.html).
 
 ## Credits
 

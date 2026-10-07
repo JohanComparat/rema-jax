@@ -122,11 +122,15 @@ bash /tmp/mf.sh -b -p $SPS/miniforge3 && rm /tmp/mf.sh
 source $SPS/miniforge3/etc/profile.d/conda.sh
 conda create -y -p $SPS/envs/rema python=3.12 pip
 conda activate $SPS/envs/rema
-pip install --no-cache-dir -e "$HOME/software/rema-jax[cuda,plots]" ipykernel   # JAX from the PyPI wheels
-# Jupyter kernel for the notebook platform, with the CC paths
+pip install --no-cache-dir -e "$HOME/software/rema-jax[cuda,plots]" ipykernel pyzmq   # JAX from the PyPI wheels
+# Jupyter kernel for the notebook platform (https://notebook.cc.in2p3.fr), with the CC paths;
+# sessions and troubleshooting: "Jupyter notebooks" on the CC-IN2P3 page of the documentation
+mkdir -p $SPS/rema_notebooks
 python -m ipykernel install --user --name rema --display-name rema \
     --env LEGACYSURVEY_DIR /sps/lsst/datasets/desi/legacysurveys \
-    --env JAX_COMPILATION_CACHE_DIR $SPS/.cache/rema/jax
+    --env REMA_WORK $SPS/rema_notebooks \
+    --env JAX_COMPILATION_CACHE_DIR $SPS/.cache/rema/jax \
+    --env XLA_PYTHON_CLIENT_PREALLOCATE false
 ```
 
 Check that the GPU nodes see the GPU (one short job):

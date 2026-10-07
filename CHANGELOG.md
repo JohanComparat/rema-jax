@@ -15,6 +15,12 @@ All notable changes to `rema` are documented here.
   list. The scripts are in `docs/figures/redmapper_dr11` (`make_all.py` runs them).
 - Notebook `docs/notebooks/redmapper_dr11.ipynb`, assembled from those scripts by
   `build_notebooks.py redmapper`; `build_notebooks.py --kernel` chooses the Jupyter kernel.
+- Documentation (CC-IN2P3): running the notebooks on the Jupyter platform
+  https://notebook.cc.in2p3.fr, with a `rema` kernel registered once with the paths of the data
+  system (`ipykernel install --env ...`), the session settings of each notebook and
+  troubleshooting. The figure scripts write to `$REMA_WORK/redmapper` like the other notebooks,
+  look for the external catalogues in `$REMA_PRODUCTS/external`, stop with a clear message when the
+  work directory is not writable, and run without `colossus` or `pandas` (their panels are left out).
 
 ### Fixed
 

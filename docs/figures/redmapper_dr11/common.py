@@ -11,11 +11,12 @@ Each ``fig_*.py`` script also runs on its own and writes its PNG figures next to
 Paths come from environment variables, with the defaults of the DR11 notebooks:
 
 REMA_PRODUCTS  the DR11 south production runs (``rema_dr11_v0.2.0_ra0-240`` and ``_ra240-360``)
-REMA_WORK      where ``prepare.py`` writes the reduced tables and maps (default
-               ``$REMA_PRODUCTS/notebooks/redmapper``)
+REMA_WORK      where the notebooks write; ``prepare.py`` writes the reduced tables and maps in
+               ``$REMA_WORK/redmapper`` (default ``$REMA_PRODUCTS/notebooks/redmapper``)
 REMA_RANDOMS   one DR11 randoms file (default ``randoms/randoms-south-1-0.fits``)
-REMA_EXTERNAL  public cluster catalogues (default ``~/data/cluster_catalogues``); a figure panel
-               whose catalogue is missing is skipped with a note
+REMA_EXTERNAL  public cluster catalogues (default ``$REMA_PRODUCTS/external`` if it exists, else
+               ``~/data/cluster_catalogues``); a figure panel whose catalogue is missing is
+               skipped with a note
 """
 
 # %% [markdown]
@@ -57,15 +58,19 @@ PRODUCTS = Path(os.environ.get("REMA_PRODUCTS", DR11 / "rema"))
 # The two parts of the production run: they meet at RA 0 and 240 deg and at Dec -85 deg.
 RUNS = [PRODUCTS / "rema_dr11_v0.2.0_ra0-240", PRODUCTS / "rema_dr11_v0.2.0_ra240-360"]
 CALIB = RUNS[0] / "calib" / "calib.fits"
-WORK = Path(os.environ.get("REMA_WORK", PRODUCTS / "notebooks" / "redmapper"))
+WORK = Path(os.environ.get("REMA_WORK", PRODUCTS / "notebooks")) / "redmapper"   # as the other notebooks
 RANDOMS = Path(os.environ.get("REMA_RANDOMS", DR11 / "randoms" / "randoms-south-1-0.fits"))
-EXTERNAL = Path(os.environ.get("REMA_EXTERNAL", Path.home() / "data" / "cluster_catalogues"))
+EXTERNAL = Path(os.environ.get("REMA_EXTERNAL", PRODUCTS / "external" if (PRODUCTS / "external").exists()
+                               else Path.home() / "data" / "cluster_catalogues"))
 # Figures are written next to the scripts when they run as scripts; the notebook shows them.
 try:
     FIGDIR = Path(__file__).resolve().parent
 except NameError:
     FIGDIR = None
-WORK.mkdir(parents=True, exist_ok=True)
+try:
+    WORK.mkdir(parents=True, exist_ok=True)
+except PermissionError:
+    raise SystemExit(f"cannot write to {WORK}: set REMA_WORK to a directory of yours") from None
 
 # %% [markdown]
 # Figure style: the palette of the other documentation figures (categorical colours in a fixed

@@ -84,6 +84,90 @@ Check that a GPU node sees its GPU (one short job):
    srun -p gpu_v100 --gpus 1 -t 0-00:10 -c 4 --mem 8G -L sps \
         python -c "import jax; print(jax.devices())"          # [CudaDevice(id=0)]
 
+.. _cc-notebooks:
+
+Jupyter notebooks (notebook.cc.in2p3.fr)
+----------------------------------------
+
+The `notebook platform <https://notebook.cc.in2p3.fr>`_ of CC-IN2P3 runs a JupyterLab session as
+an interactive SLURM job, on a CPU or a GPU node (`platform documentation
+<https://doc.cc.in2p3.fr/fr/Computing/jnps/jn-platform.html>`_). Log in with your CC-IN2P3
+account or eduGAIN. A session sees ``$HOME``, ``/pbs/throng``, ``/pbs/software`` and the ``/sps``
+spaces of your groups; the DR11 data and the products of this page are in ``/sps/lsst``, readable
+by the ``lsst`` group. The :ref:`notebooks <notebooks>` of this documentation run there in a
+``rema`` kernel: the environment of `Install, once`_, registered once as a Jupyter kernel.
+
+**Once: the kernel.** In a terminal (``ssh cca.in2p3.fr``, or File → New → Terminal in a session),
+after `Install, once`_:
+
+.. code-block:: bash
+
+   SPS=/sps/lsst/users/$USER
+   source $SPS/miniforge3/etc/profile.d/conda.sh
+   conda activate $SPS/envs/rema
+   pip install --no-cache-dir ipykernel pyzmq colossus pandas
+   mkdir -p $SPS/rema_notebooks
+   python -m ipykernel install --user --name rema --display-name rema \
+       --env LEGACYSURVEY_DIR /sps/lsst/datasets/desi/legacysurveys \
+       --env REMA_WORK $SPS/rema_notebooks \
+       --env JAX_COMPILATION_CACHE_DIR $SPS/.cache/rema/jax \
+       --env XLA_PYTHON_CLIENT_PREALLOCATE false
+   ln -s $SPS $HOME/sps                     # optional: /sps in the file browser of the platform
+
+- The platform starts a kernel through ``ipykernel`` and ``pyzmq``; ``colossus`` and ``pandas``
+  are used only by :doc:`notebooks/redmapper_dr11`.
+- ``ipykernel install --user`` writes ``~/.local/share/jupyter/kernels/rema/kernel.json``, with
+  the Python of the environment and the ``--env`` variables, so the kernel needs no login script.
+  ``REMA_WORK`` is where the notebooks write their products: the default, next to the production
+  run, is writable by its owner only. ``JAX_COMPILATION_CACHE_DIR`` keeps the compiled programs on
+  ``/sps`` between sessions (``$HOME`` is small).
+- To change a variable, run the ``ipykernel install`` line again (it replaces the kernel).
+  ``jupyter kernelspec list`` lists the kernels; ``jupyter kernelspec remove rema`` removes this one.
+- Without access to ``/sps/lsst``: install the environment in a ``/sps`` space of your group, copy
+  the products you need there, and give their location with ``--env LEGACYSURVEY_DIR`` (the DR11
+  tree) or ``--env REMA_PRODUCTS`` (the production runs only).
+- Keep the ``[cuda]`` extra of `Install, once`_ (CUDA 12 JAX wheels): the platform documentation
+  installs ``jax[cuda13]``, which does not support the V100 GPUs.
+- The rema of the PyPI release may be older than the notebooks of the repository: install the
+  clone in editable mode, as above, and update both with ``git -C $HOME/software/rema-jax pull``,
+  then restart the kernel.
+
+**Each session.** On https://notebook.cc.in2p3.fr, choose the computing group (``lsst``), the
+partition and the resources, then open the notebook from
+``software/rema-jax/docs/notebooks/`` and select the ``rema`` kernel (Kernel → Change Kernel):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 66
+
+   * - Notebook
+     - Session
+   * - ``blind_dr11``, ``pipeline_dr11``, ``scan_dr11``
+     - GPU partition (V100 or H100), 1 GPU, 5 CPUs, 32 GB. The three run in under 2 hours on a
+       V100 and need about 23 GB of memory.
+   * - ``redmapper_dr11``
+     - CPU partition, 4 CPUs, 32 GB. No GPU. The first run reduces the catalogues and one 23 GB
+       randoms file (about 15 minutes per part of the run); later runs reuse them and take a few
+       minutes.
+
+The notebooks find the sweeps, the randoms, the calibration and the production catalogues on
+``/sps`` by themselves. In a GPU session, ``import jax; jax.devices()`` returns
+``[CudaDevice(id=0)]``. The external catalogues of :doc:`redmapper_dr11` (list on that page) are
+not on ``/sps``: put them in ``$REMA_PRODUCTS/external`` or give their directory with
+``--env REMA_EXTERNAL``; without them the comparison panels are skipped.
+
+If something goes wrong:
+
+- **The kernel does not start:** ``ipykernel`` or ``pyzmq`` is missing from the environment, or
+  ``kernel.json`` points to another Python. The session log is
+  ``~/.jupyterhub/notebook_server_<job id>.log``.
+- **The session stops in the middle of a cell:** it went over its memory or time; start a new
+  session with more memory.
+- **JAX sees only the CPU:** the session was started on a CPU partition, or ``JAX_PLATFORMS=cpu``
+  is set; ``nvidia-smi`` in a terminal of the session shows the GPU.
+- **A write fails** (``cannot write to ...``): ``REMA_WORK`` is not set in the kernel.
+- End a session with File → Log Out: closing the tab leaves the job running until its time limit.
+
 The data
 --------
 

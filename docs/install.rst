@@ -38,6 +38,10 @@ From the repository, for development:
 On a machine without a GPU, replace ``jax[cuda12]`` by ``jax`` in ``environment.yml``. There is
 nothing to compile, and no Spark, Java, GSL, esutil or healsparse.
 
+At CC-IN2P3, the environment goes on ``/sps`` (:doc:`ccin2p3`, "Install, once"), and
+:ref:`cc-notebooks` registers it as a kernel of the Jupyter notebook platform
+(https://notebook.cc.in2p3.fr), with the paths of the DR11 data system.
+
 Devices and JAX settings
 ------------------------
 

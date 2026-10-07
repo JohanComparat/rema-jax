@@ -348,7 +348,8 @@ Reproduce
 ---------
 
 The figures are made by the scripts of ``docs/figures/redmapper_dr11``; they read the
-production catalogues, one DR11 randoms file and public cluster catalogues, and need no GPU:
+production catalogues, one DR11 randoms file and public cluster catalogues, and need no GPU,
+only ``colossus`` (halo mass function) and ``pandas`` (CDS tables) besides rema and matplotlib:
 
 .. code-block:: bash
 
@@ -375,11 +376,14 @@ figures inline. Paths come from environment variables (defaults in ``common.py``
        and ``rema_dr11_v0.2.0_ra240-360`` (the DR11 data system at CC-IN2P3 when ``/sps`` is
        mounted)
    * - ``REMA_WORK``
-     - ``$REMA_PRODUCTS/notebooks/redmapper``: the reduced tables, maps and ``values.json``
+     - ``$REMA_PRODUCTS/notebooks``: the reduced tables, maps and ``values.json`` go to
+       ``$REMA_WORK/redmapper``. Set it to a directory of yours when the products are not
+       (at CC-IN2P3: :ref:`cc-notebooks`)
    * - ``REMA_RANDOMS``
      - ``$LEGACYSURVEY_DIR/dr11/south/randoms/randoms-south-1-0.fits``
    * - ``REMA_EXTERNAL``
-     - ``~/data/cluster_catalogues``: the public catalogues below (a missing one is skipped)
+     - ``$REMA_PRODUCTS/external`` if it exists, else ``~/data/cluster_catalogues``: the public
+       catalogues below (a missing one is skipped)
 
 External catalogues, as downloaded on 2026-10-07:
 

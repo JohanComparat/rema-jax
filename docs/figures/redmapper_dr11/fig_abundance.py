@@ -125,10 +125,14 @@ for z in (0.6, 0.7, 0.8):
 # densities of SDSS DR8 v6.3 and DES Y1 redMaPPer (λ ≥ 20) with their published areas.
 
 # %%
-from colossus.cosmology import cosmology  # noqa: E402
-from colossus.lss import mass_function  # noqa: E402
+try:
+    from colossus.cosmology import cosmology
+    from colossus.lss import mass_function
 
-cosmology.setCosmology("rema", {"flat": True, "H0": 70.0, "Om0": 0.3, "Ob0": 0.045, "sigma8": 0.8, "ns": 0.96})
+    cosmology.setCosmology("rema", {"flat": True, "H0": 70.0, "Om0": 0.3, "Ob0": 0.045, "sigma8": 0.8, "ns": 0.96})
+except ImportError:                                  # optional: the halo curves are left out
+    mass_function = None
+    print("colossus is not installed: the halo mass function curves are left out")
 DZ = 0.05
 zedges = np.arange(0.05, 0.951, DZ)
 zc = 0.5 * (zedges[1:] + zedges[:-1])
@@ -170,7 +174,7 @@ for ref_name, area_ref, z0, z1, mk in (("sdss_dr8", LIT["R16_dr8_area"], 0.08, 0
     axes[1].plot(zc[inside], (n / area_ref / dvol)[inside], mk, ms=5, mfc="none", color=INK2,
                  label=f"{ref_name.replace('_', ' ').upper()} λ ≥ 20")
 zf = np.linspace(0.05, 0.95, 37)
-for m14, ls in ((0.7, ":"), (1.0, (0, (4, 2))), (1.3, "-.")):
+for m14, ls in ((0.7, ":"), (1.0, (0, (4, 2))), (1.3, "-.")) if mass_function is not None else ():
     lnm = np.linspace(np.log(m14 * 1e14 * H), np.log(3e15), 200)       # Msun/h
     nh = [np.trapezoid(mass_function.massFunction(np.exp(lnm), z, mdef="500c", model="tinker08",
                                                   q_out="dndlnM"), lnm) for z in zf]

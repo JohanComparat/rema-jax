@@ -347,7 +347,7 @@ for name, reader in SOURCES.items():
         continue
     try:
         cols = reader()
-    except (FileNotFoundError, OSError) as e:
+    except (FileNotFoundError, OSError, ImportError) as e:      # ImportError: pandas, for the CDS tables
         print(f"{name}: not available ({e.__class__.__name__}), skipped")
         continue
     cols = {k: np.asarray(v) for k, v in cols.items()}

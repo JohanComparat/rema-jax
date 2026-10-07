@@ -307,12 +307,11 @@ def fits_cols(path, mapping, hdu=1):
     return {k: t[v.upper()] for k, v in mapping.items()}
 
 
-ERO = Path.home() / "data" / "eromapper" / "data" / "external"
 SOURCES = {
     "sdss_dr8": lambda: read_cds(EXTERNAL / "cat_dr8.dat", {
         "RA": (29, 39), "DEC": (41, 51), "Z": (53, 58), "Z_E": (60, 65), "LAMBDA": (67, 72),
         "LAMBDA_E": (74, 78), "S": (80, 84), "ZSPEC": (86, 93), "P_CEN0": (202, 210)}),
-    "des_y1": lambda: fits_cols(Path.home() / "data" / "ACT" / "redmapper_y1a1_public_v6.4_catalog.fits", {
+    "des_y1": lambda: fits_cols(EXTERNAL / "redmapper_y1a1_public_v6.4_catalog.fits", {
         "RA": "RA", "DEC": "DEC", "Z": "Z_LAMBDA", "Z_E": "Z_LAMBDA_ERR", "LAMBDA": "LAMBDA",
         "LAMBDA_E": "LAMBDA_ERR", "S": "S", "ZSPEC": "Z_SPEC"}),
     "erass1": lambda: {**fits_cols(EXTERNAL / "erass1cl_primary_v3.2.fits", {
@@ -325,11 +324,11 @@ SOURCES = {
     "act_dr6": lambda: fits_cols(EXTERNAL / "DR6_cluster-catalog_v1.0.fits", {
         "RA": "RADeg", "DEC": "decDeg", "Z": "redshift", "M500": "M500c", "SNR": "SNR",
         "RA_OPT": "opt_RADeg", "DEC_OPT": "opt_decDeg"}),
-    "act_dr5": lambda: fits_cols(ERO / "ACT_DR5_cluster-catalog_v1.1.fits", {
+    "act_dr5": lambda: fits_cols(EXTERNAL / "ACT_DR5_cluster-catalog_v1.1.fits", {
         "RA": "ra", "DEC": "dec", "Z": "redshift", "M500": "M500cCal", "SNR": "SNR"}),
-    "spt_2500d": lambda: fits_cols(ERO / "2500d_cluster_sample_Bocquet19.fits", {
+    "spt_2500d": lambda: fits_cols(EXTERNAL / "2500d_cluster_sample_Bocquet19.fits", {
         "RA": "RA", "DEC": "DEC", "Z": "REDSHIFT", "M500": "M500", "SNR": "XI"}),
-    "mcxc": lambda: fits_cols(ERO / "mcxc.fits", {
+    "mcxc": lambda: fits_cols(EXTERNAL / "mcxc.fits", {
         "RA": "RA", "DEC": "DEC", "Z": "REDSHIFT", "M500": "MASS_500", "LX": "LX_500"}),
     "psz2": lambda: fits_cols(EXTERNAL / "HFI_PCCS_SZ-union_R2.08.fits.gz", {
         "RA": "RA", "DEC": "DEC", "Z": "REDSHIFT", "M500": "MSZ", "SNR": "SNR"}),

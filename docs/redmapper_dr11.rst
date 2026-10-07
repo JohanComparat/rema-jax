@@ -385,7 +385,8 @@ figures inline. Paths come from environment variables (defaults in ``common.py``
      - ``$REMA_PRODUCTS/external`` if it exists, else ``~/data/cluster_catalogues``: the public
        catalogues below (a missing one is skipped)
 
-External catalogues, as downloaded on 2026-10-07:
+External catalogues, as downloaded on 2026-10-07 (all in one directory, with a ``README.txt`` of
+their sources; at CC-IN2P3 in ``/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/external``):
 
 .. list-table::
    :header-rows: 1

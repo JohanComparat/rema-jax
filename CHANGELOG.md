@@ -4,6 +4,8 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-07
+
 ### Added
 
 - Documentation page "redMaPPer blind mode on DR11" (`docs/redmapper_dr11.rst`): the DR11 south
@@ -19,8 +21,9 @@ All notable changes to `rema` are documented here.
   https://notebook.cc.in2p3.fr, with a `rema` kernel registered once with the paths of the data
   system (`ipykernel install --env ...`), the session settings of each notebook and
   troubleshooting. The figure scripts write to `$REMA_WORK/redmapper` like the other notebooks,
-  look for the external catalogues in `$REMA_PRODUCTS/external`, stop with a clear message when the
-  work directory is not writable, and run without `colossus` or `pandas` (their panels are left out).
+  look for the external catalogues in `$REMA_PRODUCTS/external` (all of them in that one directory,
+  at CC-IN2P3 next to the products), stop with a clear message when the work directory is not
+  writable, and run without `colossus` or `pandas` (their panels are left out).
 
 ### Fixed
 

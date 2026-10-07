@@ -152,9 +152,11 @@ partition and the resources, then open the notebook from
 
 The notebooks find the sweeps, the randoms, the calibration and the production catalogues on
 ``/sps`` by themselves. In a GPU session, ``import jax; jax.devices()`` returns
-``[CudaDevice(id=0)]``. The external catalogues of :doc:`redmapper_dr11` (list on that page) are
-not on ``/sps``: put them in ``$REMA_PRODUCTS/external`` or give their directory with
-``--env REMA_EXTERNAL``; without them the comparison panels are skipped.
+``[CudaDevice(id=0)]``. The public cluster catalogues of the comparison figures of
+:doc:`redmapper_dr11` are next to the products, in ``$REMA_PRODUCTS/external`` (with a
+``README.txt`` of their sources), where :doc:`notebooks/redmapper_dr11` finds them. Two inputs of its
+red-sequence figure are not on ``/sps``, the spectroscopic training galaxies and the DR10 model of
+Kluge et al. (2024): those panels are left out.
 
 If something goes wrong:
 

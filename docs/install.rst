@@ -52,20 +52,23 @@ with your CC-IN2P3 account or eduGAIN. A session sees ``$HOME``, ``/pbs/throng``
 ``/sps/lsst``, readable by the ``lsst`` group.
 
 **1. Once: the environment and the kernel.** In a terminal (``ssh cca.in2p3.fr``, or File → New →
-Terminal in a session). ``$HOME`` is small, so the environment (6 GB with the CUDA libraries) and
-the caches go to ``/sps``:
+Terminal in a session). ``$HOME`` is small (20 GB), so Miniforge, its package cache, the
+environment (6 GB with the CUDA libraries) and pip's temporary files all go to ``/sps``:
 
 .. code-block:: bash
 
-   SPS=/sps/lsst/users/$USER
+   export SPS=/sps/lsst/users/$USER
    git clone https://github.com/JohanComparat/rema-jax.git $HOME/software/rema-jax
-   # Miniforge (skip if you have one; only the environment needs to be on /sps)
-   curl -L -o /tmp/mf.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-   bash /tmp/mf.sh -b -p $SPS/miniforge3 && rm /tmp/mf.sh
-   source $SPS/miniforge3/etc/profile.d/conda.sh
+   # Miniforge on /sps (0.6 GB); its package cache is then on /sps too
+   curl -sSL -o $SPS/Miniforge3.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+   bash $SPS/Miniforge3.sh -b -p $SPS/miniforge3 && rm $SPS/Miniforge3.sh
+   source $SPS/miniforge3/etc/profile.d/conda.sh     # defines the conda command in this shell
    conda create -y -p $SPS/envs/rema python=3.12 pip
    conda activate $SPS/envs/rema
-   pip install --no-cache-dir -e "$HOME/software/rema-jax[cuda,plots]" ipykernel pyzmq colossus pandas
+   mkdir -p $SPS/tmp
+   TMPDIR=$SPS/tmp pip install --no-cache-dir -e "$HOME/software/rema-jax[cuda,plots,dev,docs]" \
+       ipykernel pyzmq colossus pandas
+   rmdir $SPS/tmp
    mkdir -p $SPS/rema_notebooks
    python -m ipykernel install --user --name rema --display-name rema \
        --env LEGACYSURVEY_DIR /sps/lsst/datasets/desi/legacysurveys \
@@ -73,6 +76,40 @@ the caches go to ``/sps``:
        --env JAX_COMPILATION_CACHE_DIR $SPS/.cache/rema/jax \
        --env XLA_PYTHON_CLIENT_PREALLOCATE false
    ln -s $SPS $HOME/sps                     # optional: /sps in the file browser of the platform
+
+``[cuda]`` installs the CUDA 12 JAX wheels (CUDA 13 does not support the V100 GPUs); ``dev`` and
+``docs`` add pytest and nbclient, to run the tests and execute the notebooks.
+
+A login shell at CC-IN2P3 (``ssh``) reads ``~/.profile``, not ``~/.bashrc``, so a ``conda init``
+in ``~/.bashrc`` does not define ``conda`` there. Add these two lines to both files; ``rema-env``
+then activates the environment in any shell:
+
+.. code-block:: bash
+
+   export SPS=/sps/lsst/users/$USER
+   alias rema-env='source $SPS/miniforge3/etc/profile.d/conda.sh && conda activate $SPS/envs/rema'
+
+Check the installation with a short job on a V100: JAX must list a CUDA device, and
+``tests/test_jax_build.py`` detects a faulty JAX build. ``sbatch --wait`` returns when the job
+ends (on 2026-10-07 interactive ``srun`` steps failed to launch on the GPU nodes, while batch
+jobs ran):
+
+.. code-block:: bash
+
+   rema-env
+   python -c "import rema, jax; print(rema.__version__, jax.__version__)"
+   sbatch --wait -p gpu_v100 --gpus 1 -t 0-00:10 -c 4 --mem 8G -L sps -o $SPS/env_check.log --wrap \
+       'python -c "import jax; print(jax.devices())"; cd $HOME/software/rema-jax && JAX_PLATFORMS=cpu python -m pytest -q tests/test_jax_build.py'
+   cat $SPS/env_check.log          # [CudaDevice(id=0)] ... 1 passed
+
+**When it fails:**
+
+- ``conda: command not found``: run ``source $SPS/miniforge3/etc/profile.d/conda.sh`` (or
+  ``rema-env``) in that shell; ``$SPS`` must be set.
+- ``CondaValueError: prefix already exists``: an older environment is there; remove it with
+  ``rm -rf $SPS/envs/rema`` before ``conda create``.
+- ``Disk quota exceeded``: a cache went to ``$HOME``; keep Miniforge on ``/sps`` and pip's
+  ``--no-cache-dir`` and ``TMPDIR`` as above.
 
 **2. Each session.** On https://notebook.cc.in2p3.fr, choose the computing group (``lsst``), the
 partition and the resources below, open a notebook from ``software/rema-jax/docs/notebooks/``

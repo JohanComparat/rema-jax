@@ -103,15 +103,11 @@ agree to 8·10⁻⁴ in λ (:doc:`install`).
 Running it again
 ----------------
 
-**Once:** the environment on ``/sps``, as in :ref:`cc-notebooks` (step 1): the same environment
-serves the notebooks and the SLURM jobs. Check that a GPU node sees its GPU:
+**Once:** the environment on ``/sps``, as in :ref:`cc-notebooks` (step 1, with its check on a
+GPU node): the same environment serves the notebooks and the SLURM jobs.
 
-.. code-block:: bash
-
-   srun -p gpu_v100 --gpus 1 -t 0-00:10 -c 4 --mem 8G -L sps \
-        python -c "import jax; print(jax.devices())"          # [CudaDevice(id=0)]
-
-**Each login shell.** The jobs inherit the submitting shell's environment:
+**Each login shell.** The jobs inherit the submitting shell's environment (``rema-env``, from
+:ref:`cc-notebooks`, does the first two lines):
 
 .. code-block:: bash
 

@@ -26,6 +26,9 @@ Summary
 - **λ grows by 0.7 % for ΔΩ_m = +0.05 and by 1.2 % for Δw0 = +0.2** (median over clusters;
   d ln λ/dΩ_m = +0.05 at z ≈ 0.1 to +0.20 at z ≈ 0.9, an elasticity d ln λ/d ln D_A ≈ −0.4);
   **z_λ does not move**. The response scatters from cluster to cluster by about its own size.
+- **Running the whole finder in another cosmology changes nothing more** (tier B on the strip):
+  the same clusters, 1–2 % of them with another centre, λ shifted as at fixed centres, and counts
+  above each threshold as predicted by that shift.
 - **If m* followed the luminosity distance** (a fixed luminosity limit instead of fixed
   apparent magnitudes), the response would change sign above z ≈ 0.3 and be larger
   (d ln λ/dΩ_m ≈ −0.1 to −0.25).

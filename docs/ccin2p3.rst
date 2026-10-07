@@ -36,6 +36,11 @@ The DR11 south run of rema 0.2.0 is on the data system, next to the sweeps, in
    * - ``rema_dr11_v0.2.0_ra240-360/``
      - RA 240–360° and the polar cap below Dec −85° (574 sweeps, 94 regions), the same files,
        with the same calibration
+   * - ``rema_dr11_v0.2.0/``
+     - the two parts combined: 3.48 M clusters, 87.7 M members, with ``PART`` (0 or 1),
+       ``GLON``, ``GLAT``, ``SEAM_DIST`` (degrees to the boundary between the parts) and
+       ``FLAG_SEAM`` (``SEAM_DIST`` < 2.33°); ``MEM_MATCH_ID`` is made unique as
+       ``PART << 40 | region << 32 | rank``, in the clusters and the members
    * - ``notebooks/``
      - what the DR11 notebooks write when run at CC-IN2P3
 
@@ -152,12 +157,11 @@ partition and the resources, then open the notebook from
 
 The notebooks find the sweeps, the randoms, the calibration and the production catalogues on
 ``/sps`` by themselves. In a GPU session, ``import jax; jax.devices()`` returns
-``[CudaDevice(id=0)]``. The public cluster catalogues of the comparison figures of
-:doc:`redmapper_dr11` are next to the products, in ``$REMA_PRODUCTS/external`` (with a
-``README.txt`` of their sources), where :doc:`notebooks/redmapper_dr11` finds them, and the
-spectroscopic training galaxies of the calibration are in ``calib/plots/rs_specz.fits`` of the run.
-The DR10 red-sequence model of Kluge et al. (2024) is not public: its curves are left out of the
-red-sequence figures.
+``[CudaDevice(id=0)]``. The cluster catalogues of the comparison figures of :doc:`redmapper_dr11`
+and the DR10 red-sequence model of Kluge et al. (2024) are next to the products, in
+``$REMA_PRODUCTS/external`` (with a ``README.txt`` of their sources), where
+:doc:`notebooks/redmapper_dr11` finds them; the spectroscopic training galaxies of the calibration
+are in ``calib/plots/rs_specz.fits`` of the run.
 
 If something goes wrong:
 

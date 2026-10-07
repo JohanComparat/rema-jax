@@ -45,15 +45,21 @@ for tier in ("tierB", "tierC"):
     ax = axes[2]
     lam_edges = cmp_["lam_edges"]
     for k, c in enumerate(cosmos):
-        rr = [r for r in runs if r["cosmology"] == c and "ncum_ratio_vs_tierA" in r]
+        rr = [r for r in runs if r["cosmology"] == c and "ncum_rerun" in r]
         if not rr:
             continue
-        ratio = np.nanmedian(np.array([r["ncum_ratio_vs_tierA"] for r in rr]), axis=(0, 2))
-        ax.plot(lam_edges, ratio, "o-", color=SERIES[k % len(SERIES)], label=c)
+        nb = np.sum([np.sum(r["ncum_rerun"], axis=1) for r in rr], axis=0)
+        na = np.sum([np.sum(r["ncum_tierA"], axis=1) for r in rr], axis=0)
+        ratio = nb / np.maximum(na, 1)
+        # (the two catalogues share almost all their clusters: no independent Poisson errors)
+        ax.plot(lam_edges, ratio, "o-", color=SERIES[k % len(SERIES)], ms=4,
+                label=f"{c} ({int(na[lam_edges.index(20.0)])} with λ ≥ 20)")
         record(f"{tier}_ncum_ratio_vs_tierA_{c}", ratio.tolist())
     ax.axhline(1, color=MUTED, lw=0.6)
     ax.set_xscale("log")
-    ax.set_xlabel("λ threshold")
-    ax.set_ylabel("N(> λ) re-run / fiducial with the tier-A shift")
-    panel_label(ax, "1: the response of the re-measured clusters explains the counts")
+    ax.set_xticks(lam_edges, [f"{v:g}" for v in lam_edges])
+    ax.xaxis.set_minor_formatter(plt.NullFormatter())
+    ax.set_xlabel("λ threshold (0.1 < z_λ < 0.6)")
+    ax.set_ylabel("N(> λ): re-run / fiducial shifted by tier A")
+    ax.legend(fontsize=7)
     save(fig, f"rerun_{tier}")

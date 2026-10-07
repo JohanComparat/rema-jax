@@ -55,13 +55,16 @@ def main(argv=None):
                 shifted = np.exp(np.log(ca["LAMBDA"]) + np.asarray(delta_lnlam(resp, np.log(ca["LAMBDA"]),
                                                                              ca["Z_LAMBDA"], dth)))
                 ze = np.asarray(C.Z_EDGES)
-                ratio = np.full((len(LAM_EDGES), ze.size - 1), np.nan)
+                na = np.zeros((len(LAM_EDGES), ze.size - 1))
+                nb = np.zeros_like(na)
                 for k, lmin in enumerate(LAM_EDGES):
                     for m in range(ze.size - 1):
-                        na = np.sum((shifted >= lmin) & (ca["Z_LAMBDA"] >= ze[m]) & (ca["Z_LAMBDA"] < ze[m + 1]))
-                        nb = np.sum((cb["LAMBDA"] >= lmin) & (cb["Z_LAMBDA"] >= ze[m]) & (cb["Z_LAMBDA"] < ze[m + 1]))
-                        ratio[k, m] = nb / na if na else np.nan
+                        na[k, m] = np.sum((shifted >= lmin) & (ca["Z_LAMBDA"] >= ze[m]) & (ca["Z_LAMBDA"] < ze[m + 1]))
+                        nb[k, m] = np.sum((cb["LAMBDA"] >= lmin) & (cb["Z_LAMBDA"] >= ze[m]) & (cb["Z_LAMBDA"] < ze[m + 1]))
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    ratio = np.where(na > 0, nb / na, np.nan)
                 s["ncum_ratio_vs_tierA"] = ratio.tolist()
+                s["ncum_rerun"], s["ncum_tierA"] = nb.tolist(), na.tolist()
                 step = sum(v - getattr(CosmologyConfig(), k) for k, v in theta.items())
                 s["selection_c"] = (np.log(ratio) / step).tolist()
             out["runs"].append(s)

@@ -172,6 +172,28 @@ The ratio of N(> λ) between the re-run and the tier-A prediction (the fiducial 
 shifted by the measured response) gives the selection correction c(λ, z) of the counts model.
 ``scripts/cosmo_sens/cosmo_sens.sh`` runs the three tiers (`Reproduce`_).
 
+**Tier B on the strip** (the same 3 sweeps and own box as tier A, the production calibration, the
+blind mode run five times on the laptop GPU, 20 minutes each):
+
+.. figure:: figures/cosmology_sensitivity/rerun_tierB.png
+   :alt: Change of lambda of matched clusters, clusters lost or gained, and N(>lambda) ratios between re-runs
+
+   Blind re-runs against the fiducial re-run. Left: median change of ln λ of the clusters with
+   λ ≥ 20 matched between the runs (bars: NMAD). Middle: clusters with λ ≥ 20 without a match.
+   Right: N(> λ) of the re-run over that of the fiducial re-run with λ shifted by the tier-A
+   response (1 when the re-measurement at fixed centres explains the change of the counts; at
+   λ ≥ 60 one cluster is 20 %).
+
+- All but two of the 175 clusters with λ ≥ 20 are matched, 99 % of them by their central galaxy;
+  the two lost (w0 = −1.2) or gained (w0 = −0.8) cross λ = 20 because of the shift of λ.
+- The matched clusters move by Δ ln λ = −0.76 % and +0.73 % (Ω_m = 0.25 and 0.35), +1.35 % and
+  −1.32 % (w0 = −0.8 and −1.2): tier A gives −0.71 %, +0.66 %, +1.27 % and −1.21 %.
+- 0.6 to 2.3 % of the clusters change centre, the median member overlap
+  (Σ min(p, p′)/Σ max(p, p′)) is 0.98–0.99, z_λ does not move.
+- The counts above each λ threshold follow the tier-A shift to within the noise of the strip: the
+  seeds, the percolation order, the centring and the selection cuts add nothing measurable to the
+  response of λ, so the counts model uses no selection correction (c = 0).
+
 The counts model
 ----------------
 

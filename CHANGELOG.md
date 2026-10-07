@@ -4,6 +4,18 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Documentation page "redMaPPer blind mode on DR11" (`docs/redmapper_dr11.rst`): the DR11 south
+  production catalogue in 30 figures of the redMaPPer papers (Rykoff et al. 2014, 2016; Kluge et
+  al. 2024) and of later validations (red sequence, z_λ against spectroscopic redshifts, richness
+  against DES Y1, SDSS DR8 and eRASS1, depth and z_vlim maps, abundance, centring against X-ray
+  and SZ centres, recovery of ACT, SPT, Planck, eRASS1, MCXC and Wen & Han clusters, membership
+  against spectroscopy), with a table of numbers next to the published values and a literature
+  list. The scripts are in `docs/figures/redmapper_dr11` (`make_all.py` runs them).
+- Notebook `docs/notebooks/redmapper_dr11.ipynb`, assembled from those scripts by
+  `build_notebooks.py redmapper`; `build_notebooks.py --kernel` chooses the Jupyter kernel.
+
 ### Fixed
 
 - `rema_dr11_blind.sh status` failed with a traceback during `prepare`, before the region plan

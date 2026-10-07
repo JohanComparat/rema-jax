@@ -52,7 +52,8 @@ entirely at \|b\| < 15° were not run, and regions reaching below 15° that fail
 seeds survive the first pass, and percolation runs out of memory.
 
 The :ref:`notebooks <notebooks>` read these files by default at CC-IN2P3: the calibration of
-the run, and the merged catalogues to compare with.
+the run, and the merged catalogues to compare with. :doc:`redmapper_dr11` shows the catalogue in
+the figures of the redMaPPer papers.
 
 Install, once
 -------------

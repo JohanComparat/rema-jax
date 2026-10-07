@@ -1,12 +1,14 @@
 """Build, execute and check the DR11 notebooks of the documentation.
 
-    python docs/notebooks/build_notebooks.py [blind] [pipeline] [scan]   # write (no outputs)
-    python docs/notebooks/build_notebooks.py --execute [names]           # write and execute
-    python docs/notebooks/build_notebooks.py --check                     # check executed ones
+    python docs/notebooks/build_notebooks.py [blind] [pipeline] [scan] [redmapper]  # write (no outputs)
+    python docs/notebooks/build_notebooks.py --execute [names] [--kernel K]         # write and execute
+    python docs/notebooks/build_notebooks.py --check                                # check executed ones
 
 Execution needs the DR11 data and the ``rema`` Jupyter kernel
-(``python -m ipykernel install --user --name rema``); run it on a GPU with
-``JAX_PLATFORMS=cuda``. The order matters: ``pipeline`` compares its merged catalogue with the
+(``python -m ipykernel install --user --name rema``, or another one with ``--kernel``); run it on a
+GPU with ``JAX_PLATFORMS=cuda``. ``redmapper`` is assembled from the figure scripts of
+``docs/figures/redmapper_dr11`` (their ``# %%`` cells); it reads the production catalogues only.
+The order matters: ``pipeline`` compares its merged catalogue with the
 one-region catalogue of ``blind`` (same sweeps, same calibration). Paths come from the
 environment variables REMA_DR11_DIR (or LEGACYSURVEY_DIR), REMA_PRODUCTS, REMA_CALIB and
 REMA_WORK; without them the DR11 data system at CC-IN2P3 is used when /sps is mounted: the sweeps,
@@ -25,7 +27,7 @@ from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-ORDER = ("blind", "pipeline", "scan")
+ORDER = ("blind", "pipeline", "scan", "redmapper")
 
 
 def md(text):
@@ -1495,8 +1497,52 @@ print(positions)
 
 
 
+# --------------------------------------------------------------------------- redMaPPer figures notebook
+FIGURES = REPO / "docs" / "figures" / "redmapper_dr11"
+FIGURE_SCRIPTS = ("common", "prepare", "fig_redsequence", "fig_redshifts", "fig_richness", "fig_abundance",
+                  "fig_centering", "fig_external", "fig_members")
+
+
+def script_cells(path: Path):
+    """Cells of a percent-format script: ``# %%`` code, ``# %% [markdown]`` markdown (the leading
+    ``# `` removed); ``# %% [script-only]`` cells and the text before the first marker are left out."""
+    cells, kind, lines = [], None, []
+
+    def flush():
+        text = "\n".join(lines).strip("\n")
+        if kind == "code" and text.strip():
+            cells.append(new_code_cell(text))
+        elif kind == "markdown" and text.strip():
+            cells.append(new_markdown_cell("\n".join(ln[2:] if ln.startswith("# ") else ln.lstrip("#")
+                                                     for ln in text.splitlines())))
+
+    for line in path.read_text().splitlines():
+        if line.startswith("# %%"):
+            flush()
+            tag = line[4:].strip()
+            kind = {"": "code", "[markdown]": "markdown"}.get(tag, "skip")
+            lines = []
+        else:
+            lines.append(line)
+    flush()
+    return cells
+
+
+def redmapper_cells():
+    cells = []
+    for name in FIGURE_SCRIPTS:
+        cells += script_cells(FIGURES / f"{name}.py")
+    cells.insert(1, md(f"""
+        This notebook is assembled by `docs/notebooks/build_notebooks.py redmapper` from the scripts
+        in `docs/figures/redmapper_dr11` ({", ".join(f"`{n}.py`" for n in FIGURE_SCRIPTS)}), which also
+        write the figures of the documentation page. Run as scripts, they save PNG files; here the
+        figures are shown inline.
+        """))
+    return cells
+
+
 # --------------------------------------------------------------------------- write, run, check
-BUILDERS = {"blind": blind_cells, "pipeline": pipeline_cells, "scan": scan_cells}
+BUILDERS = {"blind": blind_cells, "pipeline": pipeline_cells, "scan": scan_cells, "redmapper": redmapper_cells}
 FORBIDDEN = ("cla" + "ude", "/tmp/")
 
 
@@ -1526,11 +1572,12 @@ def check_executed(path: Path) -> list[str]:
     return problems
 
 
-def execute(path: Path, timeout: int = -1):
+def execute(path: Path, timeout: int = -1, kernel: str = "rema"):
     from nbclient import NotebookClient
 
     nb = nbformat.read(path, as_version=4)
-    NotebookClient(nb, timeout=timeout, kernel_name="rema", resources={"metadata": {"path": str(HERE)}}).execute()
+    NotebookClient(nb, timeout=timeout, kernel_name=kernel, resources={"metadata": {"path": str(HERE)}}).execute()
+    nb.metadata["kernelspec"] = {"name": "rema", "display_name": "rema", "language": "python"}
     nbformat.write(nb, path)
 
 
@@ -1539,6 +1586,7 @@ def main(argv=None):
     p.add_argument("names", nargs="*", help=f"notebooks among {ORDER} (default all)")
     p.add_argument("--execute", action="store_true")
     p.add_argument("--check", action="store_true")
+    p.add_argument("--kernel", default="rema", help="Jupyter kernel that executes the notebooks (default rema)")
     args = p.parse_args(argv)
     unknown = set(args.names) - set(ORDER)
     if unknown:
@@ -1557,7 +1605,7 @@ def main(argv=None):
         print("wrote", path)
         if args.execute:
             t0 = time.time()
-            execute(path)
+            execute(path, kernel=args.kernel)
             print(f"executed {path.name} in {time.time() - t0:.0f} s")
     return 0
 

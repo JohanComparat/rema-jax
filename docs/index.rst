@@ -11,8 +11,10 @@ derivatives, and the package installs with ``pip``.
 These pages are for readers who know redMaPPer, and they are hands-on: every command and code
 block has been run. Start with :doc:`tour` (mock data, two minutes on a laptop). Then follow
 :doc:`dr11` for the real data, the :ref:`notebooks <notebooks>` (a set of sweeps as one region,
-the same sweeps through the HPC pipeline, one cluster in scan mode) and :doc:`hpc` for the full
-DR11 run. :doc:`design` gives the algorithm, the deviations from redMaPPer and the
+the same sweeps through the HPC pipeline, one cluster in scan mode, the figures of the production
+catalogue) and :doc:`hpc` for the full
+DR11 run. :doc:`redmapper_dr11` shows the DR11 production catalogue in the figures of the
+redMaPPer papers. :doc:`design` gives the algorithm, the deviations from redMaPPer and the
 validation.
 
 What differs from redMaPPer
@@ -71,6 +73,13 @@ What differs from redMaPPer
    notebooks/blind_dr11
    notebooks/pipeline_dr11
    notebooks/scan_dr11
+   notebooks/redmapper_dr11
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Results
+
+   redmapper_dr11
 
 .. toctree::
    :maxdepth: 2

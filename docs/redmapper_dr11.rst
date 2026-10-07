@@ -412,6 +412,8 @@ their sources; at CC-IN2P3 in ``/sps/lsst/datasets/desi/legacysurveys/dr11/south
      - ``mcxc.fits``
    * - Wen & Han (2024)
      - CDS ``J/ApJS/272/39``, ``table2.dat``
+   * - Kluge et al. (2024), DR10 south grz red-sequence model
+     - ``legacy_dr10_south_v0.3_grz_z_cal_iter1_pars.fit``
 
 Literature
 ----------

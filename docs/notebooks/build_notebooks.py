@@ -739,7 +739,7 @@ def pipeline_cells():
     c.append(md("""
     # The HPC pipeline on a set of sweeps, and the region boundaries
 
-    The full DR11 south blind run cuts the sky into about 300–450 regions of about 100 deg²,
+    The full DR11 south blind run cuts the sky into about 300 regions of about 100 deg² (292),
     one SLURM array task each (`scripts/slurm/rema_dr11_blind.sh`; see the HPC page of the
     documentation). This notebook runs the same stages, with the same task script
     (`scripts/slurm/rema_task.sh`), on the sweeps of the blind notebook, cut into one region
@@ -758,7 +758,7 @@ def pipeline_cells():
       neighbour's mask radius and seed offset, at most about 1.6° at z = 0.05.
     - Percolation chains that run beyond the buffer can still change a cluster, at second order.
 
-    Run the blind notebook first. With three sweeps the regions take about 1.5 times the
+    Run the blind notebook first. With three sweeps the regions take about 1.4 times the
     one-region time, because the buffers are read twice.
     """))
 
@@ -1129,7 +1129,7 @@ def scan_cells():
     λ and z_λ are recomputed there (LAMBDA_OPT, Z_LAMBDA_OPT). The spectroscopic
     post-processing adds the cluster redshift and velocity dispersion from the members' Z_SPEC.
     The target is the SZ cluster ACT-CL J0012.9-0857, given by its position only. The notebook
-    runs in under a minute on an RTX 3060 laptop GPU.
+    scan itself takes under a minute on a GPU; reading the randoms files takes most of the runtime.
     """))
 
     c.append(md("""
@@ -1299,9 +1299,9 @@ print(f"{zs.size} galaxies within 6′ with 0.30 < ZSPEC < 0.42: ZSPEC {zs.min()
 '''))
 
     c.append(md("""
-    z_λ at the optical centre (0.336) agrees with the spectroscopic redshift of the 14 kept
-    members (0.337 ± 0.002). ZMAX, z_λ and SPEC_Z_BOOT all lie 0.009–0.012 (1 + z) below the
-    ACT redshift, and no spectroscopic redshift within 6′ is near it: the 17 between 0.30 and
+    z_λ at the optical centre (0.338) agrees with the spectroscopic redshift of the 14 kept
+    members (0.336 ± 0.002). z_λ and SPEC_Z_BOOT lie 0.010–0.012 (1 + z) below the ACT
+    redshift (ZMAX, on the second maximum of the scan, lies 0.03 above), and no spectroscopic redshift within 6′ is near it: the 17 between 0.30 and
     0.42 span 0.327–0.341. The optical centre is 79″ (0.27 h⁻¹Mpc) from the SZ position, with
     the P_CEN printed above. Blind mode centres this cluster on its brightest member, 0.49 h⁻¹Mpc from the
     SZ position, outside the 0.4 h⁻¹Mpc search radius of scan mode (see the blind notebook).
@@ -1311,9 +1311,11 @@ print(f"{zs.size} galaxies within 6′ with 0.30 < ZSPEC < 0.42: ZSPEC {zs.min()
     ## Figures
 
     λ(z) and LNLAMLIKE(z) along the scan, and p(z) of the refined z_λ at the input position.
-    LNLAMLIKE is undefined where λ ≤ 0; those steps are left out. Both curves have a second
-    maximum near z = 0.39. λ is higher there (32.3 against 30.9), but the likelihood is higher
-    at z = 0.340 (42.5 against 41.0), which sets ZMAX.
+    LNLAMLIKE is undefined where λ ≤ 0; those steps are left out. Both curves have two
+    maxima, at z = 0.340 and 0.395. The second is slightly higher in λ (34.1 against 32.1) and in
+    the likelihood (40.0 against 39.6), so ZMAX = 0.395; the refinement of z_λ in the percolation
+    aperture, which starts from ZMAX, converges to the first (z_λ = 0.340), where the
+    spectroscopic members are.
     """))
 
     c.append(code('''

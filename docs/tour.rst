@@ -116,8 +116,10 @@ Derivatives of λ
 
 - :func:`~rema.core.richness.richness` solves Σ pmem = λ K(r_λ) inside ``jax.lax.custom_root``.
   ``jax.grad`` therefore gives the implicit derivative of λ with respect to anything the
-  filter depends on: the redshift, the red-sequence nodes, the background or the cosmology. It
-  does not differentiate through the iterations. ``richness`` is batched and jitted, so arrays
+  filter depends on: the redshift, the red-sequence nodes, the background or the distance
+  table. The cosmological parameters reach λ through that table:
+  :meth:`~rema.model.cosmo.CosmoTable.jvp` gives its derivatives, and ``rema remeasure --jvp``
+  uses them (:doc:`cosmology_sensitivity`). It does not differentiate through the iterations. ``richness`` is batched and jitted, so arrays
   are [B, K] and one compilation serves every cluster of the same shape.
 - z = 0.30 is a node of the red-sequence splines, so there λ depends only on that node's
   colours. Between nodes, the gradient spreads over the neighbouring nodes.

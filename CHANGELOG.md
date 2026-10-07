@@ -4,6 +4,34 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Cosmology sensitivity study (documentation page "Cosmology and the DR11 cluster counts"):
+  - the cosmology of a run is configurable beyond Omega_m and h (`Omega_b`, `sum_mnu`, `w0`, `wa`;
+    old configurations still load) and can be changed on the command line with
+    `--cosmology KEY=VALUE` (blind, scan, background, zred, calibrate, remeasure);
+  - `CosmoTable` is built from a ggah_mod cosmology inside a trace (`from_cosmology`), its
+    parameters are leaves (another cosmology does not recompile the kernels), and
+    `CosmoTable.jvp` gives its derivatives with respect to the cosmological parameters;
+  - `Region.with_cosmology`: the same region in another cosmology (zred recomputed; optionally
+    m* following the luminosity distance);
+  - `rema remeasure` (`rema.modes.remeasure`): the clusters of a catalogue re-measured at fixed
+    centres on a grid of cosmologies, with the catalogue's free fractions from its members table,
+    and the derivatives d ln(lambda)/d(theta) by autodiff and by finite differences;
+  - `rema.abundance`: the finder's response table, the z_vlim area map, the data vector
+    N(lambda, z), a counts model (ggah_mod Tinker et al. 2008 mass function, log-normal
+    mass-richness relation, photo-z kernel, the finder's response), Poisson and super-sample
+    covariance, the likelihood with the DES Y1 weak-lensing calibration of McClintock et al.
+    (2019), Fisher matrices, best fit and NUTS (optional extra `cosmo`: blackjax);
+  - `scripts/cosmo_sens`: the study's scripts (DR11 fit and forecast, response table, SLURM
+    driver for the re-measurements and re-runs on CC-IN2P3).
+- `mocks.mock_cluster(..., extent=)`: members out to several r_lambda.
+
+### Changed
+
+- Catalogues and calibrations carry the cosmology in their primary header (OMEGAM, HUBBLE,
+  OMEGAB, MNU, W0, WA); `rema merge` keeps the regions' configuration (it wrote none before).
+
 ## [0.3.1] - 2026-10-07
 
 ### Fixed

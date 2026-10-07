@@ -60,10 +60,10 @@ class CosmoTable:
     Attributes
     ----------
     z : grid, ``z[0] = 0``.
-    da : angular diameter distance [Mpc/h].
-    dc : comoving distance [Mpc/h].
-    ez : E(z) = H(z)/H0.
-    dvdz : comoving volume element dV/dz/dOmega [(Mpc/h)^3 / sr].
+    da_tab : angular diameter distance [Mpc/h] (lookup: :meth:`da`).
+    dc_tab : comoving distance [Mpc/h].
+    ez_tab : E(z) = H(z)/H0.
+    dvdz_tab : comoving volume element dV/dz/dOmega [(Mpc/h)^3 / sr].
     params : the parameters of :data:`PARAMS` (a leaf, so another cosmology does not change the
         tree structure).
     """

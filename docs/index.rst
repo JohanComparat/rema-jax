@@ -67,6 +67,7 @@ What differs from redMaPPer
 
    ccin2p3
    redmapper_dr11
+   cosmology_sensitivity
 
 .. toctree::
    :maxdepth: 2

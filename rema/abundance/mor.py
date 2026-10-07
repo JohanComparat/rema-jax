@@ -1,14 +1,13 @@
 """Mass-richness relation: P(ln lambda | M, z), and the DES Y1 weak-lensing calibration.
 
-The richness of a halo of mass M (M200m, h^-1 Msun) at redshift z is log-normal,
+The richness of a halo of mass M (M200m, h^-1 Msun) at redshift z is log-normal::
 
-    <ln lambda_DES | M, z> = a + b ln(M / M_piv) + c ln((1 + z) / (1 + z_piv)),
-    Var(ln lambda | M, z) = sigma_int^2 + (e^mu - 1) / e^(2 mu)   (intrinsic + Poisson, Costanzi
-                                                                   et al. 2019),
+    <ln lambda_DES | M, z> = a + b ln(M / M_piv) + c ln((1 + z) / (1 + z_piv))
+    Var(ln lambda | M, z) = sigma_int^2 + (e^mu - 1) / e^(2 mu)
 
-in the units of the DES Y1 redMaPPer catalogue, and rema's richness is
-ln lambda_rema = ln lambda_DES + ln_s0 + s1 (z - z_norm) (the normalisation measured on common
-clusters, ``INVESTIGATE.md`` item 5).
+(intrinsic and Poisson scatter, Costanzi et al. 2019), in the units of the DES Y1 redMaPPer
+catalogue, and rema's richness is ln lambda_rema = ln lambda_DES + ln_s0 + s1 (z - z_norm) (the
+normalisation measured on clusters common to the two catalogues).
 
 McClintock et al. (2019, Table 4) calibrated <M200m | lambda, z> = M0 (lambda/40)^F
 ((1+z)/1.35)^G with weak lensing on DES Y1 redMaPPer (lambda >= 20, 0.2 <= z <= 0.65):

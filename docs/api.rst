@@ -20,11 +20,16 @@ Run modes
 .. automodule:: rema.modes.specpost
    :members: process, clip_velocity_batch, bootstrap_clip
 
+.. automodule:: rema.modes.remeasure
+   :members: Centres, centres_from_catalog, MemberPfree, remeasure, remeasure_cosmologies,
+             cosmology_grid, response_jvp, response_fd, galaxies_near, write_remeasure,
+             read_remeasure
+
 Inputs and calibration
 ----------------------
 
 .. automodule:: rema.config
-   :members: RemaConfig
+   :members: RemaConfig, CosmologyConfig, parse_cosmology_overrides
 
 .. automodule:: rema.calibration
    :members: Calibration, ZlambdaCorrection
@@ -74,8 +79,43 @@ Kernels
 .. automodule:: rema.validate.mocks
    :members: mock_field, mock_cluster, concat
 
+Cluster abundance and cosmology
+-------------------------------
+
+See :doc:`cosmology_sensitivity`.
+
+.. automodule:: rema.abundance.response
+   :members: ResponseTable, delta_lnlam, delta_z, from_remeasure
+
+.. automodule:: rema.abundance.area
+   :members: ZvlimMap, zvlim_of
+
+.. automodule:: rema.abundance.data
+   :members: DataVector, build_data_vector
+
+.. automodule:: rema.abundance.mor
+   :members: MassRichness, mean_lnlam, var_lnlam, p_bins, mcclintock_lnm, mcclintock_cov
+
+.. automodule:: rema.abundance.counts
+   :members: CountsSetup, CountsModel, cosmology
+
+.. automodule:: rema.abundance.covariance
+   :members: sigma2_b_slabs, counts_covariance
+
+.. automodule:: rema.abundance.likelihood
+   :members: Likelihood, WLData
+
+.. automodule:: rema.abundance.fisher
+   :members: jacobians, fisher, constraints, shift
+
+.. automodule:: rema.abundance.sampling
+   :members: map_fit, laplace, nuts
+
 Model tables
 ------------
+
+.. automodule:: rema.model.cosmo
+   :members: CosmoTable
 
 .. automodule:: rema.model.sps
    :members: SSPGrid, Bandpass, exponential_weights, csp_fnu, ab_mag_10pc, lookback_time,

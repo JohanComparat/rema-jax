@@ -90,11 +90,25 @@ for key, val, com in (("MODE", "combined", "the two parts of the DR11 south run"
                       ("NREGION", int(sum(q["n_done"] for q in qas)), "regions merged, both parts"),
                       ("IDOFFSET", 40, "MEM_MATCH_ID = PART << 40 | region << 32 | rank"),
                       ("SEAMDIST", SEAM, "FLAG_SEAM: deg from a part boundary below this"),
-                      ("GLATMIN", 15.0, "clusters at |b| >= GLATMIN")):
+                      ("GLATMIN", 15.0, "clusters at |b| >= GLATMIN"),
+                      ("NCLUSTER", int(len(cat)), "both parts"), ("NMEMBER", int(len(mem)), "both parts")):
     ph[key] = (val, com)
+# The configuration: the parts' CONFIG HDU, else the calibration's (rema merge wrote none before 0.4).
+config = configs[0]
+if config is None:
+    with fits.open(R / PARTS[0] / "calib" / "calib.fits") as h:
+        config = h["CONFIG"].copy() if "CONFIG" in h else None
+if config is not None:
+    import yaml
+
+    text = config.data["YAML"][0]
+    cosmo = yaml.safe_load(text.decode() if isinstance(text, bytes) else str(text)).get("cosmology", {})
+    for key, name in (("OMEGAM", "Omega_m"), ("HUBBLE", "h")):
+        if name in cosmo:
+            ph[key] = (float(cosmo[name]), "cosmology of the run")
 hdus = [fits.PrimaryHDU(header=ph), fits.BinTableHDU.from_columns(ccols, name="CLUSTERS")]
-if configs[0] is not None:
-    hdus.append(configs[0])
+if config is not None:
+    hdus.append(config)
 tmp = OUT / ".clusters_dr11.fits.part"
 fits.HDUList(hdus).writeto(tmp, overwrite=True); tmp.rename(OUT / "clusters_dr11.fits")
 tmp = OUT / ".clusters_dr11_members.fits.part"

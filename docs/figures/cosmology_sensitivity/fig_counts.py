@@ -8,8 +8,8 @@ import numpy as np
 
 from common import BLUE, INK2, MUTED, ORANGE, RESULTS, SERIES, need, panel_label, plt, record, save
 
-FIT = os.environ.get("COSMO_FIT", "all_sig025")             # fit_dr11.py --tag
-FORECAST = os.environ.get("COSMO_FORECAST", "sig025_strip")  # forecast.py --tag
+FIT = os.environ.get("COSMO_FIT", "all_cc_sig025")             # fit_dr11.py --tag
+FORECAST = os.environ.get("COSMO_FORECAST", "sig025_cc")  # forecast.py --tag
 fit_path, fc_path = RESULTS / f"fit_{FIT}.json", RESULTS / f"forecast_{FORECAST}.json"
 if need(fit_path):
     fit = json.loads(fit_path.read_text())

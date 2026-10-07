@@ -6,12 +6,14 @@ import os
 
 from common import HERE, RESULTS
 
-FITS = [("all", "σ_int free"), ("all_sig025", "σ_int = 0.25")]
-FC = os.environ.get("COSMO_FORECAST", "sig025_strip")
+FITS = [("all_cc", "σ_int free"), ("all_cc_sig025", "σ_int = 0.25")]
+FC = os.environ.get("COSMO_FORECAST", "sig025_cc")
 VARIANTS = [(FC, "catalogue's (m* fixed), richness normalisation free"),
             (f"{FC}_fixednorm", "catalogue's (m* fixed), normalisation fixed"),
             (f"{FC}_mstar", "m* following D_L, normalisation free"),
-            (f"{FC}_mstar_fixednorm", "m* following D_L, normalisation fixed")]
+            (f"{FC}_mstar_fixednorm", "m* following D_L, normalisation fixed"),
+            (f"{FC}_fixedmor", "catalogue's (m* fixed), mass–richness relation fixed"),
+            (f"{FC}_mstar_fixedmor", "m* following D_L, mass–richness relation fixed")]
 lines = []
 fits = [(json.loads((RESULTS / f"fit_{t}.json").read_text()), lab) for t, lab in FITS
         if (RESULTS / f"fit_{t}.json").exists()]
@@ -34,7 +36,7 @@ if fits:
     for fit, slab in fits:
       for f in fit["fits"]:
         b, e = f["best"], f["fisher_err"]
-        name = "without the finder's response" if f["model"] == "noresp" else "with the response (strip table)"
+        name = "without the finder's response" if f["model"] == "noresp" else "with the response (six regions)"
         lines += [f"   * - {name}", f"     - {slab}",
                   f"     - {b['Omega_m']:.3f} ± {e['Omega_m']:.3f}",
                   f"     - {f['sigma8']:.3f} ± {f['sigma8_err']:.3f}",

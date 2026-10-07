@@ -18,10 +18,20 @@ if not need(*(files or [RESULTS / "tierA" / "<region>.fits"])):
 
 
 def load(paths):
+    """Clusters of several files, on the cosmologies they share (in the first file's order)."""
     cats = [read_remeasure(p) for p in paths]
-    labels = cats[0][1]
+    labels = [lab for lab in cats[0][1] if all(lab in c[1] for c in cats)]
     keys = set.intersection(*(set(c[0]) for c in cats))
-    return {k: np.concatenate([c[0][k] for c in cats]) for k in keys}, labels
+    out = {}
+    for k in keys:
+        parts = []
+        for c, labs, _ in cats:
+            a = np.asarray(c[k])
+            if a.ndim == 2 and a.shape[1] == len(labs):
+                a = a[:, [labs.index(lab) for lab in labels]]
+            parts.append(a)
+        out[k] = np.concatenate(parts)
+    return out, labels
 
 
 cat, labels = load(files)
@@ -75,6 +85,8 @@ if fd is not None:
     ax.scatter(fd[s], ad[s], s=4, color=BLUE, alpha=0.5, lw=0)
     lim = np.nanpercentile(np.r_[fd[s], ad[s]], [0.5, 99.5])
     ax.plot(lim, lim, color=INK2, lw=0.8)
+    ax.set_xlim(lim)
+    ax.set_ylim(lim)
     ax.set_xlabel("finite differences (Ω_m ± 0.01)")
     ax.set_ylabel("autodiff")
     panel_label(ax, f"d ln λ / dΩ_m at fixed z; median |Δ| = {np.nanmedian(np.abs(ad[s] - fd[s])):.4f}")
@@ -136,3 +148,28 @@ if mfiles:
         ax.legend()
         record(f"dlnlam_d{p}_mstar_median", float(np.median(dm[mg])))
     save(fig, "response_mstar")
+
+# The response against the depth: the z-band 10 sigma depth of the z_vlim map at each cluster.
+try:
+    zmap = __import__("cosmo_common").load_map()
+except SystemExit:
+    zmap = None
+if zmap is not None and "RA" in cat:
+    depth = zmap.value_at(cat["RA"], cat["DEC"], "DEPTH_Z10")
+    d = d1("Omega_m", 0.25, 0.35)
+    fig, ax = plt.subplots(figsize=(6, 3.6), constrained_layout=True)
+    dedges = np.arange(21.8, 23.21, 0.2)
+    dc = 0.5 * (dedges[1:] + dedges[:-1])
+    for (z0, z1), col in (((0.2, 0.45), BLUE), ((0.45, 0.7), ORANGE)):
+        s = good & np.isfinite(depth) & (z >= z0) & (z < z1) & (lam[:, 0] >= 20)
+        k = np.digitize(depth, dedges) - 1
+        med = [np.median(d[s & (k == i)]) if np.sum(s & (k == i)) > 20 else np.nan for i in range(dc.size)]
+        ax.plot(dc, med, "o-", color=col, label=f"{z0} < z_λ < {z1}, λ ≥ 20")
+        for i in range(dc.size):
+            if np.isfinite(med[i]):
+                record(f"dlnlam_dOm_depth{dc[i]:.1f}_z{z0}", float(med[i]))
+    ax.axvline(22.5, color=MUTED, lw=0.6)
+    ax.set_xlabel("z-band 10σ depth [mag] (DECaLS left, DES right of 22.5)")
+    ax.set_ylabel("median d ln λ / d Ω_m")
+    ax.legend()
+    save(fig, "response_depth")

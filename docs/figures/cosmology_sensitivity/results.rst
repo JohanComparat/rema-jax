@@ -18,13 +18,13 @@ the z_λ bias free; σ_int free or fixed at 0.25; errors from the Fisher matrix 
      - 0.020
      - 82.8
      - 15.8 (15 bins)
-   * - with the response (strip table)
+   * - with the response (six regions)
      - σ_int free
-     - 0.274 ± 0.034
+     - 0.271 ± 0.034
      - 0.869 ± 0.041
      - 0.020
-     - 84.9
-     - 15.6 (15 bins)
+     - 87.7
+     - 15.2 (15 bins)
    * - without the finder's response
      - σ_int = 0.25
      - 0.276 ± 0.035
@@ -32,13 +32,13 @@ the z_λ bias free; σ_int free or fixed at 0.25; errors from the Fisher matrix 
      - 0.250
      - 92.4
      - 21.4 (15 bins)
-   * - with the response (strip table)
+   * - with the response (six regions)
      - σ_int = 0.25
-     - 0.279 ± 0.035
+     - 0.276 ± 0.035
      - 0.898 ± 0.037
      - 0.250
-     - 92.1
-     - 21.8 (15 bins)
+     - 103.4
+     - 21.3 (15 bins)
 
 .. figure:: /figures/cosmology_sensitivity/counts_fit.png
    :alt: DR11 counts against redshift in five richness bins, with the best-fitting models
@@ -74,43 +74,63 @@ model without the response.
    * - catalogue's (m* fixed), richness normalisation free
      - 0.0348
      - 0.0449
-     - 0.0344
-     - -0.01, +0.01
+     - 0.0350
+     - +0.02, -0.01
+     - +0.01, -0.00
      - -0.01, +0.00
-     - +0.00, -0.00
-     - +0.01, -0.01
-     - -0.06, +0.05
-     - +0.03, -0.02
+     - -0.02, +0.01
+     - +0.01, -0.00
+     - -0.03, +0.03
    * - catalogue's (m* fixed), normalisation fixed
      - 0.0327
      - 0.0357
-     - 0.0323
-     - -0.01, +0.02
-     - -0.00, +0.01
-     - +0.00, -0.01
-     - +0.01, -0.01
-     - -0.06, +0.06
-     - +0.03, -0.03
+     - 0.0328
+     - +0.02, -0.00
+     - +0.01, -0.00
+     - -0.01, +0.00
+     - -0.02, +0.01
+     - +0.02, +0.00
+     - -0.04, +0.03
    * - m* following D_L, normalisation free
      - 0.0348
      - 0.0449
-     - 0.0329
-     - +0.19, -0.13
-     - +0.08, -0.05
-     - -0.08, +0.06
-     - -0.21, +0.15
-     - +0.25, -0.17
-     - -0.41, +0.29
+     - 0.0340
+     - -0.01, -0.00
+     - -0.00, -0.00
+     - +0.00, +0.00
+     - -0.00, +0.01
+     - +0.02, -0.01
+     - -0.04, +0.04
    * - m* following D_L, normalisation fixed
      - 0.0327
      - 0.0357
-     - 0.0315
-     - +0.21, -0.13
-     - +0.08, -0.06
-     - -0.09, +0.06
-     - -0.22, +0.16
-     - +0.27, -0.18
-     - -0.43, +0.32
+     - 0.0324
+     - +0.01, -0.00
+     - +0.01, -0.00
+     - -0.01, +0.00
+     - -0.02, +0.01
+     - +0.04, +0.00
+     - -0.06, +0.04
+   * - catalogue's (m* fixed), mass–richness relation fixed
+     - 0.0045
+     - 0.0039
+     - 0.0044
+     - -0.13, +1.06
+     - -0.05, +0.41
+     - +0.05, -0.40
+     - +0.11, -0.96
+     - -0.25, +1.91
+     - +0.26, -1.90
+   * - m* following D_L, mass–richness relation fixed
+     - 0.0045
+     - 0.0039
+     - 0.0048
+     - +0.73, -1.21
+     - +0.28, -0.49
+     - -0.26, +0.49
+     - -0.61, +1.25
+     - +1.00, -2.06
+     - -0.98, +2.59
 
 .. figure:: /figures/cosmology_sensitivity/counts_dlnN.png
    :alt: d ln N / d Omega_m in each bin, total and through the finder

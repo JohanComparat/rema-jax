@@ -37,6 +37,7 @@ All notable changes to `rema` are documented here.
   as `GLATMIN` and in the QA (`n_clusters_low_glat`). The driver passes `GLAT_MIN` to both. Near
   the Galactic plane, stellar contamination makes most seeds survive the first pass (76% instead of
   about a third) and percolation ran out of memory.
+  The QA's `n_members` also counts the members after the cut.
 - The region plan stopped on tiles that have DR11 randoms but no DR11 sweep at all (edge slivers,
   e.g. 8 tiles with 0.6 deg² of randoms between RA 0 and 240). `rema regions --sweeps DIR`, which
   the task script passes, treats tiles absent from the sweep directory and its checksum lists as

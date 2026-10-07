@@ -477,6 +477,7 @@ def test_cli_regions_status_merge_todo(tmp_path, capsys):
         "--glat-min", 70)
     qa2 = json.loads(out2.with_name("clusters_b70_qa.json").read_text())
     assert qa2["glat_min"] == 70 and qa2["n_clusters_low_glat"] == 9 and qa2["n_clusters"] == 0
+    assert qa2["n_members"] == 0                            # counted after the cut, like the file
     assert read_catalog(out2, members=False)[2]["GLATMIN"] == 70
     assert read_table(out2.with_name("clusters_b70_members.fits"), hdu="MEMBERS")["ID"].size == 0
 

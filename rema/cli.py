@@ -480,7 +480,8 @@ def cmd_merge(args):
     if args.glat_min is not None:
         cat, mem, removed = cut_glat(cat, mem, args.glat_min)
         qa.update(glat_min=args.glat_min, n_clusters_low_glat=removed,
-                  n_clusters=len(next(iter(cat.values()), [])) if cat else 0)
+                  n_clusters=len(next(iter(cat.values()), [])) if cat else 0,
+                  n_members=len(next(iter(mem.values()), [])) if mem else 0)
         extra["GLATMIN"] = args.glat_min
     out = Path(args.out)
     members_out = args.members_out or str(out.with_name(out.stem + "_members.fits"))

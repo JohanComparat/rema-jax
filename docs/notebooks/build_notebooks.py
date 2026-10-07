@@ -1185,7 +1185,7 @@ cal = Calibration.read(CALIB)
 cfg = cal.config
 
 box = Box(RA, RA, DEC, DEC).buffered(1.0)
-cosmo = CosmoTable.create(cfg.cosmology.Omega_m, cfg.cosmology.h)
+cosmo = CosmoTable.from_config(cfg.cosmology)
 rc = cfg.richness
 r_max = rc.maxrad_factor * rc.percolation.r0 * 3 ** rc.percolation.beta + cfg.centering.scan_maxrad
 z_min = cfg.scan.zrange[0]

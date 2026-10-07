@@ -363,6 +363,36 @@ def test_cli_blind(mock_run, caplog):
     np.testing.assert_allclose(cat2["Z_LAMBDA"], cat["Z_LAMBDA"])
 
 
+def test_cli_remeasure(mock_run, calibrated):
+    """Blind clusters re-measured at their centres: with the catalogue's free fractions the
+    fiducial cosmology gives the catalogue back; a larger Omega_m a larger lambda."""
+    from rema.modes import remeasure as R
+
+    d = mock_run["dir"]
+    common = ["--galaxies", d / "gal.fits", "--calib", calibrated, "--footprint", d / "fp.fits"]
+    run("blind", *common, "--box", *BOX.as_tuple(), "--out", d / "blind_fp.fits")
+    run("remeasure", *common, "--box", *BOX.as_tuple(), "--catalog", d / "blind_fp.fits",
+        "--members", d / "blind_fp.fits", "--vary", "Omega_m=0.35", "--jvp", "Omega_m", "--fd",
+        "--lambda-min", 10, "--out", d / "rem.fits")
+    cat, labels, hdr = R.read_remeasure(d / "rem.fits")
+    assert labels == ["fiducial", "Omega_m=0.35"] and hdr["PFREE"] == "members" and hdr["OMEGAM"] == 0.3
+    assert cat["LAMBDA"].shape == (cat["LAMBDA_CAT"].size, 2) and cat["LAMBDA_CAT"].size >= 1
+    np.testing.assert_allclose(cat["LAMBDA"][:, 0], cat["LAMBDA_CAT"], rtol=0.01)
+    np.testing.assert_allclose(cat["Z_LAMBDA"][:, 0], cat["Z_LAMBDA_CAT"], atol=2e-3)
+    np.testing.assert_allclose(cat["SCALEVAL"][:, 0], cat["SCALEVAL_CAT"], rtol=0.01)
+    assert np.all(cat["LAMBDA"][:, 1] > cat["LAMBDA"][:, 0])
+    assert np.all(cat["DLNLAMBDA_DOMEGA_M"] > 0)
+    np.testing.assert_allclose(cat["DLNLAMBDA_DOMEGA_M"], cat["DLNLAMBDA_DOMEGA_M_FD"], rtol=0.3, atol=0.05)
+    # Without members every neighbour is free: lambda can only grow.
+    run("remeasure", *common, "--catalog", d / "blind_fp.fits", "--fixed-z", "--lambda-min", 10,
+        "--max-clusters", 1, "--mstar-follows-cosmology", "--vary", "w0=-0.8", "--out", d / "rem1.fits")
+    cat1, labels1, hdr1 = R.read_remeasure(d / "rem1.fits")
+    assert hdr1["PFREE"] == "one" and hdr1["FIXEDZ"] and labels1 == ["fiducial", "w0=-0.8"]
+    assert cat1["LAMBDA"].shape[0] == 1
+    with pytest.raises(ValueError, match="KEY=V1"):
+        run("remeasure", *common, "--catalog", d / "blind_fp.fits", "--vary", "s8=1", "--out", d / "x.fits")
+
+
 # --------------------------------------------------------------------------- large runs
 SWEEPS = ["sweep-000m005-005p000.fits", "sweep-005m005-010p000.fits", "sweep-000m010-005m005.fits",
           "sweep-005m010-010m005.fits"]
@@ -392,7 +422,7 @@ def fake_index(index_dir, tiles, nside=16):
     (index_dir / "randoms-south-1-0.json").write_text(json.dumps({"nside_index": nside}))
 
 
-def test_cli_regions_status_merge_todo(tmp_path, capsys):
+def test_cli_regions_status_merge_todo(tmp_path, capsys, caplog):
     rng = np.random.default_rng(54)
     gal = tmp_path / "galaxies"
     per_sweep_tables(gal, rng)
@@ -440,6 +470,7 @@ def test_cli_regions_status_merge_todo(tmp_path, capsys):
     calib = tmp_path / "cal.fits"
     calib.write_bytes(b"calibration")
     rids = [int(r) for r in plan["REGION_ID"]]
+    rcfg = RemaConfig().replace(cosmology={"Omega_m": 0.28})
     for k, r in enumerate(rids[:-1]):
         own, _ = plan_boxes(plan, r, meta)
         m = 3
@@ -449,8 +480,9 @@ def test_cli_regions_status_merge_todo(tmp_path, capsys):
                "LAMBDA": np.full(m, 20.0)}
         mem = {"MEM_MATCH_ID": np.repeat(cat["MEM_MATCH_ID"], 2), "ID": np.arange(2 * m) + 100 * k,
                "PMEM": np.full(2 * m, 0.7)}
-        write_catalog(runs / f"{r:04d}" / "clusters.fits", cat, mem, None,
-                      {"PLANHASH": meta["PLANHASH"], "CALSHA1": file_sha1(calib)})
+        write_catalog(runs / f"{r:04d}" / "clusters.fits", cat, mem, rcfg,
+                      {"PLANHASH": meta["PLANHASH"], "CALSHA1": file_sha1(calib),
+                       "CFGSHA1": "a" if k == 0 else "b"})
     capsys.readouterr()
     run("status", "--plan", plan_path, "--runs", runs, "--calib", calib, "--check-version")
     lines = dict(line.split("=", 1) for line in capsys.readouterr().out.splitlines() if "=" in line
@@ -461,9 +493,13 @@ def test_cli_regions_status_merge_todo(tmp_path, capsys):
     out = tmp_path / "merged" / "clusters.fits"
     with pytest.raises(RuntimeError, match="missing"):
         cli.main(["merge", "--plan", str(plan_path), "--runs", str(runs), "--out", str(out)])
+    caplog.clear()
     run("merge", "--plan", plan_path, "--runs", runs, "--out", out, "--calib", calib, "--allow-missing")
     cat, mem, hdr = read_catalog(out)
     assert hdr["MODE"] == "merged" and hdr["NREGION"] == 3 and len(cat["RA"]) == 9 and mem == {}
+    # The regions' configuration and cosmology are kept (with a warning when they differ).
+    assert hdr["OMEGAM"] == 0.28 and cli._catalog_cfg(out) == rcfg
+    assert "made with 2 configurations" in caplog.text
     members = read_table(out.with_name("clusters_members.fits"), hdu="MEMBERS")
     assert members["ID"].size == 18
     regions = read_table(out.with_name("clusters_regions.fits"), hdu="REGIONS")
@@ -504,8 +540,12 @@ def test_cli_warnings(mock_run, calibrated, tmp_path, caplog):
     # A footprint built for another box than the data box.
     d = mock_run["dir"]
     run("background", "--galaxies", d / "gal.fits", "--calib", calibrated, "--footprint", d / "fp.fits",
-        "--box", 10.0, 10.5, -0.3, 0.3, "--out", tmp_path / "cal.fits")
+        "--box", 10.0, 10.5, -0.3, 0.3, "--cosmology", "Omega_m=0.35,w0=-0.9", "--out", tmp_path / "cal.fits")
     assert "the footprint was built for" in caplog.text
+    # --cosmology: the run's configuration, and the calibration's header.
+    assert "cosmology: Omega_m=0.35,w0=-0.9" in caplog.text
+    assert Calibration.read(tmp_path / "cal.fits").config.cosmology.w0 == -0.9
+    assert fits.getheader(tmp_path / "cal.fits")["OMEGAM"] == 0.35
     # --config for a catalogue that stores none.
     write_catalog(tmp_path / "nocfg.fits", {}, {}, None)
     RemaConfig().replace(spec={"nboot": 4}).to_yaml(tmp_path / "c.yaml")

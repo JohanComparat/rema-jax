@@ -58,20 +58,25 @@ def red_sequence_mags(rng, rs: RSModel, z, refmag: np.ndarray, scatter: bool = T
 
 def mock_cluster(rng, rs: RSModel, mstar_fn, mpc_per_deg_fn, ra0: float, dec0: float, z: float,
                  lam: float, depth5, r0: float = 1.0, beta: float = 0.2, lval: float = 0.2,
-                 dmag_faint: float = 2.5, poisson: bool = True, central_dmag: float | None = None):
+                 dmag_faint: float = 2.5, poisson: bool = True, central_dmag: float | None = None,
+                 extent: float = 1.0):
     """Members of a mock cluster: dict with RA, DEC, FLUX, FLUX_IVAR, REFMAG, REFMAG_ERR, TRUE_MAG,
     SNR and IS_CENTRAL.
 
     ``central_dmag``: if given, a central galaxy of magnitude m*(z) + central_dmag is added at
-    (ra0, dec0) (the first row), on the red sequence.
+    (ra0, dec0) (the first row), on the red sequence. ``extent``: members follow the NFW profile
+    out to ``extent`` r_lambda (lambda of them, on average, inside r_lambda); with the default 1
+    the cluster stops at r_lambda, so a larger aperture finds no more members.
     """
     mstar = float(mstar_fn(z))
     maxmag = mstar - 2.5 * np.log10(lval)
     mfaint = mstar + dmag_faint
     frac = float(prof.lumnorm(mstar, mfaint) / prof.lumnorm(mstar, maxmag))
-    n = rng.poisson(lam * frac) if poisson else int(round(lam * frac))
     rl = r0 * (lam / 100.0) ** beta
-    r = _draw_radii(rng, n, rl)
+    if extent > 1.0:
+        frac *= float(prof.nfw_enclosed(extent * rl) / prof.nfw_enclosed(rl))
+    n = rng.poisson(lam * frac) if poisson else int(round(lam * frac))
+    r = _draw_radii(rng, n, max(extent, 1.0) * rl)
     ang = rng.uniform(0, 2 * np.pi, n)
     D = float(mpc_per_deg_fn(z))
     dra = r / D * np.cos(ang) / np.cos(np.radians(dec0))

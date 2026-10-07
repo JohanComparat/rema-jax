@@ -9,13 +9,14 @@ aperture completeness.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from dataclasses import dataclass, field
 
 import jax.numpy as jnp
 import numpy as np
 
-from ..config import RemaConfig
+from ..config import CosmologyConfig, RemaConfig
 from ..core.context import FilterModel
 from ..core.maskcorr import no_footprint, radial_completeness
 from ..core.richness import Neighbors, RadialQuad
@@ -55,9 +56,10 @@ class Region:
               table_bands=None, footprint: Footprint | None = None,
               zredcorr: ZredCorrection | None = None, bkg: ChisqBkg | None = None,
               area_deg2: float | None = None, zlcorr=None, zbkg: ZredBkg | None = None,
-              wcen_params: dict | None = None) -> "Region":
+              wcen_params: dict | None = None, cosmo: CosmoTable | None = None) -> "Region":
         """Region of a galaxy table with the given model.
 
+        ``cosmo``: the distance table (default: tabulated from ``cfg.cosmology``).
         Missing zred columns and backgrounds are computed from the table. The wcen centring
         model is set up when ``wcen_params`` are calibrated (its zred background built from the
         table when ``zbkg`` is not given), with the z -> zred_uncorr mapping of ``zlcorr`` for
@@ -66,17 +68,13 @@ class Region:
         cfg = cfg or RemaConfig()
         table_bands = tuple(table_bands or cfg.survey.bands)
         band_idx = [table_bands.index(b) for b in rs.bands]
-        cosmo = CosmoTable.create(cfg.cosmology.Omega_m, cfg.cosmology.h)
+        cosmo = cosmo if cosmo is not None else CosmoTable.from_config(cfg.cosmology)
         mstar = MStar(cfg.model.mstar)
         gal = dict(gal)
         flux = np.asarray(gal["FLUX"])[:, band_idx]
         ivar = np.asarray(gal["FLUX_IVAR"])[:, band_idx]
         if "ZRED" not in gal:
-            grid = ZredGrid.create(rs, mstar, cosmo, cfg.model.zrange, cfg.model.zbin_coarse)
-            res = compute_zred(flux, ivar, grid, rs.iref, mode=cfg.model.chisq_mode,
-                               eps=cfg.survey.flux_floor, alpha=cfg.model.alpha,
-                               use_lndet=cfg.zred.use_lndet, correction=zredcorr, rs=rs)
-            gal.update(res.as_columns())
+            gal.update(_zred_columns(flux, ivar, rs, cfg, mstar, cosmo, zredcorr))
         area_fn = _area_function(gal, rs, cfg, footprint, area_deg2)
         if bkg is None:
             bkg = build_chisq_bkg(flux, ivar, gal["REFMAG"], rs, mstar, area_fn,
@@ -103,6 +101,41 @@ class Region:
         return cls(gal=gal, table_bands=table_bands, rs=rs, model=model, cfg=cfg,
                    footprint=footprint, zredcorr=zredcorr, band_idx=band_idx, zlcorr=zlcorr,
                    zbkg=zbkg, wcen=wcen, wcen_params=wcen_params)
+
+    def with_cosmology(self, cosmology: CosmologyConfig | dict | None = None, *,
+                       cosmo: CosmoTable | None = None, recompute_zred: bool = True,
+                       mstar_follows: bool = False) -> "Region":
+        """The region in another cosmology, with the same galaxies, calibration and footprint.
+
+        ``cosmology`` replaces (a dataclass) or updates (a dict) the configuration's cosmology;
+        ``cosmo`` gives the distance table directly (e.g. a table built inside a trace). zred
+        depends on the cosmology through E(z) (redMaPPer's volume factor): it is recomputed for
+        every galaxy unless ``recompute_zred`` is False. The calibration products (backgrounds,
+        corrections, wcen) are kept: they are those of the calibration's cosmology. The neighbour
+        indices and the footprint maps are shared with this region.
+
+        ``mstar_follows``: m*(z) is a table of apparent magnitudes, i.e. of this region's
+        cosmology; with True it moves by 5 log10 of the ratio of the luminosity distances, so
+        that the luminosity limit (0.2 L*) stays the same luminosity.
+        """
+        cfg = self.cfg if cosmology is None else self.cfg.replace(cosmology=cosmology)
+        cosmo = cosmo if cosmo is not None else CosmoTable.from_config(cfg.cosmology)
+        model = dataclasses.replace(self.model, cosmo=cosmo)
+        mstar = MStar(cfg.model.mstar)
+        if mstar_follows:
+            zt = np.asarray(self.model.mstar_z, np.float64)
+            old = np.maximum(np.asarray(self.model.cosmo.da(zt), np.float64), 1e-12)
+            new = np.maximum(np.asarray(cosmo.da(zt), np.float64), 1e-12)
+            mstar.m = np.asarray(self.model.mstar_m, np.float64) + 5.0 * np.log10(new / old)
+            model = dataclasses.replace(model, mstar_m=jnp.asarray(mstar.m, self.model.mstar_m.dtype))
+        gal = self.gal
+        if recompute_zred:
+            gal = dict(gal)
+            flux = np.asarray(gal["FLUX"])[:, self.band_idx]
+            ivar = np.asarray(gal["FLUX_IVAR"])[:, self.band_idx]
+            gal.update(_zred_columns(flux, ivar, self.rs, cfg, mstar, cosmo, self.zredcorr))
+        # A new instance: no host-table cache (_ht) of the old distances or m*.
+        return dataclasses.replace(self, gal=gal, cfg=cfg, model=model)
 
     def centering_method(self, method: str | None = None) -> str:
         """"bcg" or "wcen": ``method`` or cfg.centering.method; "auto" is wcen when calibrated."""
@@ -225,6 +258,16 @@ class Region:
 
     def maxmag(self, z):
         return self.mstar_np(z) - 2.5 * np.log10(self.model.lval)
+
+
+def _zred_columns(flux, ivar, rs: RSModel, cfg: RemaConfig, mstar: MStar, cosmo: CosmoTable,
+                  zredcorr: ZredCorrection | None) -> dict:
+    """ZRED, ZRED_E, ZRED_CHISQ and the uncorrected zred of galaxies (model bands)."""
+    grid = ZredGrid.create(rs, mstar, cosmo, cfg.model.zrange, cfg.model.zbin_coarse)
+    res = compute_zred(flux, ivar, grid, rs.iref, mode=cfg.model.chisq_mode,
+                       eps=cfg.survey.flux_floor, alpha=cfg.model.alpha,
+                       use_lndet=cfg.zred.use_lndet, correction=zredcorr, rs=rs)
+    return res.as_columns()
 
 
 def _area_function(gal, rs, cfg, footprint, area_deg2):

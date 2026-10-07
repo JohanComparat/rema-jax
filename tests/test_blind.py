@@ -34,6 +34,31 @@ def mock_region():
     return reg, specs
 
 
+def test_region_with_cosmology(mock_region):
+    """Another cosmology: new distances and zred, same galaxies; the fiducial gives the same lambda."""
+    reg, specs = mock_region
+    d0 = reg.mpc_per_deg_np(0.5)                       # fills the host-table cache
+    gi = np.array([int(np.argmin(np.hypot(reg.gal["RA"] - ra, reg.gal["DEC"] - dec)))
+                   for ra, dec, _, _ in specs])
+    z0 = np.array([z for _, _, z, _ in specs])
+    st, q = Stage.make(1.0, 0.2), RadialQuad.make(rmax=1.0 * 20**0.2 + 0.25)
+    same = reg.with_cosmology(recompute_zred=False)
+    assert same.gal is reg.gal and same.cfg == reg.cfg
+    a = B._run_batched(reg, gi, z0, st, q, "richness", log_every=0)
+    b = B._run_batched(same, gi, z0, st, q, "richness", log_every=0)
+    np.testing.assert_array_equal(a["LAMBDA"], b["LAMBDA"])
+    hi = reg.with_cosmology({"Omega_m": 0.35})
+    assert hi.cfg.cosmology.Omega_m == 0.35 and reg.cfg.cosmology.Omega_m == 0.3
+    assert hi.mpc_per_deg_np(0.5) < d0 == reg.mpc_per_deg_np(0.5)
+    # zred sees the cosmology through E(z), weakly.
+    dz = np.abs(hi.gal["ZRED"] - reg.gal["ZRED"])
+    assert dz.max() > 0 and np.median(dz) < 0.01
+    c = B._run_batched(hi, gi, z0, st, q, "richness", log_every=0)
+    assert np.all(c["LAMBDA"] != a["LAMBDA"]) and np.all(np.abs(np.log(c["LAMBDA"] / a["LAMBDA"])) < 0.2)
+    # R_lambda in Mpc follows lambda; the aperture in degrees grows as D_A falls.
+    np.testing.assert_allclose(c["R_LAMBDA"], (c["LAMBDA"] / 100) ** 0.2, rtol=1e-5)
+
+
 @pytest.mark.slow
 def test_batched_percolation_is_exact(mock_region):
     reg, _ = mock_region

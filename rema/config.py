@@ -58,10 +58,67 @@ class SurveyConfig:
 
 @dataclass(frozen=True)
 class CosmologyConfig:
-    """Flat LCDM; lengths are in h^-1 Mpc as in redMaPPer."""
+    """Flat w0waCDM with massive neutrinos (ggah_mod); lengths are in h^-1 Mpc as in redMaPPer.
+
+    ``Omega_m`` includes the neutrinos. The finder only sees the expansion history: D_A(z) in
+    h^-1 Mpc sets every aperture and E(z) the zred volume factor, so ``Omega_b`` has no effect and
+    ``h`` enters only through the radiation and neutrino densities. ``Omega_b`` and ``sum_mnu``
+    are ggah_mod's defaults, the values used before they were configurable.
+
+    >>> c = CosmologyConfig(Omega_m=0.25)
+    >>> c.label()
+    'Omega_m=0.25'
+    >>> c.header()["OMEGAM"], CosmologyConfig().label()
+    (0.25, 'fiducial')
+    """
 
     Omega_m: float = 0.3
     h: float = 0.7
+    Omega_b: float = 0.0493
+    sum_mnu: float = 0.06               # eV, normal hierarchy
+    w0: float = -1.0
+    wa: float = 0.0
+
+    def to_ggah(self):
+        """The ggah_mod :class:`~ggah_mod.cosmology.Cosmology` (validated)."""
+        from ggah_mod.cosmology import Cosmology
+
+        return Cosmology.create(**dataclasses.asdict(self))
+
+    def header(self) -> dict[str, float]:
+        """FITS keywords of the cosmology."""
+        return {key: float(getattr(self, name)) for name, key in _COSMO_KEYS.items()}
+
+    def label(self) -> str:
+        """The parameters that differ from the defaults, ``'fiducial'`` when none do."""
+        ref = CosmologyConfig()
+        diff = [f"{f.name}={getattr(self, f.name):g}" for f in dataclasses.fields(self)
+                if getattr(self, f.name) != getattr(ref, f.name)]
+        return ",".join(diff) or "fiducial"
+
+
+_COSMO_KEYS = {"Omega_m": "OMEGAM", "h": "HUBBLE", "Omega_b": "OMEGAB", "sum_mnu": "MNU",
+               "w0": "W0", "wa": "WA"}
+
+
+def parse_cosmology_overrides(items) -> dict[str, float]:
+    """``["Omega_m=0.25", "w0=-0.8,wa=0.1"]`` -> ``{"Omega_m": 0.25, "w0": -0.8, "wa": 0.1}``.
+
+    >>> parse_cosmology_overrides(["Omega_m=0.25", "w0=-0.8,wa=0.1"])
+    {'Omega_m': 0.25, 'w0': -0.8, 'wa': 0.1}
+    """
+    known = [f.name for f in dataclasses.fields(CosmologyConfig)]
+    out: dict[str, float] = {}
+    for item in items or ():
+        for pair in str(item).split(","):
+            if not pair.strip():
+                continue
+            key, sep, value = pair.partition("=")
+            key = key.strip()
+            if not sep or key not in known:
+                raise ValueError(f"cosmology override {pair!r}: expected KEY=VALUE with KEY in {known}")
+            out[key] = float(value)
+    return out
 
 
 @dataclass(frozen=True)

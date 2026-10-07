@@ -58,7 +58,7 @@ class FilterModel:
     @classmethod
     def create(cls, rs: RSModel, bkg: ChisqBkg, cfg: RemaConfig,
                cosmo: CosmoTable | None = None, mstar: MStar | None = None) -> "FilterModel":
-        cosmo = cosmo or CosmoTable.create(cfg.cosmology.Omega_m, cfg.cosmology.h)
+        cosmo = cosmo or CosmoTable.from_config(cfg.cosmology)
         mstar = mstar or MStar(cfg.model.mstar)
         m = cfg.model
         return cls(rs=rs, bkg=bkg, cosmo=cosmo, mstar_z=jnp.asarray(mstar.z),

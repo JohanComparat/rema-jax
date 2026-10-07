@@ -57,6 +57,18 @@ def _config_diff(a, b) -> list[str]:
     return sorted(k for k in fa.keys() | fb.keys() if fa.get(k) != fb.get(k))
 
 
+def _with_cosmology(cfg, args):
+    """``cfg`` with the ``--cosmology KEY=VALUE`` overrides of ``args`` applied."""
+    from .config import parse_cosmology_overrides
+
+    over = parse_cosmology_overrides(getattr(args, "cosmology", None))
+    if not over:
+        return cfg
+    cfg = cfg.replace(cosmology=over)
+    log.info("cosmology: %s", cfg.cosmology.label())
+    return cfg
+
+
 def _run_cfg(path, stored, source: str):
     """Configuration of a run: ``--config`` if given, else the one stored with the input (the
     calibration, or a catalogue's CONFIG HDU), else the defaults. A ``--config`` that differs from
@@ -147,7 +159,7 @@ def _region(args, need_bkg=True, rebuild_bkg=False, sky=None):
     from .sky.maps import Footprint
 
     cal = Calibration.read(args.calib)
-    cfg = _run_cfg(args.config, cal.config, "calibration")
+    cfg = _with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args)
     gal = read_galaxies(args.galaxies, sky, cfg)
     log.info("%d galaxies from %s%s", gal["ID"].size if gal else 0, args.galaxies,
              f" in {sky}" if sky is not None else "")
@@ -328,6 +340,83 @@ def cmd_blind(args):
     _write_catalog(args.out, cat, mem, cfg, hdr)
 
 
+def cmd_remeasure(args):
+    """Re-measure catalogued clusters at fixed centres in other cosmologies (tier A)."""
+    from astropy.io import fits
+
+    from .calibration import Calibration
+    from .io.legacy import read_galaxies
+    from .io.tables import read_table
+    from .model.cosmo import CosmoTable
+    from .modes import remeasure as R
+    from .modes.common import Region
+    from .pipeline import file_sha1
+    from .sky.maps import Footprint
+
+    pr = _plan_region(args)
+    sky = pr[1] if pr else _sky(args.box)
+    own = pr[0] if pr else _box(args.own)
+    cal = Calibration.read(args.calib)
+    if cal.bkg is None:
+        raise SystemExit("the calibration has no background (run `rema background`)")
+    cfg = _with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args)
+    vary = R.parse_vary(args.vary)
+    grid = R.cosmology_grid(cfg.cosmology, vary)
+    jvp = [p for p in (args.jvp or "").split(",") if p]
+    # Catalogue rows in the data box (they hold the percolation claims), centres in the own box.
+    with fits.open(args.catalog, memmap=True) as h:
+        names = set(h["CLUSTERS"].columns.names)
+    pos = read_table(args.catalog, ["RA", "DEC"], hdu="CLUSTERS")
+    rows = np.flatnonzero(sky.contains(pos["RA"], pos["DEC"])) if sky is not None else np.arange(pos["RA"].size)
+    want = [c for c in ("MEM_MATCH_ID", "SEED_ID", "ID_CENT", "RA", "DEC", "LNLIKE", *R.CAT_VALUES)
+            if c in names]
+    cat = read_table(args.catalog, want, rows=rows, hdu="CLUSTERS")
+    target = cat["LAMBDA"] >= args.lambda_min
+    if own is not None:
+        target &= own.contains(cat["RA"], cat["DEC"])
+    target = np.flatnonzero(target)
+    if args.max_clusters and target.size > args.max_clusters:
+        target = np.sort(np.random.default_rng(args.seed).choice(target, args.max_clusters, replace=False))
+    zcol = "Z_LAMBDA_RAW" if "Z_LAMBDA_RAW" in cat else "Z_LAMBDA"
+    log.info("%d clusters to re-measure (lambda >= %g) of %d in the data box; %d cosmologies",
+             target.size, args.lambda_min, rows.size, len(grid))
+    # Only the galaxies around the clusters (zred is recomputed for them in every cosmology), out to
+    # the read radius at the lowest D_A of the grid.
+    gal = read_galaxies(args.galaxies, sky, cfg)
+    st, _ = R.stage_and_quad(cfg)
+    z0 = np.maximum(cat[zcol][target] - 0.05, cfg.model.zrange[0])
+    d = np.min([np.asarray(CosmoTable.from_config(c).mpc_per_deg(z0)) for c in grid.values()], axis=0)
+    gal = R.galaxies_near(gal, cat["RA"][target], cat["DEC"][target], 1.1 * float(st.maxrad) / d)
+    log.info("%d galaxies around them", gal["ID"].size if gal else 0)
+    fp = Footprint.read(args.footprint) if args.footprint else None
+    reg = Region.build(gal, cal.rs, cfg, footprint=fp, zredcorr=cal.zredcorr, bkg=cal.bkg,
+                       zlcorr=cal.zlcorr, zbkg=cal.zbkg)
+    centres = R.centres_from_catalog(reg, cat, rows=target)
+    pfree = None
+    if args.members:
+        mm = read_table(args.members, ["MEM_MATCH_ID"], hdu="MEMBERS")["MEM_MATCH_ID"]
+        keep = np.flatnonzero(np.isin(mm, cat["MEM_MATCH_ID"]))
+        mem = read_table(args.members, ["MEM_MATCH_ID", "ID", "P", "PFREE"], rows=keep, hdu="MEMBERS")
+        pfree = R.MemberPfree(reg, cat, mem, centres)
+        log.info("free fractions from %d member rows", keep.size)
+    res = R.remeasure_cosmologies(reg, centres, grid, pfree=pfree, fixed_z=args.fixed_z,
+                                  mstar_follows=args.mstar_follows_cosmology)
+    extra = {}
+    if jvp:
+        zfid = res[next(iter(res))]["Z_LAMBDA_RAW"].astype(np.float64)
+        extra.update(R.response_jvp(reg, centres, jvp, z=np.where(zfid > 0, zfid, centres.z0), pfree=pfree))
+        if args.fd:
+            extra.update(R.response_fd(reg, centres, {p: R.FD_STEPS[p] for p in jvp}, pfree=pfree))
+    hdr = {"CALSHA1": file_sha1(args.calib), "CATALOG": Path(args.catalog).name[:60],
+           "PFREE": "members" if pfree is not None else "one", "FIXEDZ": bool(args.fixed_z),
+           "MSTARFOL": bool(args.mstar_follows_cosmology), "LAMMIN": args.lambda_min,
+           "NCOSMO": len(grid), **cfg.cosmology.header()}
+    if pr is not None:
+        hdr["REGION"] = args.region_id
+    R.write_remeasure(args.out, cat, centres, res, grid, extra, hdr)
+    log.info("wrote %s (%d clusters x %d cosmologies)", args.out, centres.size, len(grid))
+
+
 def cmd_specpost(args):
     from .io.tables import read_table
     from .modes import specpost
@@ -472,10 +561,15 @@ def cmd_merge(args):
     import json
 
     from .io.tables import write_table
-    from .pipeline import cut_glat, edge_profile, merge_regions, read_plan
+    from .pipeline import cut_glat, edge_profile, merge_regions, read_plan, region_path
 
     cat, mem, regions, qa = merge_regions(args.plan, args.runs, allow_missing=args.allow_missing,
                                           calib=args.calib)
+    # The merged catalogue keeps the configuration of the regions (the first one's).
+    cfg = _catalog_cfg(region_path(args.runs, regions["REGION_ID"][0])) if len(regions["REGION_ID"]) else None
+    if len(qa["configs"]) > 1:
+        log.warning("the regions were made with %d configurations (%s); the merged catalogue keeps "
+                    "the first region's", len(qa["configs"]), ", ".join(qa["configs"]))
     extra = {"MODE": "merged", "NREGION": qa["n_done"]}
     if args.glat_min is not None:
         cat, mem, removed = cut_glat(cat, mem, args.glat_min)
@@ -485,7 +579,7 @@ def cmd_merge(args):
         extra["GLATMIN"] = args.glat_min
     out = Path(args.out)
     members_out = args.members_out or str(out.with_name(out.stem + "_members.fits"))
-    _write_catalog(out, cat, mem, None, extra, members_path=members_out)
+    _write_catalog(out, cat, mem, cfg, extra, members_path=members_out)
     write_table(out.with_name(out.stem + "_regions.fits"), regions, extname="REGIONS")
     if cat:
         plan, meta = read_plan(args.plan)
@@ -513,6 +607,9 @@ def build_parser() -> argparse.ArgumentParser:
             sp.add_argument("--calib", required=True, help="calibration file")
         if footprint:
             sp.add_argument("--footprint", help="footprint map from `rema maps`")
+        sp.add_argument("--cosmology", action="append", metavar="KEY=VALUE",
+                        help="override a cosmological parameter of the configuration (Omega_m, h, "
+                             "Omega_b, sum_mnu, w0, wa); repeat, or separate with commas")
 
     def centering(sp):
         sp.add_argument("--centering", choices=("auto", "bcg", "wcen"),
@@ -602,6 +699,30 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--specpost", action="store_true")
     s.add_argument("--out", required=True)
     s.set_defaults(func=cmd_blind)
+
+    s = sub.add_parser("remeasure", help="re-measure catalogued clusters at fixed centres in other "
+                                         "cosmologies (cosmology sensitivity)")
+    common(s)
+    boxes(s)
+    plan(s)
+    s.add_argument("--catalog", required=True, help="cluster catalogue (CLUSTERS HDU)")
+    s.add_argument("--members", help="its members table: neighbours keep the catalogue's free "
+                   "fractions (default: every neighbour free)")
+    s.add_argument("--own", nargs=4, metavar=("RA0", "RA1", "DEC0", "DEC1"),
+                   help="re-measure the clusters centred in this box (default with --regions: its own box)")
+    s.add_argument("--vary", action="append", metavar="KEY=V1,V2",
+                   help="one-at-a-time values of a cosmological parameter (repeat for others)")
+    s.add_argument("--jvp", metavar="P1,P2", help="also d ln(lambda)/dP by autodiff at fixed z")
+    s.add_argument("--fd", action="store_true", help="and by central differences (with --jvp)")
+    s.add_argument("--fixed-z", action="store_true", help="lambda at the catalogue's raw z_lambda "
+                   "(no z_lambda iteration)")
+    s.add_argument("--mstar-follows-cosmology", action="store_true",
+                   help="m*(z) moves with the luminosity distance (fixed luminosity limit)")
+    s.add_argument("--lambda-min", type=float, default=5.0)
+    s.add_argument("--max-clusters", type=int, help="a random subset of this size")
+    s.add_argument("--seed", type=int, default=1)
+    s.add_argument("--out", required=True)
+    s.set_defaults(func=cmd_remeasure)
 
     s = sub.add_parser("specpost", help="spectroscopic post-processing of a catalogue")
     s.add_argument("catalog")

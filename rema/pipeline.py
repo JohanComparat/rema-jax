@@ -268,7 +268,7 @@ def required_buffer(cfg: RemaConfig, lam: float = 100.0, z: float | None = None)
 
     rc, pc = cfg.richness.percolation, cfg.percolation
     z = cfg.model.zrange[0] if z is None else z
-    cosmo = CosmoTable.create(cfg.cosmology.Omega_m, cfg.cosmology.h)
+    cosmo = CosmoTable.from_config(cfg.cosmology)
     deg = lambda r, zz: float(r / float(cosmo.mpc_per_deg(max(zz, cfg.model.zrange[0]))))
     maxrad = cfg.richness.maxrad_factor * rc.r0 * 3.0**rc.beta
     lam2 = 2.0 * lam

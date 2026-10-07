@@ -30,13 +30,14 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
+from dataclasses import dataclass
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 from ..core.centering import as_centering, center_bcg, center_wcen, lncglike, w_column
-from ..core.richness import RadialQuad, Stage, richness
+from ..core.richness import Neighbors, RadialQuad, Stage, richness
 from ..core.zlambda import ZLambda, zlambda
 from ..sky.neighbors import radec_from_unit, unit_vectors
 from ..sky.regions import Box
@@ -81,15 +82,33 @@ def _pad_batch(arrs, B):
     return [np.concatenate([a, np.repeat(a[:1], B - n, axis=0)]) for a in arrs], n
 
 
-def _run_batched(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, quad: RadialQuad,
-                 kind: str, batch: int = 1024, log_every: int = 20, budget: int | None = None,
-                 calc_err: bool = True):
-    """Per-seed stage over galaxies ``gi`` centred on themselves, starting at ``z0``.
+@dataclass
+class _Batch:
+    """Device inputs of one sub-batch of seeds (see :func:`_iter_batches`)."""
 
-    kind = "zlambda" (first pass; Z_LAMBDA_E only with ``calc_err``) or "richness" (likelihood
-    pass). Seeds are processed in
-    redshift order; each query of ``batch`` seeds is split into sub-batches of B seeds with
-    B x K <= ``budget`` (B a power of two), so device memory stays bounded.
+    rows: np.ndarray          # positions of the seeds in ``gi``; the first ``n`` are real
+    n: int
+    nb: Neighbors
+    frad: jnp.ndarray
+    fgeo: jnp.ndarray
+    z: np.ndarray             # [B] float64, the seeds' redshifts (padded)
+    ids: np.ndarray           # [B] galaxy IDs of the seeds (padded)
+    K: int
+    B: int
+    outer: int                # index of the query batch, and seeds queried so far
+    done: int
+    last: bool                # last sub-batch of its query batch
+
+
+def _iter_batches(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, quad: RadialQuad,
+                  kind: str, batch: int = 1024, budget: int | None = None, pfree_nb=None):
+    """Padded neighbours and aperture completeness of seeds ``gi`` centred on themselves.
+
+    Seeds are processed in redshift order; each query of ``batch`` seeds is split into
+    sub-batches of B seeds with B x K <= ``budget`` (B a power of two), so device memory stays
+    bounded. kind = "zlambda" reads neighbours over z0 +- 0.05, "richness" at z0.
+    ``pfree_nb(rows, idx, valid)`` -> [B, K] gives the free fraction of each neighbour (galaxy
+    indices ``idx``) of the seeds at ``rows`` of ``gi`` (default 1).
     """
     cfg = region.cfg
     g = region.gal
@@ -100,11 +119,6 @@ def _run_batched(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, q
     bmax = 256 if jax.default_backend() == "gpu" else batch
     zfloor = cfg.model.zrange[0]
     order = np.argsort(z0, kind="stable")
-    out = {k: np.full(gi.size, np.nan, np.float32) for k in
-           ("LAMBDA", "LAMBDA_E", "Z_LAMBDA", "Z_LAMBDA_E", "R_LAMBDA", "SCALEVAL", "MASKFRAC",
-            "LNLAMLIKE", "LNCGLIKE", "NINCUT")}
-    zc = cfg.zlambda
-    t0 = time.time()
     for ib, b0 in enumerate(range(0, gi.size, batch)):
         sel = order[b0:b0 + batch]
         ra, dec, ids = g["RA"][gi[sel]], g["DEC"][gi[sel]], g["ID"][gi[sel]]
@@ -123,41 +137,59 @@ def _run_batched(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, q
         Bs = int(2 ** np.floor(np.log2(max(32, min(batch, bmax, budget // K)))))
         for s0 in range(0, sel.size, Bs):
             ss = slice(s0, s0 + Bs)
-            n = sel[ss].size
-            (ra_p, dec_p, ids_p, zz_p, pidx, pval, pth), _ = _pad_batch(
-                [ra[ss], dec[ss], ids[ss], zz[ss], pad.idx[ss], pad.valid[ss], pad.theta[ss]], Bs)
+            (rows_p, ra_p, dec_p, ids_p, zz_p, pidx, pval, pth), n = _pad_batch(
+                [sel[ss], ra[ss], dec[ss], ids[ss], zz[ss], pad.idx[ss], pad.valid[ss], pad.theta[ss]], Bs)
             sub = type(pad)(pidx, pval, pth, np.zeros(Bs, np.int64))
-            nb = region.neighbors(sub, center_ids=ids_p)
+            pf = None if pfree_nb is None else pfree_nb(rows_p, pidx, pval)
+            nb = region.neighbors(sub, center_ids=ids_p, pfree_nb=pf)
             fr, fg = region.completeness(ra_p, dec_p, zz_p, quad)
-            if kind == "zlambda":
-                zl = zlambda(nb, jnp.asarray(zz_p, jnp.float32), fr, fg, quad, region.model, stage,
-                             maxiter=zc.maxiter, tol=zc.tol, ngrid=zc.ngrid, half_width=zc.half_width,
-                             npz=zc.npzbins, topfrac=zc.topfrac, soft=zc.pcol_soft, calc_err=calc_err)
-                rich, zres, zres_e = zl.rich, np.asarray(zl.z)[:n], np.asarray(zl.z_e)[:n]
-            else:
-                zj = jnp.asarray(zz_p, jnp.float32)
-                rich = richness(nb, zj, fr, fg, quad, region.model, stage)
-                zres, zres_e = zz[ss], np.full(n, np.nan)
-                if region.wcen is not None:
-                    # Central-galaxy likelihood of the seed (redMaPPer's likelihood pass).
-                    out["LNCGLIKE"][sel[ss]] = np.asarray(
-                        lncglike(nb, rich, zj, region.model, region.wcen))[:n]
-                # Members other than the seed (redMaPPer rejects fewer than 3).
-                out["NINCUT"][sel[ss]] = np.sum((np.asarray(rich.pmem) > 0)
-                                                & ~np.asarray(nb.is_center), axis=1)[:n]
-            tgt = sel[ss]
-            out["LAMBDA"][tgt] = np.asarray(rich.lam)[:n]
-            out["LAMBDA_E"][tgt] = np.asarray(rich.lam_e)[:n]
-            out["R_LAMBDA"][tgt] = np.asarray(rich.r_lambda)[:n]
-            out["SCALEVAL"][tgt] = np.asarray(rich.scaleval)[:n]
-            out["MASKFRAC"][tgt] = np.asarray(rich.maskfrac)[:n]
-            out["LNLAMLIKE"][tgt] = np.asarray(rich.lnlamlike)[:n]
-            out["Z_LAMBDA"][tgt] = zres
-            out["Z_LAMBDA_E"][tgt] = zres_e
-            if kind != "richness" or region.wcen is None:
-                out["LNCGLIKE"][tgt] = 0.0
-        if log_every and ib % log_every == 0:
-            log.info("%s: %d/%d seeds (K=%d, B=%d), %.1fs", kind, b0 + sel.size, gi.size, K, Bs,
+            yield _Batch(rows=rows_p, n=n, nb=nb, frad=fr, fgeo=fg, z=zz_p, ids=ids_p, K=K, B=Bs,
+                         outer=ib, done=b0 + sel.size, last=s0 + Bs >= sel.size)
+
+
+def _run_batched(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, quad: RadialQuad,
+                 kind: str, batch: int = 1024, log_every: int = 20, budget: int | None = None,
+                 calc_err: bool = True, pfree_nb=None):
+    """Per-seed stage over galaxies ``gi`` centred on themselves, starting at ``z0``.
+
+    kind = "zlambda" (first pass; Z_LAMBDA_E only with ``calc_err``) or "richness" (likelihood
+    pass). Batching and ``pfree_nb``: see :func:`_iter_batches`.
+    """
+    zc = region.cfg.zlambda
+    out = {k: np.full(gi.size, np.nan, np.float32) for k in
+           ("LAMBDA", "LAMBDA_E", "Z_LAMBDA", "Z_LAMBDA_E", "R_LAMBDA", "SCALEVAL", "MASKFRAC",
+            "LNLAMLIKE", "LNCGLIKE", "NINCUT")}
+    t0 = time.time()
+    for bt in _iter_batches(region, gi, z0, stage, quad, kind, batch, budget, pfree_nb):
+        n, nb, tgt = bt.n, bt.nb, bt.rows[:bt.n]
+        if kind == "zlambda":
+            zl = zlambda(nb, jnp.asarray(bt.z, jnp.float32), bt.frad, bt.fgeo, quad, region.model,
+                         stage, maxiter=zc.maxiter, tol=zc.tol, ngrid=zc.ngrid,
+                         half_width=zc.half_width, npz=zc.npzbins, topfrac=zc.topfrac,
+                         soft=zc.pcol_soft, calc_err=calc_err)
+            rich, zres, zres_e = zl.rich, np.asarray(zl.z)[:n], np.asarray(zl.z_e)[:n]
+        else:
+            zj = jnp.asarray(bt.z, jnp.float32)
+            rich = richness(nb, zj, bt.frad, bt.fgeo, quad, region.model, stage)
+            zres, zres_e = bt.z[:n], np.full(n, np.nan)
+            if region.wcen is not None:
+                # Central-galaxy likelihood of the seed (redMaPPer's likelihood pass).
+                out["LNCGLIKE"][tgt] = np.asarray(lncglike(nb, rich, zj, region.model, region.wcen))[:n]
+            # Members other than the seed (redMaPPer rejects fewer than 3).
+            out["NINCUT"][tgt] = np.sum((np.asarray(rich.pmem) > 0)
+                                        & ~np.asarray(nb.is_center), axis=1)[:n]
+        out["LAMBDA"][tgt] = np.asarray(rich.lam)[:n]
+        out["LAMBDA_E"][tgt] = np.asarray(rich.lam_e)[:n]
+        out["R_LAMBDA"][tgt] = np.asarray(rich.r_lambda)[:n]
+        out["SCALEVAL"][tgt] = np.asarray(rich.scaleval)[:n]
+        out["MASKFRAC"][tgt] = np.asarray(rich.maskfrac)[:n]
+        out["LNLAMLIKE"][tgt] = np.asarray(rich.lnlamlike)[:n]
+        out["Z_LAMBDA"][tgt] = zres
+        out["Z_LAMBDA_E"][tgt] = zres_e
+        if kind != "richness" or region.wcen is None:
+            out["LNCGLIKE"][tgt] = 0.0
+        if log_every and bt.last and bt.outer % log_every == 0:
+            log.info("%s: %d/%d seeds (K=%d, B=%d), %.1fs", kind, bt.done, gi.size, bt.K, bt.B,
                      time.time() - t0)
     return out
 

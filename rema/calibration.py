@@ -121,6 +121,8 @@ class Calibration:
             prim["MSTAR"] = self.config.model.mstar
         for k, v in self.meta.items():
             prim[k[:8].upper()] = v
+        if self.config is not None:
+            prim.update(self.config.cosmology.header())
         return write_fits(path, hdus, prim)
 
     @classmethod

@@ -1,28 +1,38 @@
-"""Cosmological distances, tabulated once from :mod:`ggah_mod.cosmology`.
+"""Cosmological distances, tabulated from :mod:`ggah_mod.cosmology`.
 
 Lengths are in h^-1 Mpc, the redMaPPer convention: radii such as r_lambda = r0 (lambda/100)^beta
 are physical h^-1 Mpc, so the angular scale of a cluster is set by the angular diameter
 distance D_A(z) in Mpc/h.
 
-The table is a pytree, so it can be passed to jitted functions and differentiated through
+The table is a pytree whose leaves are all arrays, so it can be passed to jitted functions,
+swapped for the table of another cosmology without recompiling them, and differentiated through
 (the interpolation is linear in the tabulated values and piecewise linear in z).
+:meth:`CosmoTable.from_cosmology` builds it inside a trace, and :meth:`CosmoTable.jvp` gives its
+derivatives with respect to the cosmological parameters.
 
 >>> import numpy as np
 >>> tab = CosmoTable.create(Omega_m=0.3, h=0.7)
->>> bool(np.isclose(float(tab.da(0.5)), 881.3, rtol=1e-3))
-True
+>>> bool(np.isclose(float(tab.da(0.5)), 881.3, rtol=1e-3)), round(float(tab.Omega_m), 6)
+(True, 0.3)
 """
 
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass, field
+import dataclasses
+from dataclasses import dataclass
+from typing import Sequence
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
+from ..config import CosmologyConfig
+
 DEG = np.pi / 180.0
+
+#: Cosmological parameters carried by a table, in the order of :attr:`CosmoTable.params`.
+PARAMS = tuple(f.name for f in dataclasses.fields(CosmologyConfig))
 
 
 @contextlib.contextmanager
@@ -38,6 +48,10 @@ def _float64():
         yield
 
 
+def _grid(zmax: float, dz: float) -> np.ndarray:
+    return np.arange(0.0, zmax + dz / 2, dz)
+
+
 @jax.tree_util.register_dataclass
 @dataclass(frozen=True)
 class CosmoTable:
@@ -50,6 +64,8 @@ class CosmoTable:
     dc : comoving distance [Mpc/h].
     ez : E(z) = H(z)/H0.
     dvdz : comoving volume element dV/dz/dOmega [(Mpc/h)^3 / sr].
+    params : the parameters of :data:`PARAMS` (a leaf, so another cosmology does not change the
+        tree structure).
     """
 
     z: jnp.ndarray
@@ -57,30 +73,82 @@ class CosmoTable:
     dc_tab: jnp.ndarray
     ez_tab: jnp.ndarray
     dvdz_tab: jnp.ndarray
-    Omega_m: float = field(default=0.3, metadata=dict(static=True))
-    h: float = field(default=0.7, metadata=dict(static=True))
+    params: jnp.ndarray
+
+    @classmethod
+    def from_cosmology(cls, cosmo, z) -> "CosmoTable":
+        """Tables of a ggah_mod cosmology on the grid ``z``; traceable.
+
+        Inside a trace build ``cosmo`` with the plain ``Cosmology(...)`` constructor
+        (``Cosmology.create`` validates on concrete values).
+        """
+        from ggah_mod.cosmology.background import comoving_distance, hubble_e, transverse_distance
+
+        z = jnp.asarray(z)
+        chi = comoving_distance(z, cosmo)
+        fk = transverse_distance(chi, cosmo)
+        ez = hubble_e(z, cosmo)
+        params = jnp.stack([jnp.asarray(getattr(cosmo, p), dtype=chi.dtype) for p in PARAMS])
+        return cls(z=z, da_tab=fk / (1.0 + z), dc_tab=chi, ez_tab=ez,
+                   dvdz_tab=cosmo.hubble_distance * fk**2 / ez, params=params)
+
+    @classmethod
+    def from_config(cls, c: CosmologyConfig | None = None, zmax: float = 2.0,
+                    dz: float = 1e-3) -> "CosmoTable":
+        """Tabulate in float64, stored in the default JAX precision."""
+        c = c or CosmologyConfig()
+        with _float64():
+            tab = cls.from_cosmology(c.to_ggah(), jnp.asarray(_grid(zmax, dz), dtype=jnp.float64))
+            tab = jax.tree_util.tree_map(lambda a: np.asarray(a, np.float64), tab)
+        # Device arrays (not numpy): numpy leaves would push every jitted call that receives
+        # the table onto JAX's slow dispatch path.
+        return jax.tree_util.tree_map(jnp.asarray, tab)
 
     @classmethod
     def create(cls, Omega_m: float = 0.3, h: float = 0.7, zmax: float = 2.0,
-               dz: float = 1e-3) -> "CosmoTable":
-        """Tabulate the distances of a flat cosmology with ggah_mod, in float64."""
-        from ggah_mod.cosmology import (Cosmology, angular_diameter_distance,
-                                        comoving_distance, comoving_volume_element,
-                                        hubble_e)
+               dz: float = 1e-3, **kw) -> "CosmoTable":
+        """Tabulate the distances of a flat cosmology with ggah_mod, in float64.
 
-        z = np.arange(0.0, zmax + dz / 2, dz)
+        ``kw``: the other fields of :class:`~rema.config.CosmologyConfig`.
+        """
+        return cls.from_config(CosmologyConfig(Omega_m=Omega_m, h=h, **kw), zmax=zmax, dz=dz)
+
+    @classmethod
+    def jvp(cls, c: CosmologyConfig | None, params: Sequence[str], zmax: float = 2.0,
+            dz: float = 1e-3) -> tuple["CosmoTable", dict[str, "CosmoTable"]]:
+        """The table of ``c`` and, for each parameter, its derivative table d(table)/d(param).
+
+        Forward mode in float64, stored in the default precision. A derivative table goes with
+        the table as the tangent of ``jax.jvp`` through any function of a :class:`CosmoTable`.
+        Its ``z`` is the tangent of the grid, zero: read its values (``da_tab``, ...) on the
+        table's grid, not with its lookup methods. The other parameters are held fixed
+        (``Omega_m`` at fixed ``Omega_b``).
+        """
+        c = c or CosmologyConfig()
+        unknown = set(params) - set(PARAMS)
+        if unknown:
+            raise ValueError(f"unknown cosmological parameter(s) {sorted(unknown)}; known: {PARAMS}")
+        out = {}
         with _float64():
-            cosmo = Cosmology.create(Omega_m=Omega_m, h=h)
-            zz = jnp.asarray(z, dtype=jnp.float64)
-            da = np.asarray(angular_diameter_distance(zz, cosmo), dtype=np.float64)
-            dc = np.asarray(comoving_distance(zz, cosmo), dtype=np.float64)
-            ez = np.asarray(hubble_e(zz, cosmo), dtype=np.float64)
-            dvdz = np.asarray(comoving_volume_element(zz, cosmo), dtype=np.float64)
-        # Device arrays (not numpy): numpy leaves would push every jitted call that receives
-        # the table onto JAX's slow dispatch path.
-        return cls(z=jnp.asarray(z), da_tab=jnp.asarray(da), dc_tab=jnp.asarray(dc),
-                   ez_tab=jnp.asarray(ez), dvdz_tab=jnp.asarray(dvdz),
-                   Omega_m=float(Omega_m), h=float(h))
+            z = jnp.asarray(_grid(zmax, dz), dtype=jnp.float64)
+            cosmo = c.to_ggah()
+            zero = jax.tree_util.tree_map(lambda x: jnp.zeros((), jnp.float64), cosmo)
+            fn = lambda cc: cls.from_cosmology(cc, z)
+            tab = fn(cosmo)
+            for p in params:
+                dcos = dataclasses.replace(zero, **{p: jnp.ones((), jnp.float64)})
+                _, out[p] = jax.jvp(fn, (cosmo,), (dcos,))
+            tab, out = jax.tree_util.tree_map(lambda a: np.asarray(a, np.float64), (tab, out))
+        return jax.tree_util.tree_map(jnp.asarray, (tab, out))
+
+    # Parameters ----------------------------------------------------------------
+    @property
+    def Omega_m(self):
+        return self.params[PARAMS.index("Omega_m")]
+
+    @property
+    def h(self):
+        return self.params[PARAMS.index("h")]
 
     # Lookups (linear interpolation; work on numpy or traced inputs) -----------
     def da(self, z):

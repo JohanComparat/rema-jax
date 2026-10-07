@@ -34,7 +34,7 @@ import time
 import numpy as np
 
 from ..calibration import Calibration
-from ..config import RemaConfig
+from ..config import RemaConfig, parse_cosmology_overrides
 from ..core.richness import RadialQuad, Stage
 from ..io.tables import read_table
 from ..model.profiles import MStar
@@ -333,6 +333,7 @@ def calibrate(args):
     from ..sky.regions import Box, sky_header, sky_union
 
     cfg = RemaConfig.from_yaml(args.config) if args.config else RemaConfig()
+    cfg = cfg.replace(cosmology=parse_cosmology_overrides(getattr(args, "cosmology", None)))
     boxes = getattr(args, "box", None)
     sky = sky_union([Box(*map(float, b)) for b in boxes]) if boxes else None
     gal = read_galaxies(args.galaxies, sky, cfg)

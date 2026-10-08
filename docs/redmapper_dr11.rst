@@ -357,7 +357,8 @@ minutes for one part on a laptop, mostly reading the 23 GB randoms file); the fi
 then take 3 minutes together. ``make_all.py`` writes the
 PNG files next to the scripts and the table of numbers (``values.rst``). The notebook
 :doc:`notebooks/redmapper_dr11` is assembled from the same scripts, cell by cell, and shows the
-figures inline. Paths come from environment variables (defaults in ``common.py``):
+figures inline. It reads one directory and writes to another, both given by environment
+variables (defaults in ``common.py``), like the other notebooks:
 
 .. list-table::
    :header-rows: 1
@@ -365,19 +366,15 @@ figures inline. Paths come from environment variables (defaults in ``common.py``
 
    * - Variable
      - Default and content
-   * - ``REMA_PRODUCTS``
-     - ``$LEGACYSURVEY_DIR/dr11/south/rema``: the production runs ``rema_dr11_v0.2.0_ra0-240``
-       and ``rema_dr11_v0.2.0_ra240-360`` (the DR11 data system at CC-IN2P3 when ``/sps`` is
-       mounted)
+   * - ``REMA_DATA``
+     - The DR11 south directory, shared and read only: the production runs
+       ``rema/rema_dr11_v0.2.0_ra0-240`` and ``rema/rema_dr11_v0.2.0_ra240-360``, the randoms file
+       ``randoms/randoms-south-1-0.fits`` and the public catalogues below in ``rema/external``
+       (a missing one is skipped). Default: the DR11 data system at CC-IN2P3 when ``/sps`` is
+       mounted, else ``~/data/legacysurvey/dr11/south``
    * - ``REMA_WORK``
-     - ``$REMA_PRODUCTS/notebooks``: the reduced tables, maps and ``values.json`` go to
-       ``$REMA_WORK/redmapper``. Set it to a directory of yours when the products are not
-       (at CC-IN2P3: :ref:`cc-notebooks`)
-   * - ``REMA_RANDOMS``
-     - ``$LEGACYSURVEY_DIR/dr11/south/randoms/randoms-south-1-0.fits``
-   * - ``REMA_EXTERNAL``
-     - ``$REMA_PRODUCTS/external`` if it exists, else ``~/data/cluster_catalogues``: the public
-       catalogues below (a missing one is skipped)
+     - Yours, writable (default ``~/rema_work``): the reduced tables, maps and ``values.json``
+       (about 7.5 GB) go to ``$REMA_WORK/redmapper`` (at CC-IN2P3: :ref:`cc-notebooks`)
 
 External catalogues, as downloaded on 2026-10-07 (all in one directory, with a ``README.txt`` of
 their sources; at CC-IN2P3 in ``/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/external``):

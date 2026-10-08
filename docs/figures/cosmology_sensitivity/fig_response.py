@@ -1,5 +1,5 @@
 """Tier A: the richness of catalogued clusters re-measured at fixed centres in other cosmologies
-(rema remeasure). Reads $REMA_COSMO/tierA/*.fits: <name>.fits (grid, autodiff, finite
+(rema remeasure). Reads $REMA_WORK/cosmo_sens/tierA/*.fits: <name>.fits (grid, autodiff, finite
 differences, members' free fractions) and <name>_mstar.fits (m* following D_L)."""
 
 from pathlib import Path

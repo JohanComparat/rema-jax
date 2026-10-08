@@ -2,8 +2,9 @@
 
     python docs/figures/cosmology_sensitivity/make_all.py
 
-The figures read the results of the scripts in ``scripts/cosmo_sens`` from ``$REMA_COSMO``
-(default ``$REMA_PRODUCTS/notebooks/cosmo_sens``, see ``scripts/cosmo_sens/common.py``):
+The figures read the results of the scripts in ``scripts/cosmo_sens`` from
+``$REMA_WORK/cosmo_sens`` (default ``~/rema_work/cosmo_sens``, see
+``scripts/cosmo_sens/cosmo_common.py``):
 ``tierA/*.fits`` (rema remeasure), ``response_*.fits``, ``fit_*.json`` and ``forecast_*.json``.
 A figure whose inputs are missing is skipped with a note. The numbers quoted by the page are
 collected in ``values.json`` next to this file.

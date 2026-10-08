@@ -1,4 +1,4 @@
-"""Write the tables of docs/cosmology_sensitivity.rst from the results in $REMA_COSMO:
+"""Write the tables of docs/cosmology_sensitivity.rst from the results in $REMA_WORK/cosmo_sens:
 fit_table.rst (fit_<tag>.json) and forecast_table.rst (forecast_<variant>.json)."""
 
 import json

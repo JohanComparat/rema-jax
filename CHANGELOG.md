@@ -4,6 +4,21 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- The DR11 notebooks, the redMaPPer figure scripts and the cosmology sensitivity scripts use two
+  directories, given by two environment variables: `REMA_DATA`, shared and read only (the DR11
+  south directory, with the production run and the external catalogues in `rema/`; default the
+  data system at CC-IN2P3, else `~/data/legacysurvey/dr11/south`), and `REMA_WORK`, writable
+  (default `~/rema_work`). They replace `REMA_DR11_DIR` (or `LEGACYSURVEY_DIR`), `REMA_PRODUCTS`,
+  `REMA_CALIB`, `REMA_RANDOMS`, `REMA_EXTERNAL`, `REMA_KLUGE_PARS` and `REMA_COSMO` there; the
+  command line, the SLURM scripts and the tests are unchanged.
+
+### Fixed
+
+- Without `REMA_WORK`, the notebooks wrote next to the production run, which only its owner can
+  write to: `Permission denied` for everyone else (scan notebook, ingest cell).
+
 ## [0.3.2] - 2026-10-08
 
 ### Added

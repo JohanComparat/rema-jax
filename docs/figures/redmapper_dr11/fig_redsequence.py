@@ -23,7 +23,7 @@ from rema.model.redsequence import RSModel
 
 CAL = Calibration.read(CALIB)
 RS = CAL.rs
-KLUGE_PARS = Path(os.environ.get("REMA_KLUGE_PARS", EXTERNAL / "legacy_dr10_south_v0.3_grz_z_cal_iter1_pars.fit"))
+KLUGE_PARS = EXTERNAL / "legacy_dr10_south_v0.3_grz_z_cal_iter1_pars.fit"
 KLUGE = RSModel.from_redmapper_pars(str(KLUGE_PARS)) if KLUGE_PARS.exists() else None
 # Comparat et al. (2025), Table 2: z, g-r, its error, scatter, its error.
 COMPARAT = np.array([

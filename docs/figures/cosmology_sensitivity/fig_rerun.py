@@ -1,5 +1,6 @@
 """Tiers B and C: blind re-runs in other cosmologies against the fiducial re-run
-(scripts/cosmo_sens/compare_runs.py -> $REMA_COSMO/tierB/compare.json, tierC/compare.json)."""
+(scripts/cosmo_sens/compare_runs.py -> tierB/compare.json, tierC/compare.json in
+$REMA_WORK/cosmo_sens)."""
 
 import json
 

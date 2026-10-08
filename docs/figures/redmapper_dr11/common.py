@@ -8,15 +8,16 @@ Each ``fig_*.py`` script also runs on its own and writes its PNG figures next to
 ``docs/notebooks/redmapper_dr11.ipynb``, where the figures are shown inline. Cells marked
 ``# %% [script-only]`` are left out of the notebook.
 
-Paths come from environment variables, with the defaults of the DR11 notebooks:
+Two directories, from environment variables, as in the other DR11 notebooks:
 
-REMA_PRODUCTS  the DR11 south production runs (``rema_dr11_v0.2.0_ra0-240`` and ``_ra240-360``)
-REMA_WORK      where the notebooks write; ``prepare.py`` writes the reduced tables and maps in
-               ``$REMA_WORK/redmapper`` (default ``$REMA_PRODUCTS/notebooks/redmapper``)
-REMA_RANDOMS   one DR11 randoms file (default ``randoms/randoms-south-1-0.fits``)
-REMA_EXTERNAL  public cluster catalogues (default ``$REMA_PRODUCTS/external`` if it exists, else
-               ``~/data/cluster_catalogues``); a figure panel whose catalogue is missing is
-               skipped with a note
+REMA_DATA  shared, read only: the DR11 south directory. The scripts read the production runs
+           (``rema/rema_dr11_v0.2.0_ra0-240`` and ``_ra240-360``), one randoms file
+           (``randoms/randoms-south-1-0.fits``) and the public cluster catalogues
+           (``rema/external``; a figure panel whose catalogue is missing is skipped with a note).
+           Default: the DR11 data system at CC-IN2P3 when /sps is mounted, else
+           ``~/data/legacysurvey/dr11/south``.
+REMA_WORK  yours, writable: ``prepare.py`` writes the reduced tables and maps (about 7.5 GB) in
+           ``$REMA_WORK/redmapper``. Default: ``~/rema_work``.
 """
 
 # %% [markdown]
@@ -49,19 +50,26 @@ from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 
 os.environ.setdefault("JAX_PLATFORMS", "cpu")        # only the red-sequence model uses JAX here
 
-# Paths: the environment variables, else the DR11 data system at CC-IN2P3 when /sps is mounted,
-# else a local copy with the same layout.
-CC = Path("/sps/lsst/datasets/desi/legacysurveys")
-LS_DIR = Path(os.environ.get("LEGACYSURVEY_DIR", CC if CC.exists() else Path.home() / "data" / "legacysurvey"))
-DR11 = Path(os.environ.get("REMA_DR11_DIR", LS_DIR / "dr11" / "south"))
-PRODUCTS = Path(os.environ.get("REMA_PRODUCTS", DR11 / "rema"))
-# The two parts of the production run: they meet at RA 0 and 240 deg and at Dec -85 deg.
+# The two directories of the notebooks, from two environment variables:
+#   REMA_DATA  shared, read only: the DR11 south directory (randoms/) with the rema production run
+#              and the external catalogues in rema/. Default: the DR11 data system at CC-IN2P3
+#              when /sps is mounted, else ~/data/legacysurvey/dr11/south.
+#   REMA_WORK  yours, writable: everything the notebooks write. Default: ~/rema_work.
+CC = Path("/sps/lsst/datasets/desi/legacysurveys/dr11/south")
+REMA_DATA = Path(os.environ.get("REMA_DATA", CC if CC.exists() else Path.home() / "data" / "legacysurvey" / "dr11" / "south"))
+REMA_WORK = Path(os.environ.get("REMA_WORK", Path.home() / "rema_work"))
+if not REMA_DATA.is_dir():
+    raise SystemExit(f"REMA_DATA = {REMA_DATA} not found: set REMA_DATA to the DR11 south directory")
+
+# In REMA_DATA: the two parts of the production run (they meet at RA 0 and 240 deg and at
+# Dec -85 deg), one randoms file and the public cluster catalogues.
+PRODUCTS = REMA_DATA / "rema"
 RUNS = [PRODUCTS / "rema_dr11_v0.2.0_ra0-240", PRODUCTS / "rema_dr11_v0.2.0_ra240-360"]
 CALIB = RUNS[0] / "calib" / "calib.fits"
-WORK = Path(os.environ.get("REMA_WORK", PRODUCTS / "notebooks")) / "redmapper"   # as the other notebooks
-RANDOMS = Path(os.environ.get("REMA_RANDOMS", DR11 / "randoms" / "randoms-south-1-0.fits"))
-EXTERNAL = Path(os.environ.get("REMA_EXTERNAL", PRODUCTS / "external" if (PRODUCTS / "external").exists()
-                               else Path.home() / "data" / "cluster_catalogues"))
+RANDOMS = REMA_DATA / "randoms" / "randoms-south-1-0.fits"
+EXTERNAL = PRODUCTS / "external"
+# In REMA_WORK: the reduced tables and maps of prepare.py.
+WORK = REMA_WORK / "redmapper"
 # Figures are written next to the scripts when they run as scripts; the notebook shows them.
 try:
     FIGDIR = Path(__file__).resolve().parent
@@ -69,8 +77,10 @@ except NameError:
     FIGDIR = None
 try:
     WORK.mkdir(parents=True, exist_ok=True)
-except PermissionError:
-    raise SystemExit(f"cannot write to {WORK}: set REMA_WORK to a directory of yours") from None
+except OSError:
+    pass
+if not os.access(WORK, os.W_OK):
+    raise SystemExit(f"cannot write to REMA_WORK = {REMA_WORK}: set REMA_WORK to a directory of yours")
 
 # %% [markdown]
 # Figure style: the palette of the other documentation figures (categorical colours in a fixed

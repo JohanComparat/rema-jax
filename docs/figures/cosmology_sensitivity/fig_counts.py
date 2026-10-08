@@ -1,5 +1,5 @@
 """The DR11 counts and the best-fitting models, with and without the finder's response, and how
-the counts move with Omega_m (fit_<tag>.json, forecast_<tag>.json in $REMA_COSMO)."""
+the counts move with Omega_m (fit_<tag>.json, forecast_<tag>.json in $REMA_WORK/cosmo_sens)."""
 
 import json
 import os

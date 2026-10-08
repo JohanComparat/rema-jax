@@ -9,11 +9,11 @@ Execution needs the DR11 data and the ``rema`` Jupyter kernel
 GPU with ``JAX_PLATFORMS=cuda``. ``redmapper`` is assembled from the figure scripts of
 ``docs/figures/redmapper_dr11`` (their ``# %%`` cells); it reads the production catalogues only.
 The order matters: ``pipeline`` compares its merged catalogue with the
-one-region catalogue of ``blind`` (same sweeps, same calibration). Paths come from the
-environment variables REMA_DR11_DIR (or LEGACYSURVEY_DIR), REMA_PRODUCTS, REMA_CALIB and
-REMA_WORK; without them the DR11 data system at CC-IN2P3 is used when /sps is mounted: the sweeps,
-the randoms, and the calibration and merged catalogues of the DR11 south production run next to
-them (defaults below). The markdown avoids run numbers; the cells print them.
+one-region catalogue of ``blind`` (same sweeps, same calibration). Every notebook reads
+REMA_DATA, the DR11 south directory (shared, read only: sweeps, randoms, and in rema/ the
+production run and the external catalogues; default the DR11 data system at CC-IN2P3 when /sps is
+mounted, else ~/data/legacysurvey/dr11/south), and writes only to REMA_WORK (default
+~/rema_work). The markdown avoids run numbers; the cells print them.
 """
 
 import argparse
@@ -69,18 +69,29 @@ jax.config.update("jax_compilation_cache_dir",
                   os.environ.get("JAX_COMPILATION_CACHE_DIR") or os.path.expanduser("~/.cache/rema/jax"))
 jax.config.update("jax_persistent_cache_min_compile_time_secs", 1.0)
 
-# Paths: the environment variables, else the DR11 data system at CC-IN2P3 when /sps is mounted
-# (the Jupyter kernels there do not read ~/.bashrc), else a local copy with the same layout.
-CC = Path("/sps/lsst/datasets/desi/legacysurveys")
-LS_DIR = Path(os.environ.get("LEGACYSURVEY_DIR", CC if CC.exists() else Path.home() / "data" / "legacysurvey"))
-DR11 = Path(os.environ.get("REMA_DR11_DIR", LS_DIR / "dr11" / "south"))
-# The DR11 south production run (rema 0.2.0) next to the sweeps: two parts that meet at RA 0 and
-# 240 deg and at Dec -85 deg, with one calibration.
-PRODUCTS = Path(os.environ.get("REMA_PRODUCTS", DR11 / "rema"))
+# The two directories of the notebooks, from two environment variables:
+#   REMA_DATA  shared, read only: the DR11 south directory (sweep/, randoms/) with the rema
+#              production run in rema/. Default: the DR11 data system at CC-IN2P3 when /sps is
+#              mounted, else ~/data/legacysurvey/dr11/south.
+#   REMA_WORK  yours, writable: everything the notebooks write. Default: ~/rema_work.
+CC = Path("/sps/lsst/datasets/desi/legacysurveys/dr11/south")
+REMA_DATA = Path(os.environ.get("REMA_DATA", CC if CC.exists() else Path.home() / "data" / "legacysurvey" / "dr11" / "south"))
+REMA_WORK = Path(os.environ.get("REMA_WORK", Path.home() / "rema_work"))
+if not REMA_DATA.is_dir():
+    raise SystemExit(f"REMA_DATA = {REMA_DATA} not found: set REMA_DATA to the DR11 south directory")
+try:
+    REMA_WORK.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
+if not os.access(REMA_WORK, os.W_OK):
+    raise SystemExit(f"cannot write to REMA_WORK = {REMA_WORK}: set REMA_WORK to a directory of yours")
+
+# In REMA_DATA: the DR11 south production run (rema 0.2.0), two parts that meet at RA 0 and
+# 240 deg and at Dec -85 deg, with one calibration; and every randoms file present.
+PRODUCTS = REMA_DATA / "rema"
 RUNS = [PRODUCTS / "rema_dr11_v0.2.0_ra0-240", PRODUCTS / "rema_dr11_v0.2.0_ra240-360"]
-CALIB = Path(os.environ.get("REMA_CALIB", RUNS[0] / "calib" / "calib.fits"))
-EXAMPLES = Path(os.environ.get("REMA_WORK", PRODUCTS / "notebooks"))   # what the notebooks write
-RANDOMS = sorted((DR11 / "randoms").glob("randoms-south-1-*.fits"))     # every randoms file present
+CALIB = RUNS[0] / "calib" / "calib.fits"
+RANDOMS = sorted((REMA_DATA / "randoms").glob("randoms-south-1-*.fits"))
 
 
 def read_all_randoms(cfg, box):
@@ -187,11 +198,15 @@ def blind_cells():
     c.append(md("""
     ## Setup and parameters
 
-    `SWEEPS` lists the sweep files, by name. At CC-IN2P3 the defaults read the data system:
-    the sweeps and the randoms of DR11 south, and the calibration and catalogues of the
-    production run next to them (`PRODUCTS`). Elsewhere, set the environment variables
-    `REMA_DR11_DIR`, `REMA_PRODUCTS` (or `REMA_CALIB`) and `REMA_WORK`. Run products go to
-    `WORK`, and the per-sweep galaxy tables to `GALDIR`, which the pipeline notebook shares.
+    `SWEEPS` lists the sweep files, by name. The notebooks use two directories, given by two
+    environment variables:
+
+    - `REMA_DATA`, shared and read only: the DR11 south directory, with the sweeps, the randoms
+      and, in `rema/` (`PRODUCTS`), the calibration and catalogues of the production run. At
+      CC-IN2P3 the default is the DR11 data system.
+    - `REMA_WORK`, yours: everything the notebooks write (default `~/rema_work`). Run products
+      go to `WORK`, and the per-sweep galaxy tables to `GALDIR`, which the pipeline notebook
+      shares.
     """))
 
     c.append(code(SETUP_COMMON + SWEEPS_DEFAULT + '''
@@ -207,15 +222,15 @@ from rema.pipeline import file_sha1
 from rema.sky.maps import build_footprint, read_randoms
 from rema.sky.regions import sweep_union
 
-WORK = EXAMPLES / "blind"
-GALDIR = EXAMPLES / "galaxies"
+WORK = REMA_WORK / "blind"
+GALDIR = REMA_WORK / "galaxies"
 WORK.mkdir(parents=True, exist_ok=True)
 
 SKY = sweep_union(SWEEPS)          # a Box when the sweeps tile a rectangle, else a BoxUnion
 BOUND = SKY.bounding()
 print(f"rema {rema.__version__}, jax {jax.__version__}, devices: {jax.devices()}")
 print(f"{len(SWEEPS)} sweeps, {SKY.area_deg2():.1f} deg², sky: {SKY}")
-print(f"data: {DR11}; {len(RANDOMS)} randoms files; calibration: {CALIB}")
+print(f"data: {REMA_DATA}; work: {REMA_WORK}; {len(RANDOMS)} randoms files; calibration: {CALIB}")
 '''))
 
     c.append(code(STYLE))
@@ -275,7 +290,7 @@ print(f"model.zrange {cfg.model.zrange}, model.chisq_mode {cfg.model.chisq_mode!
 
     c.append(code('''
 t0 = time.perf_counter()
-ingest_sweeps([DR11 / "sweep" / "11.0" / s for s in SWEEPS], GALDIR, cfg)
+ingest_sweeps([REMA_DATA / "sweep" / "11.0" / s for s in SWEEPS], GALDIR, cfg)
 gal = read_galaxies(GALDIR, SKY, cfg)
 T["ingest"] = time.perf_counter() - t0
 
@@ -717,9 +732,10 @@ print(f"{'total':10s} {sum(T.values()):7.1f} s on {jax.devices()[0].device_kind}
     Repeat `--box` once per box of the sky; the sweeps here tile a single rectangle.
 
     ```bash
-    rema ingest DR11/sweep/11.0/sweep-000m005-005p000.fits DR11/sweep/11.0/sweep-000m010-005m005.fits \\
-         DR11/sweep/11.0/sweep-000m015-005m010.fits --outdir galaxies
-    rema maps DR11/randoms/randoms-south-1-*.fits --box 0 5 -15 0 --out footprint.fits
+    rema ingest $REMA_DATA/sweep/11.0/sweep-000m005-005p000.fits \\
+         $REMA_DATA/sweep/11.0/sweep-000m010-005m005.fits \\
+         $REMA_DATA/sweep/11.0/sweep-000m015-005m010.fits --outdir galaxies
+    rema maps $REMA_DATA/randoms/randoms-south-1-*.fits --box 0 5 -15 0 --out footprint.fits
     rema blind --galaxies galaxies --box 0 5 -15 0 --calib CALIB --footprint footprint.fits \\
          --checkpoint checkpoint --specpost --out clusters.fits
     ```
@@ -765,7 +781,8 @@ def pipeline_cells():
     c.append(md("""
     ## Setup and parameters
 
-    `SWEEPS` must be the blind notebook's. `OUTDIR` is laid out like an HPC run directory, and
+    `SWEEPS`, `REMA_DATA` and `REMA_WORK` must be the blind notebook's (`REMA_DATA` is read only,
+    everything is written to `REMA_WORK`). `OUTDIR` is laid out like an HPC run directory, and
     its `galaxies/` points to the per-sweep tables that the blind notebook wrote. The stages run
     the task script with the environment variables the driver would set. `AREA_BOX` restricts
     the run to the sweeps, `TARGET_AREA=25` with `BAND_HEIGHT=5` gives one region per sweep, and
@@ -783,9 +800,9 @@ from rema.pipeline import file_sha1, plan_boxes, read_plan, region_path, require
 from rema.sky.regions import sweep_union
 
 TASK = Path(rema.__file__).resolve().parents[1] / "scripts" / "slurm" / "rema_task.sh"
-OUTDIR = EXAMPLES / "pipeline"
+OUTDIR = REMA_WORK / "pipeline"
 OUTDIR.mkdir(parents=True, exist_ok=True)
-GALDIR = EXAMPLES / "galaxies"
+GALDIR = REMA_WORK / "galaxies"
 if not (OUTDIR / "galaxies").exists():
     (OUTDIR / "galaxies").symlink_to(GALDIR)
 
@@ -793,7 +810,7 @@ SKY = sweep_union(SWEEPS)
 BOUND = SKY.bounding()
 area_box = ";".join(f"{b.ra_min:g} {b.ra_max:g} {b.dec_min:g} {b.dec_max:g}" for b in SKY.boxes)
 # Products stay in OUTDIR, never in the production folders a sourced ccin2p3.env may point to.
-ENV = {**os.environ, "DR11": str(DR11), "OUTDIR": str(OUTDIR), "CALIB": str(CALIB),
+ENV = {**os.environ, "DR11": str(REMA_DATA), "OUTDIR": str(OUTDIR), "CALIB": str(CALIB),
        "CLUSTERS_DIR": str(OUTDIR), "MEMBERS_DIR": str(OUTDIR),
        "AREA_BOX": area_box, "TARGET_AREA": "25", "BAND_HEIGHT": "5", "BUFFER": "2",
        "NRAND": str(len(RANDOMS)), "CHUNK": "100000", "DEVICE": "gpu" if jax.default_backend() == "gpu" else "cpu",
@@ -965,7 +982,7 @@ merged, mmem, _ = read_catalog(OUTDIR / "clusters_dr11.fits", members=False)
     """))
 
     c.append(code('''
-ref_path = EXAMPLES / "blind" / "clusters.fits"
+ref_path = REMA_WORK / "blind" / "clusters.fits"
 ref, _, rh = read_catalog(ref_path, members=False)
 assert rh.get("SWEEPS") == ",".join(sorted(SWEEPS))[:1000], "run the blind notebook with the same SWEEPS"
 assert rh.get("CALSHA1") == file_sha1(CALIB), "run the blind notebook with the same calibration"
@@ -1135,9 +1152,10 @@ def scan_cells():
     c.append(md("""
     ## Setup and parameters
 
-    At CC-IN2P3 the defaults read the DR11 data system (sweeps, randoms, and the calibration and
-    catalogues of the production run); elsewhere set `REMA_DR11_DIR`, `REMA_PRODUCTS` (or
-    `REMA_CALIB`) and `REMA_WORK`. The ACT redshift is used only for the comparisons at the end.
+    The notebook reads `REMA_DATA`, the DR11 south directory (shared, read only: sweeps,
+    randoms, and the calibration and catalogues of the production run in `rema/`; at CC-IN2P3
+    the default is the DR11 data system), and writes to `REMA_WORK` (yours, default
+    `~/rema_work`). The ACT redshift is used only for the comparisons at the end.
     """))
 
     c.append(code(SETUP_COMMON + '''
@@ -1152,7 +1170,7 @@ from rema.modes.scan import run_scan
 from rema.sky.maps import build_footprint, read_randoms
 from rema.sky.regions import Box, sweeps_overlapping
 
-WORK = EXAMPLES / "scan"
+WORK = REMA_WORK / "scan"
 WORK.mkdir(parents=True, exist_ok=True)
 
 NAME = "ACT-CL J0012.9-0857"
@@ -1194,7 +1212,7 @@ print(f"box RA {box.ra_min:.3f} to {box.ra_max:.3f}, Dec {box.dec_min:.3f} to {b
 print(f"largest aperture {r_max:.2f} h⁻¹Mpc = {r_max / float(cosmo.mpc_per_deg(z_min)):.2f}° "
       f"at z = {z_min}")
 
-sweeps = sweeps_overlapping(box, DR11 / "sweep" / "11.0")
+sweeps = sweeps_overlapping(box, REMA_DATA / "sweep" / "11.0")
 t0 = time.perf_counter()
 gal = ingest(sweeps, WORK / "galaxies.fits", cfg, box=box)
 T["ingest"] = time.perf_counter() - t0
@@ -1483,9 +1501,9 @@ print(positions)
 
     c.append(md("""
     ```bash
-    rema ingest DR11/sweep/11.0/sweep-000m010-005m005.fits --box 2.221 4.246 -9.955 -7.954 \\
+    rema ingest $REMA_DATA/sweep/11.0/sweep-000m010-005m005.fits --box 2.221 4.246 -9.955 -7.954 \\
          --out galaxies.fits
-    rema maps DR11/randoms/randoms-south-1-0.fits --box 2.221 4.246 -9.955 -7.954 --out footprint.fits
+    rema maps $REMA_DATA/randoms/randoms-south-1-0.fits --box 2.221 4.246 -9.955 -7.954 --out footprint.fits
     rema scan --galaxies galaxies.fits --calib CALIB --footprint footprint.fits \\
          --positions positions.fits --id-col NAME --specpost --out scan.fits
     ```

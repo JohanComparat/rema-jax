@@ -1,5 +1,5 @@
 """Tier C: how much the calibration changes with the cosmology it is made in. Compares the
-calibrations in $REMA_COSMO/tierC/<cosmology>/calib.fits with the fiducial one and writes
+calibrations in $REMA_WORK/cosmo_sens/tierC/<cosmology>/calib.fits with the fiducial one and writes
 calib_table.rst (the largest and median changes over 0.1 < z < 0.8)."""
 
 import numpy as np

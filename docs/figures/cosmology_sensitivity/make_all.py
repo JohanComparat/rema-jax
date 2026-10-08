@@ -2,7 +2,7 @@
 
     python docs/figures/cosmology_sensitivity/make_all.py [--only fig_response ...]
 
-Inputs: $REMA_COSMO (see common.py); a figure whose inputs are missing is skipped.
+Inputs: $REMA_WORK/cosmo_sens (see common.py); a figure whose inputs are missing is skipped.
 """
 
 import argparse

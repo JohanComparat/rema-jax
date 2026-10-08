@@ -2,7 +2,7 @@
 
     python docs/figures/redmapper_dr11/prepare.py [--force]
 
-Writes into $REMA_WORK (see common.py), each table as a directory of .npy columns:
+Writes into $REMA_WORK/redmapper (see common.py), each table as a directory of .npy columns:
 
 clusters/   every cluster of the production parts present, with PART, REGION, GLAT, IN_CALIB,
             SEAM_DIST and the depth-map values at its position (DEPTH_Z10, ZVLIM, ...)
@@ -289,7 +289,8 @@ else:
 #
 # Public catalogues, renamed to common columns: RA, DEC, Z (best redshift), and where they
 # exist LAMBDA (redMaPPer-like richness), M500 [10¹⁴ M☉], LX [10⁴⁴ erg/s], centre positions
-# and quality columns. Each is read once from `REMA_EXTERNAL` (sources in its README).
+# and quality columns. Each is read once from `EXTERNAL` (`$REMA_DATA/rema/external`, sources in
+# its README).
 
 # %%
 def read_cds(path, columns):

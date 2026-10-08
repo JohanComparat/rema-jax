@@ -11,7 +11,7 @@ the catalogue is made by a finder run at a cosmology offset by -Delta from it (O
 Omega_m = 0.3, w0 = -1, are used around this cosmology). Its counts N_resp are fitted by the model
 without the response: the shift F^-1 J^T C^-1 [N_resp - N_noresp] (plus the weak-lensing term)
 is the bias of ignoring the finder's cosmology dependence. Writes
-``$REMA_COSMO/forecast_<tag>.json``.
+``$REMA_WORK/cosmo_sens/forecast_<tag>.json``.
 """
 
 from __future__ import annotations

@@ -8,7 +8,7 @@ Steps: the data vector (common.data_vector); a first best fit with a Poisson cov
 defaults; the covariance (Poisson + super-sample) at that fit; the best fit again; the Fisher
 matrix and the Laplace covariance at the best fit; optionally a NUTS chain. With ``--response``
 the fit is done twice, without and with the response table (the finder's richness in the true
-cosmology). Results: ``$REMA_COSMO/fit_<tag>.json`` (and ``chain_<tag>_<model>.npz``).
+cosmology). Results: ``$REMA_WORK/cosmo_sens/fit_<tag>.json`` (and ``chain_<tag>_<model>.npz``).
 """
 
 from __future__ import annotations

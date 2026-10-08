@@ -354,16 +354,17 @@ On CC-IN2P3 (:doc:`ccin2p3`), tiers A, B and C on the six regions (``OUTDIR`` de
    python $REMA/scripts/cosmo_sens/compare_runs.py tierC --response response_cc.fits
 
 Then, with the reduced tables of ``docs/figures/redmapper_dr11/prepare.py`` and the results in
-``REMA_COSMO`` (default ``$REMA_PRODUCTS/notebooks/cosmo_sens``: the tier-A files in ``tierA/``,
-the response tables, the comparisons in ``tierB/`` and ``tierC/``):
+``$REMA_WORK/cosmo_sens`` (``REMA_WORK`` as for the notebooks, default ``~/rema_work``: the
+tier-A files in ``tierA/``, the response tables, the comparisons in ``tierB/`` and ``tierC/``):
 
 .. code-block:: bash
 
+   R=${REMA_WORK:-$HOME/rema_work}/cosmo_sens
    F11=Omega_m,ln10A_s,h,n_s,Omega_b,mor_a,mor_b,mor_c,ln_s0,s1,dz_bias      # sigma_int fixed at 0.25
-   python scripts/cosmo_sens/fit_dr11.py --response $REMA_COSMO/response_cc.fits --tag all_cc
-   python scripts/cosmo_sens/fit_dr11.py --response $REMA_COSMO/response_cc.fits --free $F11 --tag all_cc_sig025
-   python scripts/cosmo_sens/forecast.py --response $REMA_COSMO/response_cc.fits \
-       --fit $REMA_COSMO/fit_all_cc_sig025.json --tag sig025_cc
+   python scripts/cosmo_sens/fit_dr11.py --response $R/response_cc.fits --tag all_cc
+   python scripts/cosmo_sens/fit_dr11.py --response $R/response_cc.fits --free $F11 --tag all_cc_sig025
+   python scripts/cosmo_sens/forecast.py --response $R/response_cc.fits \
+       --fit $R/fit_all_cc_sig025.json --tag sig025_cc
    # variants: response_cc_mstar.fits (tag sig025_cc_mstar); --free without ln_s0,s1 (_fixednorm)
    # or with the cosmology and dz_bias only (_fixedmor)
    python docs/figures/cosmology_sensitivity/make_all.py

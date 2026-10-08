@@ -1,11 +1,13 @@
 """Shared settings of the cosmology sensitivity scripts (docs/cosmology_sensitivity.rst).
 
-Paths come from environment variables, with the defaults of the DR11 notebooks:
+Two directories, from environment variables, as in the DR11 notebooks:
 
-REMA_PRODUCTS  the DR11 south production (``rema_dr11_v0.2.0`` combined, and the two parts)
-REMA_WORK      the reduced tables of ``docs/figures/redmapper_dr11/prepare.py`` are read from
-               ``$REMA_WORK/redmapper`` (default ``$REMA_PRODUCTS/notebooks``)
-REMA_COSMO     where these scripts write (default ``$REMA_WORK/cosmo_sens``)
+REMA_DATA  shared, read only: the DR11 south directory, with the production in ``rema/``
+           (``rema_dr11_v0.2.0`` combined, and the two parts). Default: the DR11 data system at
+           CC-IN2P3 when /sps is mounted, else ``~/data/legacysurvey/dr11/south``.
+REMA_WORK  yours, writable (default ``~/rema_work``): the reduced tables of
+           ``docs/figures/redmapper_dr11/prepare.py`` are read from ``$REMA_WORK/redmapper``, and
+           these scripts write to ``$REMA_WORK/cosmo_sens``.
 """
 
 from __future__ import annotations
@@ -15,13 +17,12 @@ from pathlib import Path
 
 import numpy as np
 
-CC = Path("/sps/lsst/datasets/desi/legacysurveys")
-LS_DIR = Path(os.environ.get("LEGACYSURVEY_DIR", CC if CC.exists() else Path.home() / "data" / "legacysurvey"))
-DR11 = Path(os.environ.get("REMA_DR11_DIR", LS_DIR / "dr11" / "south"))
-PRODUCTS = Path(os.environ.get("REMA_PRODUCTS", DR11 / "rema"))
-WORK = Path(os.environ.get("REMA_WORK", PRODUCTS / "notebooks"))
-REDUCED = WORK / "redmapper"
-OUT = Path(os.environ.get("REMA_COSMO", WORK / "cosmo_sens"))
+CC = Path("/sps/lsst/datasets/desi/legacysurveys/dr11/south")
+REMA_DATA = Path(os.environ.get("REMA_DATA", CC if CC.exists() else Path.home() / "data" / "legacysurvey" / "dr11" / "south"))
+REMA_WORK = Path(os.environ.get("REMA_WORK", Path.home() / "rema_work"))
+PRODUCTS = REMA_DATA / "rema"
+REDUCED = REMA_WORK / "redmapper"
+OUT = REMA_WORK / "cosmo_sens"
 COMBINED = PRODUCTS / "rema_dr11_v0.2.0"
 CALIB = PRODUCTS / "rema_dr11_v0.2.0_ra0-240" / "calib" / "calib.fits"
 
@@ -57,7 +58,7 @@ def load_reduced(columns=("LAMBDA", "Z_LAMBDA", "Z_LAMBDA_E", "RA", "DEC", "ZVLI
     """Clusters of the reduced DR11 table (``prepare.py``) with lambda >= lambda_min."""
     d = REDUCED / "clusters"
     if not d.exists():
-        raise SystemExit(f"{d} not found: run docs/figures/redmapper_dr11/prepare.py (or set REMA_WORK)")
+        raise SystemExit(f"{d} not found: run docs/figures/redmapper_dr11/prepare.py with the same REMA_WORK")
     lam = np.load(d / "LAMBDA.npy", mmap_mode="r")
     keep = np.flatnonzero(np.asarray(lam) >= lambda_min)
     return {c: np.asarray(np.load(d / f"{c}.npy", mmap_mode="r"))[keep] for c in columns}

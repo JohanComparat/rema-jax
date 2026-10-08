@@ -69,10 +69,7 @@ environment (6 GB with the CUDA libraries) and pip's temporary files all go to `
    TMPDIR=$SPS/tmp pip install --no-cache-dir -e "$HOME/software/rema-jax[cuda,plots,dev,docs]" \
        ipykernel pyzmq colossus pandas
    rmdir $SPS/tmp
-   mkdir -p $SPS/rema_notebooks
    python -m ipykernel install --user --name rema --display-name rema \
-       --env LEGACYSURVEY_DIR /sps/lsst/datasets/desi/legacysurveys \
-       --env REMA_WORK $SPS/rema_notebooks \
        --env JAX_COMPILATION_CACHE_DIR $SPS/.cache/rema/jax \
        --env XLA_PYTHON_CLIENT_PREALLOCATE false
    ln -s $SPS $HOME/sps                     # optional: /sps in the file browser of the platform
@@ -129,9 +126,19 @@ and select the ``rema`` kernel (Kernel → Change Kernel):
        production catalogue and one 23 GB randoms file (about 30 minutes); later runs reuse them
        and take a few minutes.
 
-The notebooks find the sweeps, the randoms, the calibration, the production catalogues and the
-external catalogues of :doc:`redmapper_dr11` on ``/sps`` by themselves. In a GPU session,
-``import jax; jax.devices()`` returns ``[CudaDevice(id=0)]``.
+The notebooks use two directories, given by two environment variables, and need neither at
+CC-IN2P3:
+
+- ``REMA_DATA``, shared and read only: the DR11 south directory, with the sweeps, the randoms
+  and, in ``rema/``, the production catalogues, their calibration and the external catalogues of
+  :doc:`redmapper_dr11`. Default: ``/sps/lsst/datasets/desi/legacysurveys/dr11/south`` when it
+  exists, else ``~/data/legacysurvey/dr11/south``.
+- ``REMA_WORK``, yours: everything the notebooks write. Default: ``~/rema_work``. The DR11
+  notebooks write about 0.5 GB there, :doc:`notebooks/redmapper_dr11` 7.5 GB; when ``$HOME``
+  lacks the room (20 GB at CC-IN2P3), add ``--env REMA_WORK $SPS/rema_work`` to the
+  ``ipykernel install`` line.
+
+In a GPU session, ``import jax; jax.devices()`` returns ``[CudaDevice(id=0)]``.
 
 **3. Updates.** ``git -C $HOME/software/rema-jax pull`` updates the code and the notebooks
 together (the install is editable); then restart the kernel.
@@ -142,9 +149,7 @@ What the kernel settings do:
   the Python of the environment and the ``--env`` variables, so the kernel needs no login script.
   The platform starts kernels through ``ipykernel`` and ``pyzmq``; ``colossus`` and ``pandas``
   are used only by :doc:`notebooks/redmapper_dr11`.
-- ``REMA_WORK`` is where the notebooks write their products: the default, next to the production
-  run, is writable by its owner only. ``JAX_COMPILATION_CACHE_DIR`` keeps the compiled programs on
-  ``/sps`` between sessions.
+- ``JAX_COMPILATION_CACHE_DIR`` keeps the compiled programs on ``/sps`` between sessions.
 - To change a variable, run the ``ipykernel install`` line again (it replaces the kernel).
   ``jupyter kernelspec list`` lists the kernels; ``jupyter kernelspec remove rema`` removes this one.
 - Keep the ``[cuda]`` extra (CUDA 12 JAX wheels): the platform documentation installs
@@ -152,8 +157,8 @@ What the kernel settings do:
 - Install the clone, not the PyPI release: the notebooks of the repository may need a newer
   rema than the last release.
 - Without access to ``/sps/lsst``: install the environment in a ``/sps`` space of your group, copy
-  the products you need there, and give their location with ``--env LEGACYSURVEY_DIR`` (the DR11
-  tree) or ``--env REMA_PRODUCTS`` (the production runs only).
+  the parts of the DR11 south directory you need there, with the same layout, and give their
+  location with ``--env REMA_DATA``.
 
 If something goes wrong:
 
@@ -164,7 +169,8 @@ If something goes wrong:
   session with more memory.
 - **JAX sees only the CPU:** the session was started on a CPU partition, or ``JAX_PLATFORMS=cpu``
   is set; ``nvidia-smi`` in a terminal of the session shows the GPU.
-- **A write fails** (``cannot write to ...``): ``REMA_WORK`` is not set in the kernel.
+- **A write fails** (``cannot write to REMA_WORK``, or ``Permission denied``): ``REMA_WORK``
+  points to a directory that is not yours; ``REMA_DATA`` is never written to.
 - End a session with File → Log Out: closing the tab leaves the job running until its time limit.
 
 The batch production at CC-IN2P3 (SLURM arrays) uses the same environment: :doc:`ccin2p3`.

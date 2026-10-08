@@ -222,7 +222,7 @@ V100 or the laptop GPU; tier C on regions 15 and 82, each calibration 2 hours on
   −1.7 % (w0 = −0.8 and −1.2), median over the regions; from the DES regions (9, 15) to the
   shallowest DECaLS region (113) the shift grows by 70 %, as in tier A. 1.5–2 % of the clusters
   change centre, the median member overlap (Σ min(p, p′)/Σ max(p, p′)) is 0.97–0.98, and z_λ does
-  not move (|Δz| < 10⁻⁴).
+  not move (changes below 10⁻⁴).
 - **The counts follow the tier-A shift**: N(> λ) of the re-runs over the fiducial re-run shifted
   by the response table is 1 within 0.5 % at λ ≥ 10, 20 and 30, and within 1–3 % at λ ≥ 45 and 60
   (265 and 110 clusters): the seeds, the percolation order, the centring and the cuts add nothing

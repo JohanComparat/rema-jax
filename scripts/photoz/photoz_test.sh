@@ -130,9 +130,8 @@ case $STAGE in
         if [[ ! -s $dst && -s $src ]]; then cp "$src" "$dst"; fi
         [[ -s $dst ]] || missing_fp=1
     done
-    idx=()
-    [[ $missing_fp == 1 ]] && idx=(--index "$OUTDIR/randoms_index" --nrand "$NRAND")
-    spec=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" "${idx[@]}" \
+    # (the randoms are only needed, and submitted, when a footprint could not be copied)
+    spec=$(rema todo --sweeps "$DR11/sweep/11.0" --galaxies "$OUTDIR/galaxies" --index "$OUTDIR/randoms_index" --nrand "$NRAND" \
                $(python -c "import sys; [print('--box', *b.split()) for b in sys.argv[1].split(';')]" "$AREA_BOX"))
     echo "$spec"
     ing=$(sed -n 's/^ingest_array=//p' <<< "$spec")

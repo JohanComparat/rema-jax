@@ -184,3 +184,75 @@ def rerun_summary(a: dict, b: dict, lam_edges, z_edges, lam_min: float = 20.0, m
             ratio[k, m] = nb / na if na else np.nan
     out["ncum_ratio"] = ratio.tolist()
     return out
+
+
+# --------------------------------------------------------------------------- different finders
+def match_physical(ra1, dec1, z1, ra2, dec2, z2, mpc_per_deg, rmax: float = 1.0, dz_max: float = 0.05,
+                   rank2=None):
+    """One-to-one matches within a projected distance ``rmax`` [h^-1 Mpc] at z1 and
+    |z2 - z1| / (1 + z1) < ``dz_max``. Each object 1, in input order, takes the best-ranked free
+    object 2 (``rank2``, higher is better; default the closest). ``mpc_per_deg(z)``: h^-1 Mpc per
+    degree (e.g. :meth:`rema.model.cosmo.CosmoTable.mpc_per_deg`). Returns (i1, i2, distance).
+
+    >>> d = lambda z: 1000.0 * np.ones_like(np.asarray(z, float))      # 1000 h^-1 Mpc per degree
+    >>> i1, i2, r = match_physical([10.0, 20.0], [0.0, 0.0], [0.3, 0.5], [10.0005, 20.0], [0.0, 0.0],
+    ...                            [0.31, 0.8], d)
+    >>> i1.tolist(), i2.tolist(), np.round(r, 3).tolist()
+    ([0], [0], [0.5])
+    """
+    z1, z2 = np.asarray(z1, np.float64), np.asarray(z2, np.float64)
+    good1 = np.flatnonzero(np.isfinite(z1) & (z1 > 0))
+    good2 = np.flatnonzero(np.isfinite(z2) & (z2 > 0))
+    if good1.size == 0 or good2.size == 0:
+        return np.zeros(0, int), np.zeros(0, int), np.zeros(0)
+    x1, x2 = unit_vectors(np.asarray(ra1)[good1], np.asarray(dec1)[good1]), \
+        unit_vectors(np.asarray(ra2)[good2], np.asarray(dec2)[good2])
+    scale = np.asarray(mpc_per_deg(z1[good1]), np.float64)                 # h^-1 Mpc per deg
+    rad = rmax / scale
+    chord = 2 * np.sin(np.radians(rad) / 2)
+    tree = cKDTree(x2)
+    A, B, D = [], [], []
+    for i, (x, c) in enumerate(zip(x1, chord)):
+        js = np.asarray(tree.query_ball_point(x, c), int)
+        if js.size == 0:
+            continue
+        zz = z1[good1[i]]
+        js = js[np.abs(z2[good2[js]] - zz) / (1 + zz) < dz_max]
+        if js.size == 0:
+            continue
+        sep = np.degrees(2 * np.arcsin(np.clip(np.linalg.norm(x2[js] - x, axis=1) / 2, 0, 1)))
+        A.append(np.full(js.size, i))
+        B.append(js)
+        D.append(sep * scale[i])
+    if not A:
+        return np.zeros(0, int), np.zeros(0, int), np.zeros(0)
+    a, b, d = np.concatenate(A), np.concatenate(B), np.concatenate(D)
+    score = -d if rank2 is None else np.asarray(rank2, np.float64)[good2[b]] - 1e-6 * d
+    order = np.lexsort((-score, a))
+    used1, used2, out = set(), set(), []
+    for p in order:
+        if a[p] in used1 or b[p] in used2:
+            continue
+        used1.add(a[p])
+        used2.add(b[p])
+        out.append(p)
+    out = np.asarray(out, int)
+    return good1[a[out]], good2[b[out]], d[out]
+
+
+def null_threshold(real, null, area: float, rate: float):
+    """The threshold t on a detection statistic above which (strictly) the null run has at most
+    ``rate`` detections per deg^2 of ``area``, and the estimated purity of the real run above it,
+    1 - n_null(> t) / n_real(> t).
+
+    >>> t, purity = null_threshold([5.0, 6.0, 9.0, 12.0], [4.0, 5.5, 7.0], 10.0, 0.1)
+    >>> t, round(purity, 3)
+    (5.5, 0.667)
+    """
+    real = np.asarray(real, np.float64)
+    null = np.sort(np.asarray(null, np.float64)[np.isfinite(null)])[::-1]
+    nmax = int(np.floor(rate * area))
+    t = float(null[nmax]) if null.size > nmax else -np.inf
+    nr = int(np.sum(real > t))
+    nn = int(np.sum(null > t))
+    return t, (1.0 - nn / nr) if nr else np.nan

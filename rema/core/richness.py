@@ -14,6 +14,11 @@ mask and depth (1 without a footprint; redMaPPer writes K = 1 - C). The solve is
 on a log-spaced grid of lambda values followed by Newton steps, wrapped in ``jax.lax.custom_root`` so that lambda has
 exact implicit derivatives with respect to every model parameter.
 
+With the photo-z filter (``model.filter = "photoz"``) the colour term rho_chi2(chi^2_i) becomes
+the galaxy's photo-z distribution at the cluster redshift, p_i(z) = N(z; ZPHOT_i, s_i), and the
+background the stacked photo-z distributions Sigma_pz(z, m_i) per unit z (as AMICO, Bellagamba
+et al. 2018); chi^2_i is then x_i^2 = ((ZPHOT_i - z)/s_i)^2, cut at ``pz_nsig_max``.
+
 Outputs follow redMaPPer: LAMBDA, LAMBDA_E = sqrt((1 - <p>) lambda S) with
 <p> = sum pmem^2 / sum pmem and S = SCALEVAL = lambda / sum pmem, R_LAMBDA, MASKFRAC
 (1 - geometric completeness within r_lambda), LNLAMLIKE = -sum pmem - sum ln(1 - pmem) over
@@ -51,6 +56,8 @@ class Neighbors:
     pfree: jnp.ndarray
     valid: jnp.ndarray        # bool
     is_center: jnp.ndarray    # bool, the galaxy at (or nearest) the centre
+    zphot: jnp.ndarray | None = None     # photo-z filter: ZPHOT and its calibrated width s
+    zphot_e: jnp.ndarray | None = None   # (-1 without a usable photo-z)
 
 
 @jax.tree_util.register_dataclass
@@ -110,8 +117,48 @@ class Richness:
 
 
 # --------------------------------------------------------------------------- kernel
+BAD_CHISQ = 1e6             # chi^2 of a galaxy without a usable photo-z (finite: no 0 * inf)
+SQRT2PI = float(np.sqrt(2.0 * np.pi))
+
+
+def photoz_chisq(nb, z):
+    """(x^2, 2 ln s, usable) of the neighbours' photo-z at the cluster redshift z ([K])."""
+    usable = (nb.zphot >= 0) & (nb.zphot_e > 0)
+    s = jnp.where(usable, nb.zphot_e, 1.0)
+    x = (nb.zphot - z) / s
+    return jnp.where(usable, x * x, BAD_CHISQ), 2.0 * jnp.log(s), usable
+
+
 def _filter_terms(nb, z, model: FilterModel, stage: Stage):
     """lambda-independent per-neighbour terms for one cluster (arrays [K])."""
+    if model.filter == "photoz":
+        return _terms_pz(nb, z, model, stage)
+    return _terms_rs(nb, z, model, stage)
+
+
+def _terms_pz(nb, z, model: FilterModel, stage: Stage):
+    """:func:`_filter_terms` of the photo-z filter: rho = p_i(z), Sigma_g = Sigma_pz(z, m)."""
+    D = model.mpc_per_deg(z)
+    r = jnp.maximum(nb.theta * D, 1e-6)
+    mstar = model.mstar(z)
+    maxmag = model.maxmag(z)
+    chi2, lndet, usable = photoz_chisq(nb, z)
+    sg = model.pzbkg.lookup(z, nb.refmag)
+    ok = (nb.valid & usable & (chi2 < model.pz_nsig_max**2) & (r < stage.maxrad)
+          & (nb.refmag < model.pz_mag_max) & jnp.isfinite(sg) & (sg > 0))
+    rho = jnp.where(ok, jnp.exp(-0.5 * chi2 - 0.5 * lndet) / SQRT2PI, 0.0)
+    sg = jnp.where(ok, sg, 1.0)
+    phi = prof.schechter(nb.refmag, mstar, model.alpha) / prof.lumnorm(mstar, maxmag, model.alpha)
+    thi = prof.theta_i(nb.refmag, maxmag, nb.refmag_err)
+    b = 2.0 * jnp.pi * r * sg / (D * D)
+    u0 = jnp.where(ok, 2.0 * jnp.pi * r * prof.nfw_sigma(r, model.nfw_rs, model.nfw_rcore) * phi * rho, 0.0)
+    w = jnp.where(ok, thi * nb.pfree, 0.0)
+    return dict(r=r, u0=u0, b=b, w=w, chi2=chi2, lndet=lndet, rho=rho, phi=phi, sg=sg, thi=thi,
+                D=D, maxmag=maxmag, ok=ok)
+
+
+def _terms_rs(nb, z, model: FilterModel, stage: Stage):
+    """:func:`_filter_terms` of the red-sequence filter."""
     D = model.mpc_per_deg(z)
     r = jnp.maximum(nb.theta * D, 1e-6)
     mstar = model.mstar(z)

@@ -8,7 +8,9 @@ Commands (each reads and writes FITS files, so stages can be resumed and run per
   background galaxies + calibration -> calibration with the chi^2 background added
   zred       add ZRED columns to a galaxy table
   scan       richness and redshift at given positions (redMaPPer zscan)
-  blind      blind cluster finding over a region
+  blind      blind cluster finding over a region (red-sequence or, with
+             --set model.filter=photoz, photo-z filter)
+  pscd       photo-z space cluster detection over a region (the AMICO matched filter)
   specpost   spectroscopic redshift and velocity dispersion of a cluster catalogue
   calibrate  red-sequence calibration on DR11 (spectroscopic seeds)
   randoms-index  DR11 randoms -> pixel-sorted copy, for fast footprints of any box
@@ -23,7 +25,8 @@ is a galaxy table or a directory of per-sweep tables (``rema ingest --outdir``).
 Run ``rema <command> -h`` for options. GPU: set ``JAX_PLATFORMS=cuda``.
 
 Configuration: ``--config`` if given, else the configuration stored in the calibration (scan,
-blind, zred, background) or in the input catalogue (specpost), else the defaults.
+blind, zred, background) or in the input catalogue (specpost), else the defaults; then the
+``--cosmology`` and ``--set SECTION.KEY=VALUE`` (or ``--set @overlay.yaml``) overrides.
 """
 
 from __future__ import annotations
@@ -67,6 +70,23 @@ def _with_cosmology(cfg, args):
     cfg = cfg.replace(cosmology=over)
     log.info("cosmology: %s", cfg.cosmology.label())
     return cfg
+
+
+def _with_overrides(cfg, args):
+    """``cfg`` with the ``--set`` overrides of ``args`` applied (logged)."""
+    from .config import apply_overrides
+
+    items = getattr(args, "set", None)
+    if not items:
+        return cfg
+    new = apply_overrides(cfg, items)
+    log.info("configuration overrides: %s", ", ".join(_config_diff(cfg, new)) or "none")
+    return new
+
+
+def _no_photoz(cfg, what: str):
+    if cfg.model.filter != "redsequence":
+        raise SystemExit(f"{what} works with the red-sequence filter only (model.filter: {cfg.model.filter})")
 
 
 def _run_cfg(path, stored, source: str):
@@ -152,27 +172,29 @@ def _sweeps(items):
     return out
 
 
-def _region(args, need_bkg=True, rebuild_bkg=False, sky=None):
+def _region(args, need_bkg=True, rebuild_bkg=False, sky=None, rs_only: str | None = None):
     from .calibration import Calibration
     from .io.legacy import read_galaxies
     from .modes.common import Region
     from .sky.maps import Footprint
 
     cal = Calibration.read(args.calib)
-    cfg = _with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args)
+    cfg = _with_overrides(_with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args), args)
+    if rs_only:
+        _no_photoz(cfg, rs_only)
     gal = read_galaxies(args.galaxies, sky, cfg)
     log.info("%d galaxies from %s%s", gal["ID"].size if gal else 0, args.galaxies,
              f" in {sky}" if sky is not None else "")
     fp = Footprint.read(args.footprint) if getattr(args, "footprint", None) else None
     if fp is not None and sky is not None and fp.box is not None and fp.box != sky:
         log.warning("the footprint was built for %s, not for the data box %s", fp.box, sky)
-    if cal.bkg is None and need_bkg:
+    if cal.bkg is None and need_bkg and cfg.model.filter == "redsequence":
         log.warning("calibration has no background; building it from the galaxies")
     if getattr(args, "centering", None):
         cfg = cfg.replace(centering={"method": args.centering})
     reg = Region.build(gal, cal.rs, cfg, footprint=fp, zredcorr=cal.zredcorr,
                        bkg=None if rebuild_bkg else cal.bkg, zlcorr=cal.zlcorr,
-                       zbkg=None if rebuild_bkg else cal.zbkg, wcen_params=cal.wcen)
+                       zbkg=None if rebuild_bkg else cal.zbkg, wcen_params=cal.wcen, sky=sky)
     return reg, cal
 
 
@@ -259,10 +281,11 @@ def cmd_background(args):
     from .modes.common import _area_function, zred_background
 
     # Both backgrounds are rebuilt from the given galaxies.
-    reg, cal = _region(args, need_bkg=False, rebuild_bkg=True, sky=_data_sky(args))
+    sky = _data_sky(args)
+    reg, cal = _region(args, need_bkg=False, rebuild_bkg=True, sky=sky, rs_only="rema background")
     cal.bkg = reg.model.bkg
     cal.zbkg = zred_background(reg.gal, reg.cfg,
-                               _area_function(reg.gal, reg.rs, reg.cfg, reg.footprint, None))
+                               _area_function(reg.gal, reg.rs, reg.cfg, reg.footprint, None, sky))
     cal.config = reg.cfg
     cal.write(args.out)
 
@@ -340,6 +363,50 @@ def cmd_blind(args):
     _write_catalog(args.out, cat, mem, cfg, hdr)
 
 
+def cmd_pscd(args):
+    """Photo-z space cluster detection (the AMICO matched filter) over a region."""
+    import jax
+
+    from .calibration import Calibration
+    from .io.legacy import read_galaxies
+    from .modes import specpost
+    from .pipeline import file_sha1
+    from .pscd.run import run_pscd
+    from .sky.maps import Footprint
+    from .sky.regions import sky_header
+
+    pr = _plan_region(args)
+    sky = pr[1] if pr else _sky(args.box)
+    own = pr[0] if pr else _box(args.own)
+    region_id = args.region_id if args.region_id is not None else 0
+    cal = Calibration.read(args.calib) if args.calib else None
+    cfg = _with_overrides(_with_cosmology(_run_cfg(args.config, cal.config if cal else None,
+                                                   "calibration"), args), args)
+    gal = read_galaxies(args.galaxies, sky, cfg)
+    fp = Footprint.read(args.footprint) if args.footprint else None
+    info = {}
+    cat, mem = run_pscd(gal, cfg, footprint=fp, sky=sky, own=own, region_id=region_id,
+                        rs=cal.rs if cal else None, info=info)
+    hdr = {"MODE": "pscd", "FILTER": "pscd", "REGION": region_id,
+           "CALSHA1": file_sha1(args.calib) if args.calib else "none",
+           "CFGSHA1": _sha1_text(cfg.to_yaml()), "DEVICE": jax.default_backend(),
+           "NGAL": info.get("n_galaxies", 0), "NUSED": info.get("n_used", 0),
+           "NDET": info.get("n_detections", 0), "TCUBE": round(info.get("t_cube", 0.0), 1),
+           "TTOTAL": round(info.get("t_total", 0.0), 1),
+           "PEAKRSS": round(info.get("peak_rss_gb", 0.0), 2), **sky_header(sky)}
+    if own is not None:
+        hdr.update(OWNRA0=own.ra_min, OWNRA1=own.ra_max, OWNDEC0=own.dec_min, OWNDEC1=own.dec_max)
+    if pr is not None:
+        hdr["PLANHASH"] = pr[2]["PLANHASH"]
+    if args.specpost and cat:
+        sc = cfg.spec
+        cat, mem = specpost.process(cat, mem, min_members=sc.min_members, vmax_init=sc.vmax_init,
+                                    nsigma_clip=sc.nsigma_clip, niter=sc.niter, gapper_nmax=sc.gapper_nmax,
+                                    c_location=sc.c_location, c_scale=sc.c_scale, nboot=sc.nboot,
+                                    seed=sc.seed, zlambda_col="Z", center_id_col="ID_BCG")
+    _write_catalog(args.out, cat, mem, cfg, hdr)
+
+
 def cmd_remeasure(args):
     """Re-measure catalogued clusters at fixed centres in other cosmologies (tier A)."""
     from astropy.io import fits
@@ -357,9 +424,10 @@ def cmd_remeasure(args):
     sky = pr[1] if pr else _sky(args.box)
     own = pr[0] if pr else _box(args.own)
     cal = Calibration.read(args.calib)
+    cfg = _with_overrides(_with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args), args)
+    _no_photoz(cfg, "rema remeasure")
     if cal.bkg is None:
         raise SystemExit("the calibration has no background (run `rema background`)")
-    cfg = _with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args)
     vary = R.parse_vary(args.vary)
     grid = R.cosmology_grid(cfg.cosmology, vary)
     jvp = [p for p in (args.jvp or "").split(",") if p]
@@ -610,6 +678,10 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--cosmology", action="append", metavar="KEY=VALUE",
                         help="override a cosmological parameter of the configuration (Omega_m, h, "
                              "Omega_b, sum_mnu, w0, wa); repeat, or separate with commas")
+        sp.add_argument("--set", action="append", metavar="SECTION.KEY=VALUE",
+                        help="override any configuration value (VALUE in YAML, e.g. "
+                             "model.filter=photoz, photoz.mag_max=22), or merge a partial YAML "
+                             "configuration with @FILE; repeat")
 
     def centering(sp):
         sp.add_argument("--centering", choices=("auto", "bcg", "wcen"),
@@ -699,6 +771,18 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--specpost", action="store_true")
     s.add_argument("--out", required=True)
     s.set_defaults(func=cmd_blind)
+
+    s = sub.add_parser("pscd", help="photo-z space cluster detection (AMICO matched filter, any colour)")
+    common(s, calib=False)
+    s.add_argument("--calib", help="calibration: its configuration (unless --config) and red sequence "
+                                   "(members' CHISQ_RS)")
+    boxes(s)
+    plan(s)
+    s.add_argument("--own", nargs=4, metavar=("RA0", "RA1", "DEC0", "DEC1"),
+                   help="keep detections centred in this box (the region without its buffer)")
+    s.add_argument("--specpost", action="store_true")
+    s.add_argument("--out", required=True)
+    s.set_defaults(func=cmd_pscd)
 
     s = sub.add_parser("remeasure", help="re-measure catalogued clusters at fixed centres in other "
                                          "cosmologies (cosmology sensitivity)")

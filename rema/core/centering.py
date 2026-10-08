@@ -81,19 +81,25 @@ WCEN_KEYS = ("DELTA0", "DELTA1", "SIGMA_M", "LNW_CEN_MEAN", "LNW_CEN_SIGMA", "LN
 ZRMOD_IDENTITY = (np.array([0.0, 1.0]), np.array([0.0, 1.0]))
 
 
-def center_bcg_one(nb, pmem, r, r_lambda, z, maxrad, pmem_min: float = 0.8, nsig: float = 2.0):
-    """(index of the central among the neighbours, found flag) for one cluster."""
-    zok = jnp.abs(nb.zred - z) < nsig * jnp.maximum(nb.zred_e, 1e-3)
+def center_bcg_one(nb, pmem, r, r_lambda, z, maxrad, pmem_min: float = 0.8, nsig: float = 2.0,
+                   use_zphot: bool = False):
+    """(index of the central among the neighbours, found flag) for one cluster.
+
+    The redshift test uses zred, or the photo-z (and its calibrated width) with ``use_zphot``.
+    """
+    zg, ze = (nb.zphot, nb.zphot_e) if use_zphot else (nb.zred, nb.zred_e)
+    zok = jnp.abs(zg - z) < nsig * jnp.maximum(ze, 1e-3)
     cand = nb.valid & (r < jnp.minimum(r_lambda, maxrad)) & ((pmem > pmem_min) | zok)
     score = jnp.where(cand, -nb.refmag, -jnp.inf)
     i = jnp.argmax(score)
     return i, jnp.any(cand)
 
 
-@jax.jit
-def center_bcg(nb, pmem, r, r_lambda, z, maxrad, pmem_min: float = 0.8, nsig: float = 2.0):
+@partial(jax.jit, static_argnames=("use_zphot",))
+def center_bcg(nb, pmem, r, r_lambda, z, maxrad, pmem_min: float = 0.8, nsig: float = 2.0,
+               use_zphot: bool = False):
     """Batched :func:`center_bcg_one`: indices [B] and found flags [B]."""
-    fn = partial(center_bcg_one, pmem_min=pmem_min, nsig=nsig)
+    fn = partial(center_bcg_one, pmem_min=pmem_min, nsig=nsig, use_zphot=use_zphot)
     return jax.vmap(fn, in_axes=(0, 0, 0, 0, 0, None))(nb, pmem, r, r_lambda, z, maxrad)
 
 

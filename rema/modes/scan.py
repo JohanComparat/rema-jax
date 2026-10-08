@@ -30,7 +30,7 @@ from ..core.centering import as_centering, center_bcg, center_wcen
 from ..core.richness import RadialQuad, Stage, richness_one
 from ..core.zlambda import zlambda
 from ..sky.neighbors import next_pow2, unit_vectors
-from .common import Region
+from .common import Region, snr
 
 log = logging.getLogger(__name__)
 
@@ -175,6 +175,7 @@ def run_scan(region: Region, ra, dec, ids=None, batch: int = 128):
             "SCALEVAL": np.asarray(rich.scaleval, np.float32),
             "MASKFRAC": np.asarray(rich.maskfrac, np.float32),
             "LNLAMLIKE": np.asarray(rich.lnlamlike, np.float32),
+            "SNR": snr(rich.lnlamlike),
             "PZBINS": np.asarray(zl.pzbins, np.float32), "PZ": np.asarray(zl.pz, np.float32),
             "Z_STEPS": np.broadcast_to(zsteps.astype(np.float32), (n, zsteps.size)).copy(),
             "LAMBDA_STEPS": lam_steps.astype(np.float32),
@@ -213,7 +214,8 @@ def _centre(region: Region, pad, nb, rich, z):
         zchi = jnp.asarray(np.where(pad.valid, g["ZRED_CHISQ"][pad.idx], -1.0), jnp.float32)
         cen = center_wcen(nb, xyz, zchi, rich, z, maxrad, region.model, region.wcen)
     else:
-        ic, found = center_bcg(nb, rich.pmem, rich.r, rich.r_lambda, z, maxrad)
+        ic, found = center_bcg(nb, rich.pmem, rich.r, rich.r_lambda, z, maxrad,
+                               use_zphot=region.model.filter == "photoz")
         cen = as_centering(jnp.where(found, ic, -1).astype(jnp.int32), found, cfg.centering.maxcen)
     return jax.tree_util.tree_map(np.asarray, cen)
 
@@ -238,6 +240,7 @@ def member_table(region: Region, match_ids, pad, rich, z, pmin: float = 0.01) ->
            "ZRED": g["ZRED"][gi], "ZRED_E": g["ZRED_E"][gi]}
     if "ZSPEC" in g:
         out["ZSPEC"] = g["ZSPEC"][gi]
+    out.update(region.photoz_columns(gi))
     out["FLUX"] = g["FLUX"][gi]
     out["FLUX_IVAR"] = g["FLUX_IVAR"][gi]
     return out

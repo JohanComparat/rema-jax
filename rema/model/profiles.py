@@ -133,6 +133,21 @@ def lumnorm(mstar, maxmag, alpha: float = -1.0, n: int = 64, bright: float = 8.0
     return half * jnp.sum(w * schechter(m, mstar[..., None], alpha), axis=-1)
 
 
+def selection_fraction(mstar, maxmag, alpha: float, mag_max):
+    """Fraction of the luminosity function brighter than ``maxmag`` that is brighter than
+    ``mag_max`` too: lumnorm(m*, min(maxmag, mag_max)) / lumnorm(m*, maxmag).
+
+    >>> round(float(selection_fraction(20.0, 21.75, -1.0, 30.0)), 6)
+    1.0
+    >>> 0.3 < float(selection_fraction(20.0, 21.75, -1.0, 21.0)) < 0.7
+    True
+    """
+    mstar = jnp.asarray(mstar)
+    maxmag = jnp.asarray(maxmag)
+    lim = jnp.minimum(maxmag, mag_max)
+    return lumnorm(mstar, lim, alpha) / lumnorm(mstar, maxmag, alpha)
+
+
 def theta_i(m, maxmag, sigma_m):
     """Soft luminosity cut 1/2 [1 + erf((maxmag - m)/(sqrt(2) sigma_m))]."""
     return 0.5 * (1.0 + erf((maxmag - m) / (np.sqrt(2.0) * jnp.maximum(sigma_m, 1e-4))))

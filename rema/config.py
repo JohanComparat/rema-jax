@@ -137,6 +137,8 @@ class ModelConfig:
     nfw_rs: float = 0.15
     nfw_rcore: float = 0.1
     rsig: float = 0.05                  # softness of the radial cut
+    filter: str = "redsequence"         # membership filter: "redsequence" (colour chi^2) or
+                                        # "photoz" (DR11 photo-z, any colour; see PhotozConfig)
 
 
 @dataclass(frozen=True)
@@ -149,6 +151,82 @@ class BackgroundConfig:
     min_counts: float = 50.0            # adaptive merging of sparse magnitude bins
     smooth_z: float = 0.02
     smooth_m: float = 0.2
+
+
+@dataclass(frozen=True)
+class PhotozConfig:
+    """Galaxy photo-z of the photo-z filter (``model.filter: photoz``) and of ``rema pscd``.
+
+    The photo-z of a galaxy is a Gaussian of mean ZPHOT and width
+
+        s = max(err_scale(m) ZPHOT_STD, err_floor (1 + ZPHOT)),
+
+    with ``err_scale`` piecewise linear in the reference magnitude m through the nodes
+    ``err_scale_mag`` (and flat beyond them); without nodes ``err_scale`` holds one value.
+    """
+
+    err_scale: tuple[float, ...] = (1.0,)
+    err_scale_mag: tuple[float, ...] = ()
+    err_floor: float = 0.01
+    nsig_max: float = 4.0               # members within nsig_max s of the cluster redshift
+    mag_max: float | None = None        # extra reference-magnitude limit of the members (and
+                                        # of the completeness); None: the catalogue's
+    zbinsize: float = 0.005             # z grid of the stacked photo-z background
+    zrange_bkg: tuple[float, float] = (0.0, 1.6)
+    min_counts: float = 50.0            # adaptive merging of sparse magnitude bins
+
+
+@dataclass(frozen=True)
+class PscdConfig:
+    """``rema pscd``: Photo-z Space Cluster Detection, the AMICO matched filter (Bellagamba et al.
+    2018; Maturi et al. 2019) in (position, magnitude, photo-z). The galaxy photo-z, their
+    magnitude limit (``photoz.mag_max``) and the noise are those of :class:`PhotozConfig`.
+
+    The cluster template is the KiDS one (Maturi et al. 2019): an NFW profile of concentration
+    ``concentration`` and radius ``r200``, truncated at ``rtrunc`` r200 in projection, times a
+    Schechter function of slope ``alpha`` around the configuration's m*(z), with ``n200``
+    galaxies brighter than m* + ``dmag_n200`` inside r200: amplitude A = 1 is that template. The
+    profile is flat inside ``rcore``.
+    """
+
+    pixel: float = 0.01                 # deg, of the (gnomonic) amplitude grid
+    dz: float = 0.01                    # redshift step of the grid
+    zrange: tuple[float, float] | None = None   # None: model.zrange
+    r200: float = 0.7                   # h^-1 Mpc (1 Mpc for h = 0.7: M200 ~ 1e14 Msun/h)
+    concentration: float = 3.59
+    rtrunc: float = 1.35                # profile truncation, in r200
+    rcore: float = 0.1                  # h^-1 Mpc, flat core of the projected NFW (as rema's
+                                        # radial filter; the KiDS template has none). A cusp
+                                        # narrower than the pixels biases A low at high z.
+    alpha: float = -1.06
+    n200: float = 22.9
+    dmag_n200: float = 2.0
+    snr_min: float = 3.0                # detections down to this S/N (thresholds come later)
+    snr_kind: str = "amico"             # S/N of the extraction: "amico", A/sigma_A with the
+                                        # cluster's shot noise (Bellagamba et al. 2018, Eq. 11),
+                                        # or "background", A sqrt(alpha) (background noise only)
+    max_detections: int = 1000000
+    pmin: float = 0.01                  # members kept in the output: P(i in j) >= pmin
+    lambda_star_dmag: float = 1.5       # LAMBDA_STAR: members brighter than m* + 1.5, r < r200
+    max_maskfrac: float = 0.2
+    min_coverage: float = 0.2           # cells whose profile is less covered by the footprint
+                                        # are not searched (edges of the region)
+    tile: int = 32                      # pixels per side of the tiles of the maximum search
+
+
+@dataclass(frozen=True)
+class NullConfig:
+    """Null tests: shuffled galaxy properties, which keep positions and magnitudes.
+
+    "photoz" permutes the (ZPHOT, ZPHOT_STD) pairs among galaxies of the same reference magnitude
+    (bins of ``magbin``): the angular clustering stays, the redshift coherence of real structures
+    is lost. "colour" permutes the fluxes, rescaled to the galaxy's own reference flux: the red
+    sequence of real clusters is lost.
+    """
+
+    shuffle: str = "none"               # "none", "photoz" or "colour"
+    seed: int = 1
+    magbin: float = 0.1
 
 
 @dataclass(frozen=True)
@@ -175,6 +253,9 @@ class RichnessConfig:
     n_newton: int = 4
     firstpass_niter: int = 1            # lambda + z_lambda iterations of the first pass (DR10: 1)
     minlambda: float = 3.0
+    min_lnlamlike: float | None = None  # candidates also need LNLAMLIKE >= this after the first
+                                        # pass and the likelihood pass (None: no cut, as
+                                        # redMaPPer; the photo-z filter needs one)
     maxrad_factor: float = 1.2          # neighbour radius = factor * r0 * 3**beta (h^-1 Mpc)
 
 
@@ -232,6 +313,7 @@ class PercolationConfig:
 class SeedConfig:
     chisq_max: float = 20.0
     dmag_max: float = 1.75              # seeds brighter than m*(zred) + dmag_max
+    zphot_err_max: float = 0.1          # photo-z filter: seeds with s / (1 + ZPHOT) below this
 
 
 @dataclass(frozen=True)
@@ -288,6 +370,9 @@ class RemaConfig:
     scan: ScanConfig = field(default_factory=ScanConfig)
     spec: SpecConfig = field(default_factory=SpecConfig)
     calib: CalibConfig = field(default_factory=CalibConfig)
+    photoz: PhotozConfig = field(default_factory=PhotozConfig)
+    pscd: PscdConfig = field(default_factory=PscdConfig)
+    null: NullConfig = field(default_factory=NullConfig)
 
     # ------------------------------------------------------------------ helpers
     @property
@@ -326,6 +411,48 @@ class RemaConfig:
         return dataclasses.replace(self, **updates)
 
 
+def apply_overrides(cfg: RemaConfig, items) -> RemaConfig:
+    """``cfg`` with ``SECTION.KEY[.SUB]=VALUE`` overrides (VALUE read as YAML).
+
+    An item ``@FILE`` merges a partial YAML configuration (e.g. ``model: {filter: photoz}``).
+    Nested sections are merged, so the other keys keep their values; unknown keys are rejected.
+
+    >>> c = apply_overrides(RemaConfig(), ["model.filter=photoz", "richness.firstpass.r0=0.4",
+    ...                                    "photoz.err_scale=[0.8, 0.6]", "photoz.mag_max=22"])
+    >>> c.model.filter, c.richness.firstpass, c.photoz.err_scale, c.photoz.mag_max
+    ('photoz', StageRadius(r0=0.4, beta=0.0), (0.8, 0.6), 22.0)
+    """
+    d = cfg.to_dict()
+    for item in items or ():
+        if str(item).startswith("@"):
+            _merge(d, yaml.safe_load(Path(str(item)[1:]).read_text()) or {}, str(item))
+            continue
+        key, sep, value = str(item).partition("=")
+        path = key.strip().split(".")
+        if not sep or len(path) < 2:
+            raise ValueError(f"override {item!r}: expected SECTION.KEY=VALUE")
+        node = d
+        for name in path[:-1]:
+            if not isinstance(node.get(name), dict):
+                raise KeyError(f"override {item!r}: {name!r} is not a configuration section")
+            node = node[name]
+        if path[-1] not in node:
+            raise KeyError(f"override {item!r}: unknown key {path[-1]!r}; known: {sorted(node)}")
+        node[path[-1]] = yaml.safe_load(value)
+    return RemaConfig.from_dict(d)
+
+
+def _merge(d: dict, upd: dict, where: str) -> None:
+    """Merge the nested dict ``upd`` into ``d`` in place; unknown keys are rejected."""
+    for key, value in upd.items():
+        if key not in d:
+            raise KeyError(f"{where}: unknown key {key!r}; known: {sorted(d)}")
+        if isinstance(d[key], dict) and isinstance(value, dict):
+            _merge(d[key], value, where)
+        else:
+            d[key] = value
+
+
 def _to_plain(obj: Any) -> Any:
     """Tuples -> lists so that the YAML is plain; keeps nested dicts."""
     if isinstance(obj, dict):
@@ -348,8 +475,22 @@ def _build(cls: type, d: dict[str, Any]) -> Any:
             value = _build(ftype, value)
         elif isinstance(value, list):
             value = tuple(value)
+        elif isinstance(value, (int, str)) and not isinstance(value, bool) and _is_float(ftype):
+            value = float(value)            # "mag_max: 22" and "1e6" (a string in YAML 1.1)
         kwargs[name] = value
     return cls(**kwargs)
+
+
+def _is_float(ftype: Any) -> bool:
+    """A ``float`` or ``float | None`` annotation."""
+    import types
+    import typing
+
+    if ftype is float:
+        return True
+    args = typing.get_args(ftype)
+    return (typing.get_origin(ftype) in (typing.Union, types.UnionType) and float in args
+            and int not in args)
 
 
 def _field_type(cls: type, name: str) -> Any:

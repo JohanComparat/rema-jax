@@ -141,18 +141,30 @@ class Footprint:
         return float(np.sum(self.fine.values["FRACGOOD"]) * pix_area_deg2(self.nside))
 
     def effective_area(self, mag, band: str, snr_min: float = 5.0, mag_max: float = np.inf,
-                       zeropoint: float = 22.5) -> np.ndarray:
+                       zeropoint: float = 22.5, sky=None) -> np.ndarray:
         """Area (deg^2) over which a galaxy of true magnitude ``mag`` passes the selection.
 
         Selection: measured flux above max(snr_min sigma_f, flux(mag_max)), with Gaussian noise.
+        ``sky``: count only the pixels centred in this box (or union of boxes), for galaxies read
+        over a part of the map's area.
         """
         mag = np.atleast_1d(np.asarray(mag, dtype=np.float64))
         sig = self.fine.values[f"SIGF_{band.upper()}"].astype(np.float64)
         frac = self.fine.values["FRACGOOD"].astype(np.float64)
+        if sky is not None and sky != self.box:
+            inside = self.pixels_in(sky)
+            sig, frac = sig[inside], frac[inside]
         f = 10.0 ** (-0.4 * (mag - zeropoint))
         fcut = np.maximum(snr_min * sig, 10.0 ** (-0.4 * (mag_max - zeropoint)))
         psel = ndtr((f[:, None] - fcut[None, :]) / sig[None, :])
         return np.sum(psel * frac[None, :], axis=1) * pix_area_deg2(self.nside)
+
+    def pixels_in(self, sky) -> np.ndarray:
+        """Mask of the map's pixels whose centres lie in ``sky``."""
+        import healpy as hp
+
+        ra, dec = hp.pix2ang(self.nside, self.fine.pixels, nest=True, lonlat=True)
+        return np.asarray(sky.contains(ra, dec), bool)
 
     def digest(self) -> str:
         """Hash of the map (pixels and values), for checkpoint keys and provenance."""

@@ -23,7 +23,7 @@ import jax.numpy as jnp
 from ..model.likelihood import chisq as chisq_fn
 from ..model.redsequence import RSAt
 from .context import FilterModel
-from .richness import RadialQuad, Richness, Stage, grid_chunk, richness_one
+from .richness import RadialQuad, Richness, Stage, grid_chunk, photoz_chisq, richness_one
 
 ZGRID_BUDGET = 7 * 2048     # redshift-grid points x neighbours per vectorised step
 
@@ -40,7 +40,13 @@ class ZLambda:
 
 
 def _member_lnl_one(nb, z, model: FilterModel):
-    """ln L_i(z) = -chi^2/2 - ln det/2 for every neighbour at one redshift: [K]."""
+    """ln L_i(z) = -chi^2/2 - ln det/2 for every neighbour at one redshift: [K].
+
+    With the photo-z filter, chi^2 = ((ZPHOT - z)/s)^2 and ln det = 2 ln s: ln p_i(z).
+    """
+    if model.filter == "photoz":
+        chi2, lndet, _ = photoz_chisq(nb, z)
+        return -0.5 * chi2 - 0.5 * lndet
     rsz = model.rs.at(z)
     at = RSAt(rsz.mean[None], rsz.slope[None], rsz.cint[None], rsz.pivot[None])
     chi2, lndet = chisq_fn(nb.flux, nb.ivar, at, model.iref, model.chisq_mode, model.eps)

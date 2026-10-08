@@ -1,0 +1,9 @@
+# The photo-z filter of rema blind/scan (variant V0: the red-sequence run's luminosity limit,
+# m* + 1.75). Seeds brighter than m* + 1 with s / (1 + z) < 0.1. The photo-z filter is less
+# selective than the red sequence: most seeds reach lambda >= 3, so candidates also need a local
+# significance sqrt(2 LNLAMLIKE) >= 3 after the first pass and the likelihood pass (on the strip:
+# 9,490 candidates in 9 deg^2, against 2,031 with the photo-z shuffled). Combine with
+# photoz_dr11.yaml; variant V1 adds `--set photoz.mag_max=22`.
+model: {filter: photoz}
+seeds: {dmag_max: 1.0, zphot_err_max: 0.1}
+richness: {min_lnlamlike: 4.5}

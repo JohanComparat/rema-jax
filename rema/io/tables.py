@@ -138,7 +138,8 @@ def write_catalog(path: str | Path, cat: Mapping[str, np.ndarray], mem: Mapping[
     """Write a cluster catalogue: CLUSTERS, MEMBERS (or ``members_path``) and CONFIG HDUs.
 
     The primary header gets REMAVER, NCLUSTER, NMEMBER, the cosmology of ``cfg`` (OMEGAM, HUBBLE,
-    OMEGAB, MNU, W0, WA) and ``header``. An empty catalogue keeps
+    OMEGAB, MNU, W0, WA), its membership filter (FILTER) and null test (NULL, when there is one),
+    and ``header``. An empty catalogue keeps
     empty CLUSTERS and MEMBERS HDUs, which :func:`read_catalog` reads back as empty dicts.
     """
     from .. import __version__
@@ -146,8 +147,13 @@ def write_catalog(path: str | Path, cat: Mapping[str, np.ndarray], mem: Mapping[
     def hdu(t, name):
         return table_hdu(_fits_columns(t), extname=name) if t else fits.BinTableHDU(name=name)
 
+    run = {}
+    if cfg is not None:
+        run = {**cfg.cosmology.header(), "FILTER": cfg.model.filter}
+        if cfg.null.shuffle != "none":
+            run["NULL"] = cfg.null.shuffle
     prim = {"REMAVER": __version__, "NCLUSTER": _nrows(cat), "NMEMBER": _nrows(mem or {}),
-            **(cfg.cosmology.header() if cfg is not None else {}), **(header or {})}
+            **run, **(header or {})}
     hdus = [hdu(cat, "CLUSTERS")]
     if members_path is None:
         hdus.append(hdu(mem or {}, "MEMBERS"))

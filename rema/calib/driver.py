@@ -332,8 +332,14 @@ def calibrate(args):
     from ..io.legacy import read_galaxies
     from ..sky.regions import Box, sky_header, sky_union
 
+    from ..config import apply_overrides
+
     cfg = RemaConfig.from_yaml(args.config) if args.config else RemaConfig()
     cfg = cfg.replace(cosmology=parse_cosmology_overrides(getattr(args, "cosmology", None)))
+    cfg = apply_overrides(cfg, getattr(args, "set", None))
+    if cfg.model.filter != "redsequence":
+        raise SystemExit(f"rema calibrate fits the red sequence: model.filter must be redsequence, "
+                         f"not {cfg.model.filter}")
     boxes = getattr(args, "box", None)
     sky = sky_union([Box(*map(float, b)) for b in boxes]) if boxes else None
     gal = read_galaxies(args.galaxies, sky, cfg)

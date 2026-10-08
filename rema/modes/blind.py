@@ -41,18 +41,25 @@ from ..core.richness import Neighbors, RadialQuad, Stage, richness
 from ..core.zlambda import ZLambda, zlambda
 from ..sky.neighbors import radec_from_unit, unit_vectors
 from ..sky.regions import Box
-from .common import Region
+from .common import Region, snr
 
 log = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------- seeds
 def select_seeds(region: Region) -> np.ndarray:
+    """Seed galaxies: zred in the redshift range with a red-sequence chi^2 below
+    ``seeds.chisq_max``, or, with the photo-z filter, ZPHOT in the range with a calibrated width
+    s / (1 + ZPHOT) below ``seeds.zphot_err_max`` (any colour); brighter than m*(z) + dmag_max."""
     cfg = region.cfg
     g = region.gal
-    z = g["ZRED"]
+    z = region.seed_z(slice(None))
     ok = (z >= cfg.model.zrange[0]) & (z <= cfg.model.zrange[1])
-    ok &= (g["ZRED_CHISQ"] >= 0) & (g["ZRED_CHISQ"] < cfg.seeds.chisq_max)
+    if region.model.filter == "photoz":
+        s = g["ZPHOT_E"]
+        ok &= (s > 0) & (s < cfg.seeds.zphot_err_max * (1.0 + z))
+    else:
+        ok &= (g["ZRED_CHISQ"] >= 0) & (g["ZRED_CHISQ"] < cfg.seeds.chisq_max)
     ok &= g["REFMAG"] < region.mstar_np(np.clip(z, 0.01, 2.0)) + cfg.seeds.dmag_max
     return np.flatnonzero(ok)
 
@@ -282,7 +289,7 @@ def _perc_batch(nb0, gxyz, cxyz, z0, frad, fgeo, quad, model, stage, centering: 
         cen = as_centering(jnp.full(ok0.shape, -1, jnp.int32), ok0, maxcen)
     else:
         ic, found = center_bcg(nb0, rich0.pmem, rich0.r, rich0.r_lambda, zl0.z,
-                               jnp.asarray(1e3, zl0.z.dtype))
+                               jnp.asarray(1e3, zl0.z.dtype), use_zphot=model.filter == "photoz")
         cen = as_centering(jnp.where(found, ic, -1).astype(jnp.int32), found & ok0, maxcen)
     ic = cen.index[:, 0]
     found = (cen.ngood > 0) & ok0
@@ -609,7 +616,7 @@ def _record(clusters, members, region, zl, j, k, s, idx, valid, pf_used, rmask, 
         "SEED_ID": g["ID"][s], "ID_CENT": np.where(used, g["ID"][rows], -1).astype(np.int64),
         "RA": ra, "DEC": dec,
         "RA_CENT": np.where(used, g["RA"][rows], -400.0), "DEC_CENT": np.where(used, g["DEC"][rows], -400.0),
-        "RA_SEED": g["RA"][s], "DEC_SEED": g["DEC"][s], "Z_INIT": float(g["ZRED"][s]),
+        "RA_SEED": g["RA"][s], "DEC_SEED": g["DEC"][s], "Z_INIT": float(region.seed_z(s)),
         "LAMBDA": lam, "LAMBDA_E": float(take(rich.lam_e)), "Z_LAMBDA": z,
         "Z_LAMBDA_E": float(take(zl.z_e)), "Z_LAMBDA_NITER": int(take(zl.niter)),
         "R_LAMBDA": float(take(rich.r_lambda)), "R_MASK": rmask,
@@ -621,6 +628,7 @@ def _record(clusters, members, region, zl, j, k, s, idx, valid, pf_used, rmask, 
         "REFMAG": float(g["REFMAG"][cg]), "REFMAG_ERR": float(g["REFMAG_ERR"][cg]),
         "ZRED": float(g["ZRED"][cg]), "ZRED_E": float(g["ZRED_E"][cg]),
         "ZRED_CHISQ": float(g["ZRED_CHISQ"][cg]),
+        **{k: float(v) for k, v in region.photoz_columns(cg).items()},
         "CHISQ": float(take(rich.chisq)[ic]) if galaxy_centre and ic >= 0 else np.nan,
         "NCENT_GOOD": np.int16(take(cen.ngood)), "P_CEN": take(cen.p_cen).astype(np.float32),
         "Q_CEN": take(cen.q_cen).astype(np.float32), "P_SAT": take(cen.p_sat).astype(np.float32),
@@ -643,7 +651,7 @@ def _record(clusters, members, region, zl, j, k, s, idx, valid, pf_used, rmask, 
         "CHISQ": take(rich.chisq)[msel].astype(np.float32),
         "REFMAG": g["REFMAG"][mi], "REFMAG_ERR": g["REFMAG_ERR"][mi], "ZRED": g["ZRED"][mi],
         "ZRED_E": g["ZRED_E"][mi], "ZSPEC": g["ZSPEC"][mi] if "ZSPEC" in g else np.full(mi.size, -1.0),
-        "FLUX": g["FLUX"][mi], "FLUX_IVAR": g["FLUX_IVAR"][mi], "CG": g["ID"][mi] == g["ID"][cg],
+        **region.photoz_columns(mi), "FLUX": g["FLUX"][mi], "FLUX_IVAR": g["FLUX_IVAR"][mi], "CG": g["ID"][mi] == g["ID"][cg],
         "CENT_RANK": cent_rank[msel],
     })
 
@@ -653,9 +661,9 @@ class _Checkpoint:
     """Per-stage results of a blind run (npz files), so an interrupted run resumes.
 
     Every file carries a key computed from the inputs: the galaxy IDs (all, in table order) and
-    their zred and zred chi^2 (which carry the zred correction), the seeds, the red-sequence
-    model, the backgrounds, the wcen model, the footprint, the configuration and the rema
-    version. A file with another key (other inputs) is ignored and overwritten.
+    their zred and zred chi^2 (which carry the zred correction; and their photo-z with the photo-z
+    filter), the seeds, the red-sequence model, the backgrounds, the wcen model, the footprint,
+    the configuration and the rema version. A file with another key (other inputs) is ignored and overwritten.
     """
 
     def __init__(self, directory, key: str):
@@ -672,10 +680,14 @@ class _Checkpoint:
         from .. import __version__
 
         h = hashlib.sha1()
-        for col in ("ID", "ZRED", "ZRED_CHISQ"):
+        cols = ("ID", "ZRED", "ZRED_CHISQ")
+        if region.model.filter == "photoz":
+            cols += ("ZPHOT", "ZPHOT_E")
+        for col in cols:
             h.update(np.ascontiguousarray(region.gal[col]).tobytes())
         h.update(np.ascontiguousarray(region.gal["ID"][seeds]).tobytes())
-        for leaf in jax.tree_util.tree_leaves((region.rs, region.model.bkg, region.wcen)):
+        for leaf in jax.tree_util.tree_leaves((region.rs, region.model.bkg, region.model.pzbkg,
+                                               region.wcen)):
             h.update(np.ascontiguousarray(np.asarray(leaf)).tobytes())
         h.update((region.footprint.digest() if region.footprint is not None else "none").encode())
         h.update(region.cfg.to_yaml().encode())
@@ -730,7 +742,7 @@ def run_blind(region: Region, own: Box | None = None, region_id: int = 0, batch:
     if cand is None:
         fp = ck.load("firstpass") if ck else None
         if fp is None:
-            z0 = region.gal["ZRED"][seeds]
+            z0 = region.seed_z(seeds)
             fp = _run_batched(region, seeds, z0, st_fp, q_fp, "zlambda", batch, calc_err=False)
             for _ in range(max(0, rc.firstpass_niter - 1)):
                 fp = _run_batched(region, seeds, np.where(fp["Z_LAMBDA"] > 0, fp["Z_LAMBDA"], z0),
@@ -739,6 +751,8 @@ def run_blind(region: Region, own: Box | None = None, region_id: int = 0, batch:
                 ck.save("firstpass", fp)
         zr = cfg.model.zrange
         keep = ((fp["LAMBDA"] >= rc.minlambda) & (fp["Z_LAMBDA"] >= zr[0]) & (fp["Z_LAMBDA"] <= zr[1]))
+        if rc.min_lnlamlike is not None:
+            keep &= fp["LNLAMLIKE"] >= rc.min_lnlamlike
         gi = seeds[keep]
         zfp = fp["Z_LAMBDA"][keep]
         log.info("first pass: %d candidates (%.1fs)", gi.size, time.time() - t0)
@@ -749,6 +763,8 @@ def run_blind(region: Region, own: Box | None = None, region_id: int = 0, batch:
             # LNLIKE = LNLAMLIKE + LNCGLIKE (0 without a wcen model); non-finite rows are dropped.
             lnlike = lk["LNLAMLIKE"].astype(np.float64) + lk["LNCGLIKE"].astype(np.float64)
             keep = (lk["LAMBDA"] >= rc.minlambda) & np.isfinite(lnlike) & (lk["NINCUT"] >= 3)
+            if rc.min_lnlamlike is not None:
+                keep &= lk["LNLAMLIKE"] >= rc.min_lnlamlike
             cand = {"GI": gi[keep], "Z_LAMBDA": zfp[keep], "LAMBDA": lk["LAMBDA"][keep],
                     "LNLIKE": lnlike[keep], "LNCGLIKE": lk["LNCGLIKE"][keep]}
         else:
@@ -786,6 +802,7 @@ def consolidate(region: Region, cat: dict, mem: dict, own: Box | None = None, re
     out["Z_LAMBDA_E_RAW"] = out["Z_LAMBDA_E"].copy()
     out["Z_LAMBDA"], out["Z_LAMBDA_E"] = region.correct_zlambda(out["Z_LAMBDA"], out["Z_LAMBDA_E"],
                                                                 out["LAMBDA"])
+    out["SNR"] = snr(out["LNLAMLIKE"])
     srt = np.argsort(-out["LAMBDA"], kind="stable")
     out = {k: v[srt] for k, v in out.items()}
     mmid = (np.int64(region_id) << 32) | np.arange(srt.size, dtype=np.int64)
@@ -794,6 +811,9 @@ def consolidate(region: Region, cat: dict, mem: dict, own: Box | None = None, re
     msel = np.isin(mem["RANK"], rank)
     m = {k: v[msel] for k, v in mem.items()}
     m["MEM_MATCH_ID"] = np.array([lookup[r] for r in m["RANK"]], dtype=np.int64)
+    if region.model.filter == "photoz" and m["ID"].size:
+        # colour of the members: red-sequence chi^2 at the cluster redshift
+        m["CHISQ_RS"] = region.rs_chisq(m["FLUX"], m["FLUX_IVAR"], m["Z"])
     m.pop("RANK")
     out.pop("RANK")
     return out, m

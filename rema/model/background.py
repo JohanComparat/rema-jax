@@ -18,6 +18,10 @@ table give +inf (no background, i.e. not a member candidate).
 :class:`ZredBkg` is redMaPPer's second background (ZREDBKG), Sigma_g(zred, m) per deg^2, per mag
 and per unit zred, of all galaxies with a usable zred fit. The wcen centring model uses it for
 the chance that a candidate central is a foreground or background galaxy.
+
+The photo-z filter and ``rema pscd`` use a third table of the same shape, Sigma_pz(z, m)
+(:func:`build_photoz_bkg`): the galaxies' photo-z distributions stacked, per deg^2, per mag and per
+unit (true) z. It is the noise term N(m, z) of the AMICO matched filter (Bellagamba et al. 2018).
 """
 
 from __future__ import annotations
@@ -269,3 +273,55 @@ def build_chisq_bkg(flux, ivar, refmag, rs: RSModel, mstar, area_fn, *, zrange, 
     sigma_g = p * nm[None, None, :]
     return ChisqBkg(jnp.asarray(zg), jnp.asarray(cc), jnp.asarray(mc), jnp.asarray(sigma_g),
                     jnp.asarray(nm))
+
+
+def build_photoz_bkg(zphot, zphot_e, refmag, area_fn, *, zrange=(0.0, 1.6), zbinsize: float = 0.005,
+                     magbinsize: float = 0.2, mag_min: float = 12.0, mag_max: float = 24.0,
+                     min_counts: float = 50.0, sigmas=(0.2, 0.4, 0.8, 1.6, 3.2),
+                     chunk: int = 65536) -> ZredBkg:
+    """Sigma_pz(z, m), the stacked photo-z distributions of a galaxy table.
+
+    Every galaxy with a usable photo-z (``zphot_e`` > 0) contributes its Gaussian
+    N(z; zphot, zphot_e), evaluated at the redshifts of the grid (spacing ``zbinsize`` over
+    ``zrange``), to the magnitude bins of its reference magnitude (cloud in cell). As for the chi^2
+    background, Sigma_pz = N(m) P(z | m): N(m) = counts / (A_eff(m) dm) and the mean distribution
+    P(z | m) is a kernel-weighted average whose magnitude kernel widens until it holds
+    ``min_counts`` galaxies. The table's ``zred`` axis holds the redshifts, so
+    :meth:`ZredBkg.lookup` returns Sigma_pz(z, m) per deg^2 per mag per unit z.
+    """
+    zphot = np.asarray(zphot, np.float64)
+    zphot_e = np.asarray(zphot_e, np.float64)
+    refmag = np.asarray(refmag, np.float64)
+    zg = np.arange(zrange[0], zrange[1] + zbinsize / 2, zbinsize)
+    medges = np.arange(mag_min, mag_max + magbinsize / 2, magbinsize)
+    mc = 0.5 * (medges[1:] + medges[:-1])
+    use = np.flatnonzero(np.isfinite(zphot) & (zphot_e > 0) & np.isfinite(refmag))
+    den = _cic_1d(refmag[use], mc)
+    area = np.asarray([float(area_fn(m)) for m in mc])
+    nm = np.where(area > 0, den / np.maximum(area, 1e-12) / magbinsize, 0.0)
+    # num[k, b] = sum over the galaxies of magnitude bin b (CIC weights) of N(z_k; zphot, s).
+    num = np.zeros((zg.size, mc.size))
+    zg32 = zg.astype(np.float32)
+    f = (refmag[use] - mc[0]) / magbinsize
+    i0 = np.floor(f).astype(np.int64)
+    w1 = f - i0
+    for lo in range(0, use.size, chunk):
+        sl = slice(lo, lo + chunk)
+        zp = zphot[use][sl].astype(np.float32)
+        s = zphot_e[use][sl].astype(np.float32)
+        x = (zg32[None, :] - zp[:, None]) / s[:, None]
+        pdf = np.exp(-0.5 * x * x) / (np.sqrt(2.0 * np.pi, dtype=np.float32) * s[:, None])
+        for ib, w in ((i0[sl], 1.0 - w1[sl]), (i0[sl] + 1, w1[sl])):
+            ok = (ib >= 0) & (ib < mc.size)
+            # [nm, n] sparse assignment times [n, nz] distributions
+            idx = np.flatnonzero(ok)
+            order = np.argsort(ib[idx], kind="stable")
+            idx = idx[order]
+            bins, starts = np.unique(ib[idx], return_index=True)
+            wp = pdf[idx] * w[idx, None].astype(np.float32)
+            sums = np.add.reduceat(wp, starts, axis=0) if idx.size else np.zeros((0, zg.size))
+            num[:, bins] += sums.T
+    p = _kernel_ratio(num, den, mc, sigmas, min_counts)
+    sigma_g = p * nm[None, :]
+    sigma_g = np.where(area[None, :] > 0, sigma_g, np.inf)
+    return ZredBkg(jnp.asarray(zg), jnp.asarray(mc), jnp.asarray(sigma_g))

@@ -68,6 +68,7 @@ What differs from redMaPPer
    ccin2p3
    redmapper_dr11
    cosmology_sensitivity
+   photoz_finders
 
 .. toctree::
    :maxdepth: 2

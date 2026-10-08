@@ -19,7 +19,10 @@ with `pip`. It needs no compiler, Spark, Java, GSL, esutil or healsparse.
 Status: an early public release (0.x); the interface may still change before 1.0. Implemented:
 ingestion of DR11 sweeps, footprint and depth maps from the randoms, the DR11 griz red-sequence
 calibration (`rema calibrate`), zred, backgrounds, richness, z_λ, BCG or wcen centring, blind
-mode, scan mode and spectroscopic post-processing, and SLURM drivers for the HPC.
+mode, scan mode and spectroscopic post-processing, and SLURM drivers for the HPC. Experimental:
+cluster finding from the DR11 photo-z, whatever the galaxies' colours, with a photo-z filter in
+blind and scan mode (`--set model.filter=photoz`) and `rema pscd`, an implementation of the
+AMICO matched filter ([photo-z finders page](https://rema-jax.readthedocs.io/en/latest/photoz_finders.html)).
 
 **The DR11 south catalogue is done.** The blind run of rema 0.2.0 over Legacy Surveys DR11 south
 found 3,481,608 clusters with λ ≥ 3 (145,133 with λ ≥ 20) and 87.7 M members over 18,500 deg²
@@ -89,6 +92,11 @@ rema scan --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits
 #     interrupted run resumes after its last completed stage
 rema blind --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits \
      --own 0 5 -10 0 --checkpoint blind_ckpt --specpost --out clusters.fits
+
+# 4c. the same from the photo-z (any colour), and the AMICO-like PSCD
+rema blind ... --set @scripts/photoz/photoz_dr11.yaml --set @scripts/photoz/pz_filter.yaml --out pz.fits
+rema pscd --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits \
+     --own 0 5 -10 0 --set @scripts/photoz/photoz_dr11.yaml --out pscd.fits
 ```
 
 Outputs are FITS files with `CLUSTERS` and `MEMBERS` HDUs, plus the configuration (`CONFIG`).

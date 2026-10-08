@@ -4,6 +4,31 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Photo-z cluster finding (documentation page "Photo-z cluster finding on DR11"):
+  - a photo-z filter for `rema blind` and `rema scan` (`model.filter: photoz`): members from the
+    DR11 photo-z (ZPHOT, ZPHOT_STD of the ingested tables) instead of the red-sequence colours,
+    any colour; the field is the region's stacked photo-z distributions
+    (`rema.model.background.build_photoz_bkg`); BCG centring; seeds of any colour
+    (`seeds.zphot_err_max`); an optional significance floor of the candidates
+    (`richness.min_lnlamlike`);
+  - photo-z widths calibrated against spectroscopic redshifts (`photoz.err_scale`, piecewise
+    linear in magnitude; `rema.validate.photoz.fit_err_scale`, `scripts/photoz/fit_errscale.py`)
+    and an extra magnitude limit of the members (`photoz.mag_max`, also in the completeness);
+  - `rema pscd` (`rema.pscd`): PSCD, Photo-z Space Cluster Detection, an implementation of the
+    AMICO matched filter (Bellagamba et al. 2018; Maturi et al. 2019) with the KiDS template, masked
+    and depth-dependent normalisation, extraction with cleaning and membership probabilities;
+  - null tests (`null.shuffle: photoz | colour`, `rema.validate.null`) and the comparison of
+    finders at matched false-detection rates (`rema.validate.compare.match_physical`,
+    `null_threshold`); drivers `scripts/photoz/photoz_strip.sh` (laptop) and
+    `scripts/photoz/photoz_test.sh` (CC-IN2P3); figures in `docs/figures/photoz_finders/`;
+  - `--set SECTION.KEY=VALUE` and `--set @overlay.yaml` override any configuration value
+    (`rema.config.apply_overrides`); `SNR` = sqrt(2 LNLAMLIKE) in every catalogue; `FILTER` (and
+    `NULL`) in the primary header; the members' and central's ZPHOT columns when the table has
+    them; mocks with photo-z, true redshifts and blue members (`GaussianPhotoz`,
+    `mock_template_cluster`).
+
 ### Changed
 
 - The DR11 notebooks, the redMaPPer figure scripts and the cosmology sensitivity scripts use two
@@ -22,6 +47,11 @@ All notable changes to `rema` are documented here.
   write to: `Permission denied` for everyone else (scan notebook, ingest cell).
 - `scripts/cosmo_sens/cosmo_sens.sh` left the jobs' JAX compilation cache in `~/.cache/rema/jax`
   (4 GB in the 20 GB `$HOME` at CC-IN2P3); it is now in `$OUTDIR/jax_cache`.
+- Backgrounds built from the galaxy table (no background in the calibration, or
+  `rema background`) counted the effective area of the whole footprint, also when the galaxies
+  were read over a smaller data box: the background density was too low by the ratio of the
+  areas. The area is now that of the footprint's pixels in the data box.
+- Configuration values like `1e6` (a string in YAML 1.1) are read as numbers for float keys.
 
 ## [0.3.2] - 2026-10-08
 

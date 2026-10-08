@@ -29,7 +29,8 @@ Inputs and calibration
 ----------------------
 
 .. automodule:: rema.config
-   :members: RemaConfig, CosmologyConfig, parse_cosmology_overrides
+   :members: RemaConfig, CosmologyConfig, PhotozConfig, PscdConfig, NullConfig,
+             parse_cosmology_overrides, apply_overrides
 
 .. automodule:: rema.calibration
    :members: Calibration, ZlambdaCorrection
@@ -77,7 +78,41 @@ Kernels
    :members: RSModel, ZredCorrection
 
 .. automodule:: rema.validate.mocks
-   :members: mock_field, mock_cluster, concat
+   :members: mock_field, mock_cluster, mock_template_cluster, GaussianPhotoz, concat
+
+Photo-z cluster finding
+-----------------------
+
+See :doc:`photoz_finders`.
+
+.. automodule:: rema.model.photoz
+   :members: photoz_sigma, err_scale, photoz_valid
+
+.. automodule:: rema.model.background
+   :members: build_photoz_bkg, ZredBkg
+
+.. automodule:: rema.validate.photoz
+   :members: fit_err_scale, yaml_overlay
+
+.. automodule:: rema.validate.null
+   :members: null_shuffle
+
+.. automodule:: rema.validate.compare
+   :members: match_physical, null_threshold
+
+.. automodule:: rema.pscd
+
+.. automodule:: rema.pscd.model
+   :members: Template, WidthTable, MagIntegrals
+
+.. automodule:: rema.pscd.grid
+   :members: Grid, gnomonic, inverse_gnomonic, paint, convolve
+
+.. automodule:: rema.pscd.detect
+   :members: build_cube, extract, amplitude, memberships, clean
+
+.. automodule:: rema.pscd.run
+   :members: run_pscd
 
 Cluster abundance and cosmology
 -------------------------------

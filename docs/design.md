@@ -477,7 +477,38 @@ The calibration file holds the model, the corrections, the background and the co
     impure. Use λ ≥ 10 there, or calibrate a z-dependent threshold with null tests over a larger
     area.
 
-## 15. Performance notes
+## 15. Photo-z cluster finding
+
+The page "Photo-z cluster finding on DR11" (`docs/photoz_finders.rst`) describes the method and
+the results; this section lists the code.
+
+- **Photo-z widths** (`rema/model/photoz.py`): s = max(err_scale(m) ZPHOT_STD,
+  err_floor (1 + ZPHOT)), `ZPHOT_E` in the region's table; galaxies without a usable photo-z get
+  −1 and are never members.
+- **Field** (`build_photoz_bkg`): Σ_pz(z, m) = N(m) P(z | m) from the stacked Gaussians of the
+  region's galaxies, on a 0.005 grid in z over 0–1.6 and 0.2 mag bins, P kernel-smoothed in
+  magnitude as the χ² background. Stored in a `ZredBkg` (bilinear lookup), built per region,
+  never written to the calibration.
+- **Photo-z filter** (`model.filter: photoz`): `FilterModel` gets the static `filter`,
+  `pz_nsig_max`, `pz_mag_max` and the leaf `pzbkg`; `Neighbors` gets `zphot`, `zphot_e`
+  (None in red-sequence runs, so the existing kernels and their compilations are unchanged).
+  `_filter_terms` dispatches to `_terms_pz` (ρ = p_i(z), Σ_g = Σ_pz(z, m), χ² = x², ln det =
+  2 ln s, finite placeholders only) and `_member_lnl_one` to ln p_i(z). `Region.build` skips the
+  χ² background, the wcen model and the z_λ correction; BCG centring tests |ZPHOT − z| < 2s.
+  `richness.min_lnlamlike` cuts the candidates after the first and the likelihood pass.
+  Checked: the red-sequence outputs of a mock region are bit-identical to those of 0.3.2.
+- **PSCD** (`rema/pscd/`): `model.py` (template, ⟨1/s⟩ tables, cumulative magnitude
+  integrals, NumPy NFW and Schechter: the JAX versions compiled for every new array shape and took
+  most of the time), `grid.py` (gnomonic grid, cloud-in-cell painting, overlap-add convolution),
+  `detect.py` (cube of S, α, β, γ and the score L = A²α where the S/N passes; extraction from
+  the maxima of 32 × 32-pixel tiles, of which only those touched by a cleaning are recomputed;
+  cells whose profile is less than 20 % inside the footprint are not searched), `run.py` (region
+  driver and outputs). On the 75 deg² strip: 3.5 M galaxies, a 505 × 1512 × 88 cube, built in
+  2 min; about 60 ms per detection.
+- **Null tests** (`rema/validate/null.py`): seeded permutations within 0.1 mag bins, applied in
+  `Region.build` and `run_pscd` before anything else (the colour shuffle also recomputes zred).
+
+## 16. Performance notes
 
 - zred: 1.4M galaxies in 9 s on CPU, 0.25 s on an RTX 3060.
 - Device-array pytrees only. A numpy array inside a pytree argument (for example the cosmology

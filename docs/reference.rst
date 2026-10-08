@@ -17,9 +17,14 @@ Each command chooses its configuration in this order:
 
 1. ``--config``, if it is given;
 2. the configuration stored with the input:
-   - the calibration's, for ``scan``, ``blind``, ``zred`` and ``background``;
+   - the calibration's, for ``scan``, ``blind``, ``pscd``, ``zred`` and ``background``;
    - the catalogue's ``CONFIG`` HDU, for ``specpost``;
-3. the defaults.
+3. the defaults;
+
+then applies the overrides of the command line: ``--cosmology KEY=VALUE`` and
+``--set SECTION.KEY=VALUE`` (any key, VALUE in YAML, e.g. ``--set model.filter=photoz
+--set richness.firstpass.r0=0.4``), or ``--set @overlay.yaml`` (a partial configuration, merged
+section by section; ``scripts/photoz/*.yaml`` are examples). The log lists the keys that change.
 
 ``rema calibrate`` stores its configuration in the calibration, so the runs inherit it
 without a flag. When ``--config`` differs from the stored configuration, the log lists the
@@ -58,6 +63,28 @@ The keys that are most often changed:
      - null
      - E(B−V) cut on the galaxies and the randoms alike. The DR11 production uses 0.2
        (``scripts/slurm/dr11_south.yaml``).
+   * - ``model.filter``
+     - redsequence
+     - ``photoz``: members from their photo-z instead of their colours (:doc:`photoz_finders`);
+       blind and scan only, BCG centring
+   * - ``photoz.err_scale``, ``photoz.err_scale_mag``, ``photoz.err_floor``
+     - 1, (), 0.01
+     - Photo-z width s = max(err_scale(m) ZPHOT_STD, err_floor (1 + ZPHOT)), err_scale piecewise
+       linear in magnitude through the nodes
+   * - ``photoz.nsig_max``, ``photoz.mag_max``
+     - 4, null
+     - Members within nsig_max s of the cluster redshift, and brighter than mag_max (also in the
+       completeness)
+   * - ``richness.min_lnlamlike``
+     - null
+     - Candidates also need LNLAMLIKE ≥ this after the first and the likelihood pass (the
+       photo-z filter uses 4.5)
+   * - ``pscd.*``
+     - see :class:`rema.config.PscdConfig`
+     - ``rema pscd``: grid, cluster template, extraction threshold (``snr_kind``, ``snr_min``)
+   * - ``null.shuffle``, ``null.magbin``, ``null.seed``
+     - none, 0.1, 1
+     - Null tests: ``photoz`` or ``colour`` permuted among galaxies of the same magnitude
    * - ``model.zrange``
      - [0.05, 0.90]
      - Redshift range of blind mode and of the calibration
@@ -147,8 +174,8 @@ in h⁻¹Mpc (Ω_m = 0.3, flat, from ggah_mod), and fluxes in dereddened nanomag
       ``NCLUSTER``, ``NSPECGAL``, ``ZLNMAD`` and ``NWCEN``.
 
 ``rema blind`` and ``rema scan`` → ``CLUSTERS``, ``MEMBERS``, ``CONFIG``
-    - The primary header holds ``REMAVER``, ``MODE``, ``CENTRING``, ``NCLUSTER`` and
-      ``NMEMBER``.
+    - The primary header holds ``REMAVER``, ``MODE``, ``CENTRING``, ``NCLUSTER``,
+      ``NMEMBER``, ``FILTER`` (``redsequence`` or ``photoz``) and, for a null test, ``NULL``.
     - Blind runs add their provenance: ``REGION``, ``PLANHASH``, ``CALSHA1`` (the calibration
       file), ``CFGSHA1`` and ``DEVICE``.
     - They also add the data box (``BOXRA0``…, or ``NBOX`` with ``B01RA0``…), the own box
@@ -172,6 +199,17 @@ Large runs (:doc:`hpc`):
 ``rema merge`` → ``<out>.fits``, ``<out>_members.fits``, ``<out>_regions.fits``, ``<out>_qa.json``
     The merged clusters, the members, the per-region statistics and the QA.
 
+``rema pscd`` → ``CLUSTERS``, ``MEMBERS``, ``CONFIG`` (``FILTER = pscd``)
+    - Clusters: ``MEM_MATCH_ID`` ((region << 32) | rank in decreasing S/N), ``RANK`` (order of
+      extraction), ``RA``, ``DEC``, ``Z``, ``Z_E``, the amplitude ``A`` and ``A_E``, ``SNR``
+      (A/σ_A, AMICO's), ``SNR_NOCL`` (A√α), ``LNLIKE`` (A²α), ``LAMBDA``, ``LAMBDA_STAR``,
+      ``N_EXP`` (Aβ), ``NMEM``, ``MASKFRAC``, ``MLIM`` (local magnitude limit), ``R200``, the
+      brightest member with P > 0.5 (``ID_BCG``, ``RA_BCG``, ``DEC_BCG``, ``REFMAG_BCG``,
+      ``ZPHOT_BCG``), and the spectroscopic columns below with ``--specpost``.
+    - Members (P ≥ ``pscd.pmin``): ``MEM_MATCH_ID``, ``ID``, ``RA``, ``DEC``, ``Z``, ``P``,
+      ``PFIELD`` (field probability left at the end), ``R``, ``REFMAG``, ``REFMAG_ERR``,
+      ``ZPHOT``, ``ZPHOT_STD``, ``ZPHOT_E``, ``ZSPEC``, and ``CHISQ_RS`` with ``--calib``.
+
 ``CLUSTERS``:
 
 .. list-table::
@@ -193,9 +231,9 @@ Large runs (:doc:`hpc`):
      - z_λ and its error, after the calibrated correction. ``…_RAW``: before it.
    * - ``PZBINS[21]``, ``PZ[21]``, ``Z_LAMBDA_NITER``
      - p(z), and the number of z_λ iterations
-   * - ``LNLAMLIKE``, ``LNCGLIKE``, ``LNLIKE``
+   * - ``LNLAMLIKE``, ``LNCGLIKE``, ``LNLIKE``, ``SNR``
      - Richness likelihood, central-galaxy likelihood (wcen; 0 with BCG), and their sum,
-       which ranks the percolation
+       which ranks the percolation; SNR = √(2 LNLAMLIKE), a local significance
    * - ``R_MASK``
      - Radius within which the cluster claims galaxies in percolation
    * - ``ID_CENT[5]``, ``RA_CENT[5]``, ``DEC_CENT[5]``
@@ -205,8 +243,10 @@ Large runs (:doc:`hpc`):
    * - ``NCENT_GOOD``, ``Q_MISS``, ``W``
      - Number of candidates with P_C > 0, the probability that the centre is missed, and the
        connectivity of the centre
-   * - ``REFMAG``, ``REFMAG_ERR``, ``ZRED``, ``ZRED_E``, ``ZRED_CHISQ``, ``CHISQ``
-     - The central galaxy (blind)
+   * - ``REFMAG``, ``REFMAG_ERR``, ``ZRED``, ``ZRED_E``, ``ZRED_CHISQ``, ``CHISQ``, ``ZPHOT``,
+       ``ZPHOT_STD`` (``ZPHOT_E``)
+     - The central galaxy (blind); its photo-z when the table has it (and its calibrated width
+       with the photo-z filter)
    * - ``Z_STEPS[191]``, ``LAMBDA_STEPS``, ``LIKELIHOOD_STEPS``, ``ZMAX``, ``LMAX``, ``MAX_IND``,
        ``ZMAX_EDGE``
      - Scan: λ(z) and the likelihood on the grid, and its peak. ``ZMAX_EDGE`` flags a peak at
@@ -234,8 +274,9 @@ candidates:
 - ``R``: the projected distance to the centre;
 - ``P``, ``PFREE``, ``THETA_I``, ``THETA_R`` and ``PMEM`` = P · PFREE · THETA_I · THETA_R.
   ``PCOL`` is redMaPPer's colour-only probability within r_λ;
-- ``CHISQ`` at the cluster redshift; ``REFMAG``, ``REFMAG_ERR``, ``ZRED``, ``ZRED_E``,
-  ``ZSPEC``, ``FLUX``, ``FLUX_IVAR``;
+- ``CHISQ`` at the cluster redshift (with the photo-z filter: ((ZPHOT − z)/s)², and the
+  red-sequence χ² is ``CHISQ_RS``); ``REFMAG``, ``REFMAG_ERR``, ``ZRED``, ``ZRED_E``,
+  ``ZSPEC``, ``ZPHOT``, ``ZPHOT_STD`` (``ZPHOT_E``), ``FLUX``, ``FLUX_IVAR``;
 - blind mode: ``CG`` (the central galaxy) and ``CENT_RANK`` (0–4 for the centre candidates,
   −1 otherwise);
 - spectroscopic post-processing: ``VEL`` (rest-frame velocity relative to ``SPEC_Z``, km/s)

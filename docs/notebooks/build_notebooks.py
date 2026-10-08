@@ -13,7 +13,8 @@ one-region catalogue of ``blind`` (same sweeps, same calibration). Every noteboo
 REMA_DATA, the DR11 south directory (shared, read only: sweeps, randoms, and in rema/ the
 production run and the external catalogues; default the DR11 data system at CC-IN2P3 when /sps is
 mounted, else ~/data/legacysurvey/dr11/south), and writes only to REMA_WORK (default
-~/rema_work). The markdown avoids run numbers; the cells print them.
+/sps/lsst/users/$USER/rema_work when that user space exists, else ~/rema_work). The markdown
+avoids run numbers; the cells print them.
 """
 
 import argparse
@@ -51,6 +52,7 @@ import os
 os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")   # before importing jax
 
 import dataclasses
+import getpass
 import logging
 import re
 import sys
@@ -64,19 +66,25 @@ from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from matplotlib.colors import LinearSegmentedColormap
 
-# Persistent compilation cache, shared with the rema command line.
+# Your space: /sps/lsst/users/$USER at CC-IN2P3 when it exists (the $HOME there is small), else $HOME.
+SPS = Path("/sps/lsst/users") / getpass.getuser()
+MINE = SPS if SPS.is_dir() else Path.home()
+
+# Persistent compilation cache (the rema command line uses the same one when
+# JAX_COMPILATION_CACHE_DIR is set).
 jax.config.update("jax_compilation_cache_dir",
-                  os.environ.get("JAX_COMPILATION_CACHE_DIR") or os.path.expanduser("~/.cache/rema/jax"))
+                  os.environ.get("JAX_COMPILATION_CACHE_DIR") or str(MINE / ".cache" / "rema" / "jax"))
 jax.config.update("jax_persistent_cache_min_compile_time_secs", 1.0)
 
 # The two directories of the notebooks, from two environment variables:
 #   REMA_DATA  shared, read only: the DR11 south directory (sweep/, randoms/) with the rema
 #              production run in rema/. Default: the DR11 data system at CC-IN2P3 when /sps is
 #              mounted, else ~/data/legacysurvey/dr11/south.
-#   REMA_WORK  yours, writable: everything the notebooks write. Default: ~/rema_work.
+#   REMA_WORK  yours, writable: everything the notebooks write. Default: rema_work in your space
+#              (/sps/lsst/users/$USER/rema_work at CC-IN2P3, else ~/rema_work).
 CC = Path("/sps/lsst/datasets/desi/legacysurveys/dr11/south")
 REMA_DATA = Path(os.environ.get("REMA_DATA", CC if CC.exists() else Path.home() / "data" / "legacysurvey" / "dr11" / "south"))
-REMA_WORK = Path(os.environ.get("REMA_WORK", Path.home() / "rema_work"))
+REMA_WORK = Path(os.environ.get("REMA_WORK", MINE / "rema_work"))
 if not REMA_DATA.is_dir():
     raise SystemExit(f"REMA_DATA = {REMA_DATA} not found: set REMA_DATA to the DR11 south directory")
 try:
@@ -204,9 +212,9 @@ def blind_cells():
     - `REMA_DATA`, shared and read only: the DR11 south directory, with the sweeps, the randoms
       and, in `rema/` (`PRODUCTS`), the calibration and catalogues of the production run. At
       CC-IN2P3 the default is the DR11 data system.
-    - `REMA_WORK`, yours: everything the notebooks write (default `~/rema_work`). Run products
-      go to `WORK`, and the per-sweep galaxy tables to `GALDIR`, which the pipeline notebook
-      shares.
+    - `REMA_WORK`, yours: everything the notebooks write (default `rema_work` in your space:
+      `/sps/lsst/users/$USER/rema_work` at CC-IN2P3, else `~/rema_work`). Run products go to
+      `WORK`, and the per-sweep galaxy tables to `GALDIR`, which the pipeline notebook shares.
     """))
 
     c.append(code(SETUP_COMMON + SWEEPS_DEFAULT + '''
@@ -1155,7 +1163,8 @@ def scan_cells():
     The notebook reads `REMA_DATA`, the DR11 south directory (shared, read only: sweeps,
     randoms, and the calibration and catalogues of the production run in `rema/`; at CC-IN2P3
     the default is the DR11 data system), and writes to `REMA_WORK` (yours, default
-    `~/rema_work`). The ACT redshift is used only for the comparisons at the end.
+    `/sps/lsst/users/$USER/rema_work` at CC-IN2P3, else `~/rema_work`). The ACT redshift is used
+    only for the comparisons at the end.
     """))
 
     c.append(code(SETUP_COMMON + '''

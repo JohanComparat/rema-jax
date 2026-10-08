@@ -19,8 +19,9 @@
 # [$PRODUCTS/rema_dr11_v0.2.0_ra0-240: the plan, the calibration and its footprint], CATALOG and
 # MEMBERS [the combined catalogue], OUTDIR [/sps/lsst/users/$USER/rema_cosmo_sens], REGIONS
 # [15 9 55 82 91 113], TIERC_REGIONS [15 82], GRID_A, GRID_B, GRID_C (cosmologies, see below),
-# LAMBDA_MIN [5], DRY_RUN=1 (print the sbatch commands only). Partitions, GPUs, memory, NRAND,
-# DR11 and EXTRA_SBATCH as for scripts/slurm/rema_dr11_blind.sh.
+# LAMBDA_MIN [5], JAX_COMPILATION_CACHE_DIR [$OUTDIR/jax_cache], DRY_RUN=1 (print the sbatch
+# commands only). Partitions, GPUs, memory, NRAND, DR11 and EXTRA_SBATCH as for
+# scripts/slurm/rema_dr11_blind.sh.
 set -euo pipefail
 
 STAGE=${1:?stage: prepare, tierA, tierB, tierC or status}
@@ -51,9 +52,12 @@ GPUS=${GPUS:-1}
 REGION_CPUS=${REGION_CPUS:-5}
 REGION_MEM=${REGION_MEM:-45G}
 NRAND=${NRAND:-4}
+# The jobs' JAX compilation cache next to the results (rema's default, ~/.cache/rema/jax, would
+# fill $HOME).
+export JAX_COMPILATION_CACHE_DIR=${JAX_COMPILATION_CACHE_DIR:-$OUTDIR/jax_cache}
 export OUTDIR PLAN CALIB NRAND
 LOGS=$OUTDIR/logs
-mkdir -p "$LOGS" "$OUTDIR/tierA" "$OUTDIR/tierB" "$OUTDIR/tierC"
+mkdir -p "$LOGS" "$OUTDIR/tierA" "$OUTDIR/tierB" "$OUTDIR/tierC" "$JAX_COMPILATION_CACHE_DIR"
 TASK=$REMA/scripts/slurm/rema_task.sh
 
 submit() {   # submit NAME [sbatch options...] -- COMMAND...; prints the job id

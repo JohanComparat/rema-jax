@@ -5,13 +5,15 @@ Two directories, from environment variables, as in the DR11 notebooks:
 REMA_DATA  shared, read only: the DR11 south directory, with the production in ``rema/``
            (``rema_dr11_v0.2.0`` combined, and the two parts). Default: the DR11 data system at
            CC-IN2P3 when /sps is mounted, else ``~/data/legacysurvey/dr11/south``.
-REMA_WORK  yours, writable (default ``~/rema_work``): the reduced tables of
+REMA_WORK  yours, writable (default ``/sps/lsst/users/$USER/rema_work`` when that user space
+           exists, else ``~/rema_work``): the reduced tables of
            ``docs/figures/redmapper_dr11/prepare.py`` are read from ``$REMA_WORK/redmapper``, and
            these scripts write to ``$REMA_WORK/cosmo_sens``.
 """
 
 from __future__ import annotations
 
+import getpass
 import os
 from pathlib import Path
 
@@ -19,7 +21,8 @@ import numpy as np
 
 CC = Path("/sps/lsst/datasets/desi/legacysurveys/dr11/south")
 REMA_DATA = Path(os.environ.get("REMA_DATA", CC if CC.exists() else Path.home() / "data" / "legacysurvey" / "dr11" / "south"))
-REMA_WORK = Path(os.environ.get("REMA_WORK", Path.home() / "rema_work"))
+SPS = Path("/sps/lsst/users") / getpass.getuser()
+REMA_WORK = Path(os.environ.get("REMA_WORK", (SPS if SPS.is_dir() else Path.home()) / "rema_work"))
 PRODUCTS = REMA_DATA / "rema"
 REDUCED = REMA_WORK / "redmapper"
 OUT = REMA_WORK / "cosmo_sens"

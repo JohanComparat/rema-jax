@@ -17,7 +17,8 @@ REMA_DATA  shared, read only: the DR11 south directory. The scripts read the pro
            Default: the DR11 data system at CC-IN2P3 when /sps is mounted, else
            ``~/data/legacysurvey/dr11/south``.
 REMA_WORK  yours, writable: ``prepare.py`` writes the reduced tables and maps (about 7.5 GB) in
-           ``$REMA_WORK/redmapper``. Default: ``~/rema_work``.
+           ``$REMA_WORK/redmapper``. Default: ``/sps/lsst/users/$USER/rema_work`` when that user
+           space exists (CC-IN2P3), else ``~/rema_work``.
 """
 
 # %% [markdown]
@@ -34,6 +35,7 @@ REMA_WORK  yours, writable: ``prepare.py`` writes the reduced tables and maps (a
 # products are up to date.
 
 # %%
+import getpass
 import json
 import os
 import sys
@@ -54,10 +56,12 @@ os.environ.setdefault("JAX_PLATFORMS", "cpu")        # only the red-sequence mod
 #   REMA_DATA  shared, read only: the DR11 south directory (randoms/) with the rema production run
 #              and the external catalogues in rema/. Default: the DR11 data system at CC-IN2P3
 #              when /sps is mounted, else ~/data/legacysurvey/dr11/south.
-#   REMA_WORK  yours, writable: everything the notebooks write. Default: ~/rema_work.
+#   REMA_WORK  yours, writable: everything the notebooks write. Default: rema_work in your space
+#              (/sps/lsst/users/$USER/rema_work at CC-IN2P3, where $HOME is small, else ~/rema_work).
 CC = Path("/sps/lsst/datasets/desi/legacysurveys/dr11/south")
+SPS = Path("/sps/lsst/users") / getpass.getuser()
 REMA_DATA = Path(os.environ.get("REMA_DATA", CC if CC.exists() else Path.home() / "data" / "legacysurvey" / "dr11" / "south"))
-REMA_WORK = Path(os.environ.get("REMA_WORK", Path.home() / "rema_work"))
+REMA_WORK = Path(os.environ.get("REMA_WORK", (SPS if SPS.is_dir() else Path.home()) / "rema_work"))
 if not REMA_DATA.is_dir():
     raise SystemExit(f"REMA_DATA = {REMA_DATA} not found: set REMA_DATA to the DR11 south directory")
 

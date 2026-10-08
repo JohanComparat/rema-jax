@@ -133,10 +133,10 @@ CC-IN2P3:
   and, in ``rema/``, the production catalogues, their calibration and the external catalogues of
   :doc:`redmapper_dr11`. Default: ``/sps/lsst/datasets/desi/legacysurveys/dr11/south`` when it
   exists, else ``~/data/legacysurvey/dr11/south``.
-- ``REMA_WORK``, yours: everything the notebooks write. Default: ``~/rema_work``. The DR11
-  notebooks write about 0.5 GB there, :doc:`notebooks/redmapper_dr11` 7.5 GB; when ``$HOME``
-  lacks the room (20 GB at CC-IN2P3), add ``--env REMA_WORK $SPS/rema_work`` to the
-  ``ipykernel install`` line.
+- ``REMA_WORK``, yours: everything the notebooks write. Default: ``rema_work`` in your space,
+  ``/sps/lsst/users/$USER/rema_work`` when ``/sps/lsst/users/$USER`` exists (``$HOME`` has 20 GB
+  at CC-IN2P3), else ``~/rema_work``. The DR11 notebooks write about 0.5 GB there,
+  :doc:`notebooks/redmapper_dr11` 7.5 GB.
 
 In a GPU session, ``import jax; jax.devices()`` returns ``[CudaDevice(id=0)]``.
 
@@ -149,7 +149,9 @@ What the kernel settings do:
   the Python of the environment and the ``--env`` variables, so the kernel needs no login script.
   The platform starts kernels through ``ipykernel`` and ``pyzmq``; ``colossus`` and ``pandas``
   are used only by :doc:`notebooks/redmapper_dr11`.
-- ``JAX_COMPILATION_CACHE_DIR`` keeps the compiled programs on ``/sps`` between sessions.
+- ``JAX_COMPILATION_CACHE_DIR`` keeps the compiled programs on ``/sps`` between sessions, also
+  for the ``rema`` commands that the pipeline notebook runs (the notebooks alone default to
+  ``.cache/rema/jax`` in your space too, the ``rema`` command to ``~/.cache/rema/jax``).
 - To change a variable, run the ``ipykernel install`` line again (it replaces the kernel).
   ``jupyter kernelspec list`` lists the kernels; ``jupyter kernelspec remove rema`` removes this one.
 - Keep the ``[cuda]`` extra (CUDA 12 JAX wheels): the platform documentation installs

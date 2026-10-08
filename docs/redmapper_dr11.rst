@@ -373,8 +373,9 @@ variables (defaults in ``common.py``), like the other notebooks:
        (a missing one is skipped). Default: the DR11 data system at CC-IN2P3 when ``/sps`` is
        mounted, else ``~/data/legacysurvey/dr11/south``
    * - ``REMA_WORK``
-     - Yours, writable (default ``~/rema_work``): the reduced tables, maps and ``values.json``
-       (about 7.5 GB) go to ``$REMA_WORK/redmapper`` (at CC-IN2P3: :ref:`cc-notebooks`)
+     - Yours, writable (default ``/sps/lsst/users/$USER/rema_work`` when that user space
+       exists, else ``~/rema_work``): the reduced tables, maps and ``values.json`` (about 7.5 GB)
+       go to ``$REMA_WORK/redmapper`` (at CC-IN2P3: :ref:`cc-notebooks`)
 
 External catalogues, as downloaded on 2026-10-07 (all in one directory, with a ``README.txt`` of
 their sources; at CC-IN2P3 in ``/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/external``):

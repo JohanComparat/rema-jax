@@ -354,12 +354,14 @@ On CC-IN2P3 (:doc:`ccin2p3`), tiers A, B and C on the six regions (``OUTDIR`` de
    python $REMA/scripts/cosmo_sens/compare_runs.py tierC --response response_cc.fits
 
 Then, with the reduced tables of ``docs/figures/redmapper_dr11/prepare.py`` and the results in
-``$REMA_WORK/cosmo_sens`` (``REMA_WORK`` as for the notebooks, default ``~/rema_work``: the
-tier-A files in ``tierA/``, the response tables, the comparisons in ``tierB/`` and ``tierC/``):
+``$REMA_WORK/cosmo_sens`` (``REMA_WORK`` as for the notebooks, default
+``/sps/lsst/users/$USER/rema_work`` when that user space exists, else ``~/rema_work``: the tier-A
+files in ``tierA/``, the response tables, the comparisons in ``tierB/`` and ``tierC/``):
 
 .. code-block:: bash
 
-   R=${REMA_WORK:-$HOME/rema_work}/cosmo_sens
+   W=/sps/lsst/users/$USER; [ -d $W ] || W=$HOME
+   R=${REMA_WORK:-$W/rema_work}/cosmo_sens
    F11=Omega_m,ln10A_s,h,n_s,Omega_b,mor_a,mor_b,mor_c,ln_s0,s1,dz_bias      # sigma_int fixed at 0.25
    python scripts/cosmo_sens/fit_dr11.py --response $R/response_cc.fits --tag all_cc
    python scripts/cosmo_sens/fit_dr11.py --response $R/response_cc.fits --free $F11 --tag all_cc_sig025

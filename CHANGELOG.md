@@ -10,14 +10,18 @@ All notable changes to `rema` are documented here.
   directories, given by two environment variables: `REMA_DATA`, shared and read only (the DR11
   south directory, with the production run and the external catalogues in `rema/`; default the
   data system at CC-IN2P3, else `~/data/legacysurvey/dr11/south`), and `REMA_WORK`, writable
-  (default `~/rema_work`). They replace `REMA_DR11_DIR` (or `LEGACYSURVEY_DIR`), `REMA_PRODUCTS`,
-  `REMA_CALIB`, `REMA_RANDOMS`, `REMA_EXTERNAL`, `REMA_KLUGE_PARS` and `REMA_COSMO` there; the
-  command line, the SLURM scripts and the tests are unchanged.
+  (default `/sps/lsst/users/$USER/rema_work` when that user space exists, else `~/rema_work`; the
+  notebooks' JAX compilation cache defaults to the same space). They replace `REMA_DR11_DIR` (or
+  `LEGACYSURVEY_DIR`), `REMA_PRODUCTS`, `REMA_CALIB`, `REMA_RANDOMS`, `REMA_EXTERNAL`,
+  `REMA_KLUGE_PARS` and `REMA_COSMO` there; the command line, the SLURM scripts and the tests are
+  unchanged.
 
 ### Fixed
 
 - Without `REMA_WORK`, the notebooks wrote next to the production run, which only its owner can
   write to: `Permission denied` for everyone else (scan notebook, ingest cell).
+- `scripts/cosmo_sens/cosmo_sens.sh` left the jobs' JAX compilation cache in `~/.cache/rema/jax`
+  (4 GB in the 20 GB `$HOME` at CC-IN2P3); it is now in `$OUTDIR/jax_cache`.
 
 ## [0.3.2] - 2026-10-08
 

@@ -12,6 +12,10 @@
 #            from the cosmology study when there, else built from a randoms index
 #   run      per region and variant (VARIANTS): rema blind or rema pscd, GPU or CPU jobs; and
 #            the photo-z width fit of every region (errscale_<region>.txt)
+#   strip    the strip variants STRIP_VARIANTS [rs_bcg null_rs null_pz1], one GPU job each, with
+#            scripts/photoz/photoz_strip.sh on the inputs in STRIP_INPUTS (the laptop's strip
+#            galaxy table galaxies_3sweeps_v2.fits and footprint_strip.fits, copied there) into
+#            $OUTDIR/strip
 #   status   what is done
 #
 # Variants (as scripts/photoz/photoz_strip.sh): pz_v0 pz_v1 pscd_0 pscd_1 null_pz null_pz1
@@ -26,7 +30,7 @@
 # scripts/slurm/rema_dr11_blind.sh.
 set -euo pipefail
 
-STAGE=${1:?stage: prepare, run or status}
+STAGE=${1:?stage: prepare, run, strip or status}
 REMA=${REMA:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}
 PRODUCTS=${PRODUCTS:-${DR11:?set DR11}/rema}
 RUN=${RUN:-$PRODUCTS/rema_dr11_v0.2.0_ra0-240}
@@ -44,7 +48,12 @@ GPUS=${GPUS:-1}
 REGION_CPUS=${REGION_CPUS:-5}
 REGION_MEM=${REGION_MEM:-90G}
 NRAND=${NRAND:-4}
+STRIP_INPUTS=${STRIP_INPUTS:-$OUTDIR/strip_inputs}
+STRIP_VARIANTS=${STRIP_VARIANTS:-rs_bcg null_rs null_pz1}
 export OUTDIR PLAN CALIB NRAND
+# compilation cache on /sps ($HOME is small), no GPU memory preallocation
+export JAX_COMPILATION_CACHE_DIR=${JAX_COMPILATION_CACHE_DIR:-$OUTDIR/jax_cache}
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
 LOGS=$OUTDIR/logs
 mkdir -p "$LOGS" "$OUTDIR/runs"
 TASK=$REMA/scripts/slurm/rema_task.sh
@@ -164,6 +173,14 @@ print('--box', own.ra_min, own.ra_max, own.dec_min, own.dec_max)" "$PLAN" "$rid"
         done
     done
     ;;
+  strip)
+    for v in $STRIP_VARIANTS; do
+        [[ -s $OUTDIR/strip/$v/clusters.fits ]] && continue
+        submit "pz-strip-$v" "${gpu[@]}" -- env JAX_PLATFORMS=cuda PY=python PZ_GAL="$STRIP_INPUTS/galaxies_3sweeps_v2.fits" \
+            PZ_FP="$STRIP_INPUTS/footprint_strip.fits" PZ_CALIB="$CALIB" PZ_OUT="$OUTDIR/strip" \
+            bash "$REMA/scripts/photoz/photoz_strip.sh" "$v"
+    done
+    ;;
   status)
     echo "galaxy tables: $(find "$OUTDIR/galaxies" -name 'sweep-*.fits' 2>/dev/null | wc -l)"
     for rid in $REGIONS; do
@@ -173,6 +190,9 @@ print('--box', own.ra_min, own.ra_max, own.dec_min, own.dec_max)" "$PLAN" "$rid"
         for v in rs_wcen $VARIANTS; do
             printf '   %-11s %s\n' "$v" "$([[ -s $OUTDIR/runs/$v/$r/clusters.fits ]] && echo done || echo -)"
         done
+    done
+    for v in $STRIP_VARIANTS; do
+        printf 'strip %-11s %s\n' "$v" "$([[ -s $OUTDIR/strip/$v/clusters.fits ]] && echo done || echo -)"
     done
     du -sh "$OUTDIR" 2>/dev/null || true
     ;;

@@ -4,6 +4,8 @@ All notable changes to `rema` are documented here.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-08
+
 ### Added
 
 - Cosmology sensitivity study (documentation page "Cosmology and the DR11 cluster counts"):
@@ -31,6 +33,20 @@ All notable changes to `rema` are documented here.
 
 - Catalogues and calibrations carry the cosmology in their primary header (OMEGAM, HUBBLE,
   OMEGAB, MNU, W0, WA); `rema merge` keeps the regions' configuration (it wrote none before).
+- The configuration has four more cosmology keys: rema 0.3.2 reads the configurations of earlier
+  versions, but earlier versions reject those it writes (unknown keys).
+
+### Fixed
+
+- `scripts/dr11/combine_dr11.py`: the combined catalogue's NCLUSTER and NMEMBER are those of both
+  parts (they were part 0's), and it carries the CONFIG table and OMEGAM, HUBBLE. The published
+  DR11 south v0.2.0 combined catalogue was patched accordingly (headers only, data unchanged).
+
+### Documentation
+
+- "Cosmology and the DR11 cluster counts": the findings of the sensitivity study (tiers A, B and C
+  on six DR11 regions, the red-sequence calibration in other cosmologies, the counts model, the
+  DR11 fit and the forecast of the bias of ignoring the finder's response).
 
 ## [0.3.1] - 2026-10-07
 

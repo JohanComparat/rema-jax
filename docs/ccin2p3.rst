@@ -113,7 +113,7 @@ GPU node): the same environment serves the notebooks and the SLURM jobs.
 
    source /sps/lsst/users/$USER/miniforge3/etc/profile.d/conda.sh
    conda activate /sps/lsst/users/$USER/envs/rema
-   export OUTDIR=/sps/lsst/users/$USER/rema_dr11_v0.3.1    # one directory per calibration and version
+   export OUTDIR=/sps/lsst/users/$USER/rema_dr11_v0.3.2    # one directory per calibration and version
    export GLAT_MIN=15                                      # leave out the Galactic plane
    source $HOME/software/rema-jax/scripts/slurm/ccin2p3.env
    D=$REMA/scripts/slurm

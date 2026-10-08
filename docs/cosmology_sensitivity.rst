@@ -93,6 +93,19 @@ measurable. Re-training the red sequence, the zred and z_λ corrections and the 
 the other cosmology (tier C) **absorbs 10–15 % of the shift of λ** (−0.6 % and −0.9 % instead of
 −0.7 % and −1.0 % for Ω_m = 0.25 in regions 15 and 82).
 
+**The red-sequence model itself does not depend on the cosmology.** It is a function of redshift
+and magnitude only (mean colours, slopes, scatter and pivot magnitude on redshift nodes); the
+cosmology reaches it only through the calibration, whose clusters are measured in apertures of
+fixed physical size, against a background per (h⁻¹ Mpc)², with zred's volume factor. Calibrated
+in Ω_m = 0.25 or 0.35 instead of 0.3, on the same area and spectroscopic redshifts, the mean
+colours change by 0.0002–0.0003 mag (median over 0.1 < z < 0.8; at most 0.009 mag), the slopes by
+10⁻⁴, the intrinsic scatter by 1 % (at most 3.5 %), the zred and z_λ corrections by 10⁻⁴; the
+calibration uses the same clusters (±0.2 %) with the same z_λ accuracy, and the parameters of the
+centring model move by at most 0.02. The 10–15 % of the shift of λ that the re-calibration absorbs
+comes from these small, coherent changes.
+
+.. include:: figures/cosmology_sensitivity/calib_table.rst
+
 .. figure:: figures/cosmology_sensitivity/rerun_tierB.png
    :alt: Change of lambda of matched clusters, clusters lost or gained, and N(>lambda) ratios between re-runs
 
@@ -206,7 +219,10 @@ recompile the kernels, and :meth:`~rema.model.cosmo.CosmoTable.jvp` gives its de
   distribution.
 - The luminosity limit m*(z) + 1.75 is a table of apparent magnitudes (``des_z03``) and the
   calibration (red sequence, zred and z_λ corrections, centring model) was trained in apertures
-  of the calibration's cosmology.
+  of the calibration's cosmology (finding 4: it hardly depends on it). The stellar-population
+  colour tables that seed the calibration (``rema/data/build.py``) were computed with
+  Ω_m = 0.3, h = 0.7 (galaxy ages follow the lookback time); they are only the starting point of
+  the fit.
 
 Catalogues and calibrations record the cosmology in their headers (OMEGAM, HUBBLE, OMEGAB, MNU,
 W0, WA); the combined DR11 catalogue has OMEGAM and HUBBLE and its configuration.

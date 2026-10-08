@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SCRIPTS = ["fig_distances", "fig_response", "fig_rerun", "fig_counts", "fig_constraints", "results_table"]
+SCRIPTS = ["fig_distances", "fig_response", "fig_rerun", "fig_counts", "fig_constraints", "results_table", "calib_table"]
 
 p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
 p.add_argument("--only", nargs="+", default=SCRIPTS)

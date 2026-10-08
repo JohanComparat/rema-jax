@@ -100,7 +100,7 @@ def main(argv=None):
     models = [("noresp", None)]
     if a.response:
         models.append(("resp", ResponseTable.read(a.response)))
-        res["response"] = str(a.response)
+        res["response"] = Path(a.response).name
     for label, resp in models:
         r = fit_one(dv, zmap, keep, free, resp, a.nuts, tag, label, ssv=not a.no_ssv)
         res["fits"].append(r)

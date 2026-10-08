@@ -33,7 +33,7 @@ def main(argv=None):
     deg = tuple(int(x) for x in a.degree.split(","))
     tab, st = from_remeasure(a.files, ze, le, min_count=a.min_count, degree=deg)
     tab.write(a.out, header={"NFILES": len(a.files)})
-    summary = {"files": [str(f) for f in a.files], "params": list(tab.params), "z_edges": ze,
+    summary = {"files": [Path(f).name for f in a.files], "params": list(tab.params), "z_edges": ze,
                "lam_edges": le, "N": st["N"].tolist()}
     for k, par in enumerate(tab.params):
         summary[par] = {key: np.where(np.isfinite(st[key][k]), st[key][k], None).tolist()

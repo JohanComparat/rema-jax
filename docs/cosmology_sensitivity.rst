@@ -27,9 +27,10 @@ Summary
   clusters; d ln λ/dΩ_m = +0.04 at z ≈ 0.1 to +0.19 at z ≈ 0.9, more for rich clusters and in
   shallow data; an elasticity d ln λ/d ln D_A ≈ −0.35); **z_λ does not move**. The response
   scatters from cluster to cluster by about its own size.
-- **Running the whole finder in another cosmology changes nothing more** (tier B on the strip):
-  the same clusters, 1–2 % of them with another centre, λ shifted as at fixed centres, and counts
-  above each threshold as predicted by that shift.
+- **Running the whole finder in another cosmology changes nothing more** (tier B, six regions
+  and the strip): the same clusters, 1.5–2 % of them with another centre, λ shifted as at fixed
+  centres, and counts above each threshold as predicted by that shift (within 0.5 %).
+  **Re-calibrating** in the other cosmology (tier C) absorbs 10–15 % of the shift of λ.
 - **If m* followed the luminosity distance** (a fixed luminosity limit instead of fixed
   apparent magnitudes), the response would change sign above z ≈ 0.3 and be larger
   (d ln λ/dΩ_m ≈ −0.2, down to −0.5 at z > 0.7).
@@ -195,27 +196,43 @@ The ratio of N(> λ) between the re-run and the tier-A prediction (the fiducial 
 shifted by the measured response) gives the selection correction c(λ, z) of the counts model.
 ``scripts/cosmo_sens/cosmo_sens.sh`` runs the three tiers (`Reproduce`_).
 
-**Tier B on the strip** (the same 3 sweeps and own box as tier A, the production calibration, the
-blind mode run five times on the laptop GPU, 20 minutes each):
+**Results** (tier B on the six regions and on the strip of tier A, 20–60 minutes per run on a
+V100 or the laptop GPU; tier C on regions 15 and 82, each calibration 2 hours on 8 CPU cores):
 
 .. figure:: figures/cosmology_sensitivity/rerun_tierB.png
    :alt: Change of lambda of matched clusters, clusters lost or gained, and N(>lambda) ratios between re-runs
 
-   Blind re-runs against the fiducial re-run. Left: median change of ln λ of the clusters with
-   λ ≥ 20 matched between the runs (bars: NMAD). Middle: clusters with λ ≥ 20 without a match.
-   Right: N(> λ) of the re-run over that of the fiducial re-run with λ shifted by the tier-A
-   response (1 when the re-measurement at fixed centres explains the change of the counts; at
-   λ ≥ 60 one cluster is 20 %).
+   Tier B: blind re-runs against the fiducial re-run, with the production calibration. Left:
+   median change of ln λ of the clusters with λ ≥ 20 matched between the runs (bars: NMAD), per
+   region. Middle: clusters with λ ≥ 20 without a match. Right: N(> λ) at 0.1 < z_λ < 0.6, summed
+   over the regions, of the re-run over that of the fiducial re-run with λ shifted by the tier-A
+   response table (1 when the re-measurement at fixed centres explains the change of the counts).
 
-- All but two of the 175 clusters with λ ≥ 20 are matched, 99 % of them by their central galaxy;
-  the two lost (w0 = −1.2) or gained (w0 = −0.8) cross λ = 20 because of the shift of λ.
-- The matched clusters move by Δ ln λ = −0.76 % and +0.73 % (Ω_m = 0.25 and 0.35), +1.35 % and
-  −1.32 % (w0 = −0.8 and −1.2): tier A gives −0.71 %, +0.66 %, +1.27 % and −1.21 %.
-- 0.6 to 2.3 % of the clusters change centre, the median member overlap
-  (Σ min(p, p′)/Σ max(p, p′)) is 0.98–0.99, z_λ does not move.
-- The counts above each λ threshold follow the tier-A shift to within the noise of the strip: the
-  seeds, the percolation order, the centring and the selection cuts add nothing measurable to the
-  response of λ, so the counts model uses no selection correction (c = 0).
+.. figure:: figures/cosmology_sensitivity/rerun_tierC.png
+   :alt: The same for re-calibrated runs on two regions
+
+   Tier C: the same for the runs with a calibration made in the other cosmology, against the
+   fiducial re-calibration, on regions 15 (DES) and 82 (DECaLS).
+
+- **The same clusters**: of the 4,048 clusters with λ ≥ 20 in the six regions, 99.1–99.7 % are
+  matched in each cosmology (98 % of them by their central galaxy, the rest by seed or
+  position); the 0.3–1 % lost or gained are mostly those that the shift of λ moves across
+  λ = 20.
+- **λ moves as at fixed centres**: Δ ln λ = −1.0 % and +0.9 % (Ω_m = 0.25 and 0.35), +1.6 % and
+  −1.7 % (w0 = −0.8 and −1.2), median over the regions; from the DES regions (9, 15) to the
+  shallowest DECaLS region (113) the shift grows by 70 %, as in tier A. 1.5–2 % of the clusters
+  change centre, the median member overlap (Σ min(p, p′)/Σ max(p, p′)) is 0.97–0.98, and z_λ does
+  not move (|Δz| < 10⁻⁴).
+- **The counts follow the tier-A shift**: N(> λ) of the re-runs over the fiducial re-run shifted
+  by the response table is 1 within 0.5 % at λ ≥ 10, 20 and 30, and within 1–3 % at λ ≥ 45 and 60
+  (265 and 110 clusters): the seeds, the percolation order, the centring and the cuts add nothing
+  measurable, so the counts model uses no selection correction (c = 0).
+- **Re-calibrating changes little** (tier C): with the red sequence, the zred and z_λ
+  corrections and wcen trained in the other cosmology, Δ ln λ is −0.6 % and −0.9 % (Ω_m = 0.25,
+  regions 15 and 82; −0.7 % and −1.0 % with the fiducial calibration) and +0.6 % and +0.7 %
+  (Ω_m = 0.35; +0.7 % and +0.9 %): the training absorbs 10–15 % of the response. z_λ moves by
+  10⁻⁴ (the z_λ correction is retrained).
+- On the strip (one region, 175 clusters with λ ≥ 20) the four re-runs give the same picture.
 
 The counts model
 ----------------

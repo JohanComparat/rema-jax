@@ -2,11 +2,12 @@
 
 All notable changes to `rema` are documented here.
 
-## [Unreleased]
+## [0.4.0] - 2026-10-08
 
 ### Added
 
-- Photo-z cluster finding (documentation page "Photo-z cluster finding on DR11"):
+- Photo-z cluster finding (documentation pages "Photo-z cluster finding on DR11", the method and
+  the figures, and "Photo-z study: all the findings", every result, issue and open question):
   - a photo-z filter for `rema blind` and `rema scan` (`model.filter: photoz`): members from the
     DR11 photo-z (ZPHOT, ZPHOT_STD of the ingested tables) instead of the red-sequence colours,
     any colour; the field is the region's stacked photo-z distributions

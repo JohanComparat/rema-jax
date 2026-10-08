@@ -27,6 +27,9 @@ the low-mass clusters of Wen & Han (2024); the photo-z filter finds no more than
 sequence. Neither improves the completeness at z > 0.6: the DR11 photo-z of the faint members are
 too broad. Almost every photo-z detection is also a (low-λ) red-sequence cluster.
 
+All the findings of the study, with the numbers of every run, the issues found and fixed and the
+open questions, are collected on :doc:`photoz_study_findings`.
+
 .. contents::
    :local:
    :depth: 1

@@ -1,92 +1,61 @@
-"""Write results.rst (included by docs/cosmology_sensitivity.rst) from fit_<tag>.json and the
-forecast_<variant>.json files in $REMA_COSMO."""
+"""Write the tables of docs/cosmology_sensitivity.rst from the results in $REMA_COSMO:
+fit_table.rst (fit_<tag>.json) and forecast_table.rst (forecast_<variant>.json)."""
 
 import json
 import os
 
 from common import HERE, RESULTS
 
-FITS = [("all_cc", "σ_int free"), ("all_cc_sig025", "σ_int = 0.25")]
+FITS = [("all_cc", "free"), ("all_cc_sig025", "0.25 (fixed)")]
 FC = os.environ.get("COSMO_FORECAST", "sig025_cc")
-VARIANTS = [(FC, "catalogue's (m* fixed), richness normalisation free"),
-            (f"{FC}_fixednorm", "catalogue's (m* fixed), normalisation fixed"),
-            (f"{FC}_mstar", "m* following D_L, normalisation free"),
-            (f"{FC}_mstar_fixednorm", "m* following D_L, normalisation fixed"),
-            (f"{FC}_fixedmor", "catalogue's (m* fixed), mass–richness relation fixed"),
-            (f"{FC}_mstar_fixedmor", "m* following D_L, mass–richness relation fixed")]
-lines = []
+VARIANTS = [(FC, "free", "fixed (catalogue)"),
+            (f"{FC}_fixednorm", "normalisation fixed", "fixed (catalogue)"),
+            (f"{FC}_fixedmor", "fixed", "fixed (catalogue)"),
+            (f"{FC}_mstar", "free", "follows D_L"),
+            (f"{FC}_mstar_fixednorm", "normalisation fixed", "follows D_L"),
+            (f"{FC}_mstar_fixedmor", "fixed", "follows D_L")]
+OFFSETS = [("Omega_m", -0.05, "ΔΩ_m = −0.05"), ("Omega_m", 0.05, "ΔΩ_m = +0.05"),
+           ("w0", -0.2, "Δw0 = −0.2"), ("w0", 0.2, "Δw0 = +0.2")]
+
+
+def table(header, rows):
+    out = [".. list-table::", "   :header-rows: 1", ""]
+    for r in [header] + rows:
+        out += [f"   * - {r[0]}"] + [f"     - {c}" for c in r[1:]]
+    return out + [""]
+
+
 fits = [(json.loads((RESULTS / f"fit_{t}.json").read_text()), lab) for t, lab in FITS
         if (RESULTS / f"fit_{t}.json").exists()]
-if fits:
-    lines += [
-        "Best fits to the DR11 counts (Ω_m, ln 10¹⁰A_s, h, n_s, Ω_b, the mass–richness parameters and",
-        "the z_λ bias free; σ_int free or fixed at 0.25; errors from the Fisher matrix at the best fit):",
-        "",
-        ".. list-table::",
-        "   :header-rows: 1",
-        "",
-        "   * - model",
-        "     - scatter",
-        "     - Ω_m",
-        "     - σ_8",
-        "     - σ_int",
-        "     - χ² counts (20 bins)",
-        "     - χ² weak lensing",
-    ]
-    for fit, slab in fits:
-      for f in fit["fits"]:
-        b, e = f["best"], f["fisher_err"]
-        name = "without the finder's response" if f["model"] == "noresp" else "with the response (six regions)"
-        lines += [f"   * - {name}", f"     - {slab}",
-                  f"     - {b['Omega_m']:.3f} ± {e['Omega_m']:.3f}",
-                  f"     - {f['sigma8']:.3f} ± {f['sigma8_err']:.3f}",
-                  f"     - {b.get('sigma_int', 0.25):.3f}",
-                  f"     - {f['chi2']['counts']:.1f}",
-                  f"     - {f['chi2']['wl']:.1f} ({f['chi2']['n_wl']} bins)"]
-    lines += ["", ".. figure:: /figures/cosmology_sensitivity/counts_fit.png",
-              "   :alt: DR11 counts against redshift in five richness bins, with the best-fitting models", "",
-              "   The DR11 counts in the volume-limited sky (points, Poisson errors) and the best fits",
-              "   without (solid) and with (dashed) the finder's response; right: residuals in units of the",
-              "   Poisson error (dots: without, squares: with the response).", "",
-              ".. figure:: /figures/cosmology_sensitivity/constraints.png",
-              "   :alt: Omega_m - sigma_8 ellipses with and without the finder's response", "",
-              "   Ω_m–σ_8 (68 and 95 %, Fisher matrix at each best fit) without and with the finder's",
-              "   response.", ""]
 rows = []
-for v, label in VARIANTS:
-    p = RESULTS / f"forecast_{v}.json"
+for fit, slab in fits:
+    for f in fit["fits"]:
+        b, e = f["best"], f["fisher_err"]
+        rows.append(["with" if f["model"] == "resp" else "without", slab,
+                     f"{b['Omega_m']:.3f} ± {e['Omega_m']:.3f}", f"{f['sigma8']:.3f} ± {f['sigma8_err']:.3f}",
+                     f"{f['chi2']['counts']:.1f}", f"{f['chi2']['wl']:.1f}"])
+lines = table(["finder's response", "σ_int", "Ω_m", "σ_8", "χ² counts (20 bins)", "χ² lensing (15 bins)"],
+              rows) if rows else ["(the fits are not available)", ""]
+(HERE / "fit_table.rst").write_text("\n".join(lines) + "\n")
+
+rows = []
+for tag, mor, mstar in VARIANTS:
+    p = RESULTS / f"forecast_{tag}.json"
     if not p.exists():
         continue
     fc = json.loads(p.read_text())
     eo, es = fc["noresp"]["err"]["Omega_m"], fc["noresp"]["sigma8_err"]
-    sh = {f"{s['param']} truth − finder = {s['delta']:+g}": s for s in fc["shifts"]}
-    rows.append((label, eo, es, fc["resp"]["err"]["Omega_m"], sh))
-if rows:
-    keys = list(rows[0][4])
-    lines += [
-        "Forecast at the best fit without response, with the DR11 binning, area and covariance:",
-        "the shift of the best fit, in units of its error, when the counts of a catalogue made in",
-        "a cosmology offset from the true one (column heads: truth − finder) are fitted by the",
-        "model without the response.",
-        "",
-        ".. list-table::",
-        "   :header-rows: 1",
-        "",
-        "   * - response",
-        "     - σ(Ω_m)",
-        "     - σ(σ_8)",
-        "     - σ(Ω_m) with it",
-    ] + [f"     - {k}: ΔΩ_m, Δσ_8 [σ]" for k in keys]
-    for label, eo, es, eo1, sh in rows:
-        lines += [f"   * - {label}", f"     - {eo:.4f}", f"     - {es:.4f}", f"     - {eo1:.4f}"]
-        lines += [f"     - {sh[k]['shift']['Omega_m'] / eo:+.2f}, {sh[k]['sigma8_shift'] / es:+.2f}" for k in keys]
-    lines += ["", ".. figure:: /figures/cosmology_sensitivity/counts_dlnN.png",
-              "   :alt: d ln N / d Omega_m in each bin, total and through the finder", "",
-              "   d ln N/dΩ_m in each bin (lines: richness bins, as in the counts figure): total (left) and",
-              "   the part due to the finder's response (right).", "",
-              ".. figure:: /figures/cosmology_sensitivity/shifts.png",
-              "   :alt: Shifts of Omega_m and sigma_8 when the response is ignored", "",
-              "   Shifts of the best fit when the response (m* fixed) is ignored, in units of the error.", ""]
-(HERE / "results.rst").write_text("\n".join(lines) + "\n" if lines else
-                                  "The fit and forecast results are not available yet.\n")
-print("wrote results.rst")
+    sh = {(s["param"], round(s["delta"], 3)): s for s in fc["shifts"]}
+    row = [mor, mstar, f"{eo:.3f}", f"{es:.3f}"]
+    for par, d, _ in OFFSETS:
+        s = sh.get((par, d))
+        row.append("—" if s is None else f"{s['shift']['Omega_m'] / eo:+.2f}, {s['sigma8_shift'] / es:+.2f}")
+    rows.append(row)
+lines = table(["mass–richness", "m*", "σ(Ω_m)", "σ(σ_8)"]
+              + [f"{lab}: shifts of Ω_m, σ_8 [σ]" for *_, lab in OFFSETS], rows) \
+    if rows else ["(the forecasts are not available)", ""]
+(HERE / "forecast_table.rst").write_text("\n".join(lines) + "\n")
+old = HERE / "results.rst"
+if old.exists():
+    old.unlink()
+print("wrote fit_table.rst, forecast_table.rst")

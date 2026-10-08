@@ -66,21 +66,28 @@ if need(fit_path):
     ax.legend()
     save(fig, "constraints")
 
+fc_paths = [(fc_path, "mass–richness relation free"),
+            (RESULTS / f"forecast_{FORECAST}_fixedmor.json", "mass–richness relation fixed")]
+fc_paths = [(p, t) for p, t in fc_paths if p.exists()]
 if need(fc_path):
-    fc = json.loads(fc_path.read_text())
-    sh = fc["shifts"]
-    fig, ax = plt.subplots(figsize=(6.5, 3.2), constrained_layout=True)
-    y = np.arange(len(sh))
-    eo, es = fc["noresp"]["err"]["Omega_m"], fc["noresp"]["sigma8_err"]
-    ax.barh(y - 0.18, [s["shift"]["Omega_m"] / eo for s in sh], height=0.35, color=BLUE, label="Ω_m")
-    ax.barh(y + 0.18, [s["sigma8_shift"] / es for s in sh], height=0.35, color=ORANGE, label="σ_8")
-    ax.set_yticks(y, [f"{s['param']}: truth − finder = {s['delta']:+g}" for s in sh])
-    ax.axvline(0, color=INK2, lw=0.6)
-    ax.set_xlabel("shift of the best fit when the response is ignored [σ]")
-    ax.legend()
+    fig, axes = plt.subplots(1, len(fc_paths), figsize=(6 * len(fc_paths), 3.2), constrained_layout=True,
+                             squeeze=False)
+    for ax, (path, title) in zip(axes[0], fc_paths):
+        fc = json.loads(path.read_text())
+        sh = fc["shifts"]
+        y = np.arange(len(sh))
+        eo, es = fc["noresp"]["err"]["Omega_m"], fc["noresp"]["sigma8_err"]
+        ax.barh(y - 0.18, [s["shift"]["Omega_m"] / eo for s in sh], height=0.35, color=BLUE, label="Ω_m")
+        ax.barh(y + 0.18, [s["sigma8_shift"] / es for s in sh], height=0.35, color=ORANGE, label="σ_8")
+        ax.set_yticks(y, [f"{s['param']}: truth − finder = {s['delta']:+g}" for s in sh])
+        ax.axvline(0, color=INK2, lw=0.6)
+        ax.set_xlabel("shift of the best fit when the response is ignored [σ]")
+        ax.set_title(f"{title}: σ(Ω_m) = {eo:.3f}, σ(σ_8) = {es:.3f}")
+        ax.legend()
+        if path == fc_path:
+            for s in sh:
+                record(f"shift_Om_{s['param']}{s['delta']:+g}_sigma", s["shift"]["Omega_m"] / eo)
+                record(f"shift_s8_{s['param']}{s['delta']:+g}_sigma", s["sigma8_shift"] / es)
+            record("forecast_Om_err", eo)
+            record("forecast_s8_err", es)
     save(fig, "shifts")
-    for s in sh:
-        record(f"shift_Om_{s['param']}{s['delta']:+g}_sigma", s["shift"]["Omega_m"] / eo)
-        record(f"shift_s8_{s['param']}{s['delta']:+g}_sigma", s["sigma8_shift"] / es)
-    record("forecast_Om_err", eo)
-    record("forecast_s8_err", es)

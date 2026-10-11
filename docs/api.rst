@@ -17,6 +17,9 @@ Run modes
 .. automodule:: rema.modes.scan
    :members: run_scan
 
+.. automodule:: rema.modes.positions
+   :members: scan_positions, join_to_input, group_positions, data_box
+
 .. automodule:: rema.modes.specpost
    :members: process, clip_velocity_batch, bootstrap_clip
 

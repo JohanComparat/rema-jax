@@ -199,6 +199,14 @@ Large runs (:doc:`hpc`):
 ``rema merge`` → ``<out>.fits``, ``<out>_members.fits``, ``<out>_regions.fits``, ``<out>_qa.json``
     The merged clusters, the members, the per-region statistics and the QA.
 
+``rema scan-positions`` → ``CLUSTERS``, ``MEMBERS``, ``CONFIG``
+    - Clusters: one row per input row. The input columns come first, as ``INPUT_<NAME>``, then
+      the ``rema scan`` columns (below) and, without ``--no-specpost``, the spectroscopic ones,
+      then ``SCANNED``. Unscanned rows hold −1, empty strings or False.
+    - Members: as ``rema scan``, with ``MEM_MATCH_ID`` = the input row (0-based).
+    - The primary header holds ``MODE = scan-positions``, ``CALSHA1``, ``INPUT``, ``NPOS``,
+      ``NSCANNED``, ``NFOUND`` (λ > 0) and ``TTOTAL``.
+
 ``rema pscd`` → ``CLUSTERS``, ``MEMBERS``, ``CONFIG`` (``FILTER = pscd``)
     - Clusters: ``MEM_MATCH_ID`` ((region << 32) | rank in decreasing S/N), ``RANK`` (order of
       extraction), ``RA``, ``DEC``, ``Z``, ``Z_E``, the amplitude ``A`` and ``A_E``, ``SNR``

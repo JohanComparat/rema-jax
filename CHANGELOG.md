@@ -2,6 +2,22 @@
 
 All notable changes to `rema` are documented here.
 
+## [Unreleased]
+
+### Added
+
+- `rema scan-positions` (`rema.modes.positions`): scan mode and spectroscopic post-processing
+  for a table of positions (FITS, CSV, ...), joined to it row for row (input columns as
+  `INPUT_<NAME>`, `SCANNED`). It ingests the sweeps around the positions (kept in a work
+  directory), indexes the randoms of their boxes and builds the footprints itself, with the
+  DR11 south production calibration by default; `scripts/scan/scan_positions.sh` submits it as a
+  SLURM job at CC-IN2P3.
+
+### Fixed
+
+- `rema.modes.specpost.process` failed on a catalogue without any member (an index array of
+  float type); `rema scan --specpost` on positions without members crashed.
+
 ## [0.4.0] - 2026-10-08
 
 ### Added

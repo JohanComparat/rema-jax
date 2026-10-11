@@ -193,6 +193,45 @@ Consolidation keeps 12,888 of the 13,780 percolated clusters.
 - At the 25 ACT DR5 clusters of the development area, Z_LAMBDA_OPT matches the ACT redshifts
   with NMAD 0.0034 (1+z). The optical centre is the redMaPPer DR10 one for 80% of them.
 
+Scan a list of positions
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+``rema scan-positions`` does everything for a table of positions anywhere in DR11 south: it
+ingests the sweeps around them, builds their footprint from the randoms, runs the scan and the
+spectroscopic post-processing, and returns the input table with the results:
+
+.. code-block:: bash
+
+   rema scan-positions targets.csv --out targets_rema.fits                  # at CC-IN2P3
+   rema scan-positions targets.fits --ra-col ra --dec-col dec --dr11 ~/data/legacysurvey/dr11/south \
+        --calib calib.fits --work work/ --out targets_rema.fits
+
+- The input is any table astropy reads (FITS, CSV, ECSV, ...). The output CLUSTERS HDU has one
+  row per input row: every input column as ``INPUT_<NAME>``, then the scan and spectroscopic
+  columns under their usual names (``LAMBDA``, ``Z_LAMBDA``, ``RA_OPT``, ``SPEC_Z``,
+  ``VDISP``, ``BEST_Z``, …), then ``SCANNED``. Rows outside the sweeps are not scanned: their
+  columns hold −1, empty strings or False. ``MEMBERS`` gives the members, with ``MEM_MATCH_ID``
+  set to the input row (0-based).
+- **Defaults:**
+
+  - ``--dr11``: ``$DR11``, else ``$LEGACYSURVEY_DIR/dr11/south``, else the copy at CC-IN2P3;
+  - ``--calib``: the calibration of the DR11 south production run;
+  - the configuration: the calibration's, with the ``--set`` and ``--centering`` overrides
+    (e.g. ``--set @scripts/photoz/photoz_dr11.yaml --set @scripts/photoz/pz_filter.yaml`` for
+    the photo-z filter).
+
+- **Data:** each position gets ``--buffer`` = 1.2° of data, enough for the scan aperture, the
+  centre search and the completeness integral at z = 0.05. Positions are processed in sky cells
+  of ``--cell`` = 10°.
+- **Work directory** (``--work``, default ``/sps/lsst/users/$USER/rema_scan`` at CC):
+
+  - ``galaxies/`` holds the ingested sweeps (about 49 MB each), kept and reused by later runs;
+  - ``randoms_index/`` holds one index of the ``--nrand`` = 4 randoms files per set of
+    positions.
+
+- **At CC-IN2P3**, ``scripts/scan/scan_positions.sh INPUT OUTPUT [options]`` submits the command
+  as one SLURM job (V100 GPU; ``CPU=1`` for an htc job).
+
 7. Spectroscopic post-processing
 --------------------------------
 

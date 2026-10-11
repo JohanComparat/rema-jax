@@ -184,7 +184,7 @@ def process(cat: dict, mem: dict, *, min_members: int = 3, vmax_init: float = 50
     has = zsp > 0
     # Pad spectroscopic members per cluster.
     pos = {v: i for i, v in enumerate(ids)}
-    row = np.array([pos.get(v, -1) for v in mid])
+    row = np.array([pos.get(v, -1) for v in mid], dtype=np.int64)
     use = has & (row >= 0)
     counts = np.bincount(row[use], minlength=C)
     M = max(int(counts.max(initial=0)), 1)

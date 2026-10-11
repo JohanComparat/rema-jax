@@ -8,6 +8,8 @@ Commands (each reads and writes FITS files, so stages can be resumed and run per
   background galaxies + calibration -> calibration with the chi^2 background added
   zred       add ZRED columns to a galaxy table
   scan       richness and redshift at given positions (redMaPPer zscan)
+  scan-positions  the same plus spectroscopic post-processing for a table of positions, joined
+             to it; ingests the sweeps and builds the footprints around the positions
   blind      blind cluster finding over a region (red-sequence or, with
              --set model.filter=photoz, photo-z filter)
   pscd       photo-z space cluster detection over a region (the AMICO matched filter)
@@ -322,6 +324,67 @@ def cmd_scan(args):
                                     c_location=sc.c_location, c_scale=sc.c_scale, nboot=sc.nboot,
                                     seed=sc.seed)
     _write_catalog(args.out, cat, mem, cfg, {"MODE": "scan", "CENTRING": method})
+
+
+def _read_any_table(path) -> dict:
+    """A table in any format astropy reads (FITS, CSV, ECSV, ...) as a dict of numpy columns."""
+    from astropy.table import Table
+
+    t = Table.read(path)
+    out = {}
+    for name in t.colnames:
+        col = t[name]
+        if getattr(col, "mask", None) is not None and np.any(col.mask):
+            fill = "" if col.dtype.kind in "US" else (False if col.dtype.kind == "b" else np.nan)
+            col = col.filled(fill)
+        out[name] = np.asarray(col)
+    return out
+
+
+def _default_dr11() -> str | None:
+    import os
+
+    if os.environ.get("DR11"):
+        return os.environ["DR11"]
+    if os.environ.get("LEGACYSURVEY_DIR"):
+        return str(Path(os.environ["LEGACYSURVEY_DIR"]) / "dr11" / "south")
+    cc = Path("/sps/lsst/datasets/desi/legacysurveys/dr11/south")
+    return str(cc) if cc.exists() else None
+
+
+def cmd_scan_positions(args):
+    """Scan mode + spectroscopic post-processing for the positions of a table, joined to it."""
+    import os
+
+    from .calibration import Calibration
+    from .modes.positions import scan_positions
+    from .pipeline import file_sha1
+    from .sky.maps import Footprint
+
+    dr11 = args.dr11 or _default_dr11()
+    if dr11 is None and not (args.galaxies and args.footprint):
+        raise SystemExit("give --dr11 (or set DR11 or LEGACYSURVEY_DIR), or --galaxies and --footprint")
+    calib = args.calib or (str(Path(dr11) / "rema" / "rema_dr11_v0.2.0_ra0-240" / "calib" / "calib.fits")
+                           if dr11 else None)
+    if calib is None:
+        raise SystemExit("give --calib")
+    sps = Path("/sps/lsst/users") / os.environ.get("USER", "")
+    work = args.work or str(sps / "rema_scan" if sps.is_dir() else Path("rema_scan_work"))
+    cal = Calibration.read(calib)
+    cfg = _with_overrides(_with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args), args)
+    if args.centering:
+        cfg = cfg.replace(centering={"method": args.centering})
+    table = _read_any_table(args.input)
+    fp = Footprint.read(args.footprint) if args.footprint else None
+    info = {}
+    joined, mem = scan_positions(table, ra_col=args.ra_col, dec_col=args.dec_col, dr11=dr11, calib=calib,
+                                 work=work, cfg=cfg, buffer=args.buffer, cell=args.cell, nrand=args.nrand,
+                                 batch=args.batch, specpost=not args.no_specpost, galaxies=args.galaxies,
+                                 footprint=fp, info=info)
+    hdr = {"MODE": "scan-positions", "CALSHA1": file_sha1(calib), "INPUT": Path(args.input).name,
+           "NPOS": info["n_positions"], "NSCANNED": info["n_scanned"], "NFOUND": info["n_found"],
+           "TTOTAL": round(info["t_total"], 1)}
+    _write_catalog(args.out, joined, mem, cfg, hdr)
 
 
 def cmd_blind(args):
@@ -755,6 +818,33 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--specpost", action="store_true", help="also run the spectroscopic post-processing")
     s.add_argument("--out", required=True)
     s.set_defaults(func=cmd_scan)
+
+    s = sub.add_parser("scan-positions", help="scan mode + spectroscopic post-processing for the positions "
+                       "of a table, joined to it (ingests the sweeps and builds the footprints it needs)")
+    s.add_argument("input", help="table with the positions (FITS, CSV, ECSV, ...)")
+    s.add_argument("--out", required=True, help="output FITS: the input columns as INPUT_<NAME>, the scan "
+                   "and spectroscopic columns, SCANNED; MEMBERS keyed by the input row")
+    s.add_argument("--ra-col", default="RA")
+    s.add_argument("--dec-col", default="DEC")
+    s.add_argument("--dr11", help="DR11 south directory (default $DR11, $LEGACYSURVEY_DIR/dr11/south, or the "
+                   "copy at CC-IN2P3)")
+    s.add_argument("--calib", help="calibration (default: that of the DR11 south production run)")
+    s.add_argument("--config", help="YAML configuration (default: the calibration's)")
+    s.add_argument("--work", help="work directory: galaxy tables of the sweeps (kept) and randoms indexes "
+                   "(default /sps/lsst/users/$USER/rema_scan when it exists, else ./rema_scan_work)")
+    s.add_argument("--buffer", type=float, default=1.2, help="deg of data around each position")
+    s.add_argument("--cell", type=float, default=10.0, help="positions are processed in sky cells of this "
+                   "size (deg)")
+    s.add_argument("--nrand", type=int, default=4, help="randoms files for the footprints")
+    s.add_argument("--batch", type=int, default=128)
+    s.add_argument("--no-specpost", action="store_true", help="skip the spectroscopic post-processing")
+    s.add_argument("--galaxies", help="galaxy table or directory of per-sweep tables to use instead of "
+                   "ingesting the sweeps")
+    s.add_argument("--footprint", help="footprint to use instead of building it from the randoms")
+    s.add_argument("--cosmology", action="append", metavar="KEY=VALUE")
+    s.add_argument("--set", action="append", metavar="SECTION.KEY=VALUE")
+    centering(s)
+    s.set_defaults(func=cmd_scan_positions)
 
     s = sub.add_parser("blind", help="blind cluster finding")
     common(s)

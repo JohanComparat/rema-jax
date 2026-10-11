@@ -72,6 +72,23 @@ is given, so the 12 GB of members need not be loaded whole. At z_λ > 0.75, keep
 λ = 5 the catalogue favours completeness (:doc:`design`, section 14). The notebooks run at
 CC-IN2P3 on the Jupyter platform: :ref:`cc-notebooks`.
 
+Your own positions
+~~~~~~~~~~~~~~~~~~
+
+To get the scan-mode richness, redshift, centre and spectroscopic redshift at your own positions
+(X-ray or SZ candidates, say), give a table with RA and DEC to ``rema scan-positions``. It
+ingests the sweeps around the positions, builds their footprint from the randoms and returns the
+input table with the results (:doc:`dr11`, "Scan a list of positions"). As a SLURM job:
+
+.. code-block:: bash
+
+   rema-env
+   $HOME/software/rema-jax/scripts/scan/scan_positions.sh targets.csv targets_rema.fits
+   CPU=1 $HOME/software/rema-jax/scripts/scan/scan_positions.sh targets.fits out.fits --ra-col ra --dec-col dec
+
+The ingested sweeps stay in ``/sps/lsst/users/$USER/rema_scan/galaxies`` (about 49 MB each,
+reused by later runs); delete that directory when it is no longer needed.
+
 How it was made
 ---------------
 

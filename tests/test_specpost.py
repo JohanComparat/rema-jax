@@ -102,3 +102,12 @@ def test_best_z_fallbacks():
     out, _ = S.process(cat, mem, nboot=4)
     assert list(out["BEST_Z_TYPE"]) == ["cg_spec_z", "photo_z", "none"]
     assert out["BEST_Z"][0] == pytest.approx(0.201) and out["BEST_Z"][1] == pytest.approx(0.3)
+
+
+def test_process_without_members():
+    """Clusters with no member at all (a scan position in an empty field) get empty spectroscopy."""
+    cat = {"MEM_MATCH_ID": np.array([0, 1]), "Z_LAMBDA": np.array([0.3, -1.0])}
+    mem = {"MEM_MATCH_ID": np.zeros(0, np.int64), "ZSPEC": np.zeros(0), "ID": np.zeros(0, np.int64)}
+    out, m = S.process(cat, mem)
+    assert out["NSPEC"].tolist() == [0, 0] and out["BEST_Z_TYPE"].tolist() == ["photo_z", "none"]
+    assert m["VEL"].size == 0

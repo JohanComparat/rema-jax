@@ -93,6 +93,9 @@ rema scan --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits
 rema blind --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits \
      --own 0 5 -10 0 --checkpoint blind_ckpt --specpost --out clusters.fits
 
+# 4b'. a table of positions anywhere in DR11 south (ingests what it needs): input + results
+rema scan-positions targets.csv --out targets_rema.fits
+
 # 4c. the same from the photo-z (any colour), and the AMICO-like PSCD
 rema blind ... --set @scripts/photoz/photoz_dr11.yaml --set @scripts/photoz/pz_filter.yaml --out pz.fits
 rema pscd --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits \

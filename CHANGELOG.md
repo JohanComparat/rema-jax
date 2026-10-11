@@ -18,6 +18,8 @@ All notable changes to `rema` are documented here.
 
 ### Fixed
 
+- `Region.query` with a magnitude limit brighter than every galaxy of the region (a group of
+  positions at a survey edge) crashed with an IndexError; it now returns no neighbours.
 - `rema.modes.specpost.process` failed on a catalogue without any member (an index array of
   float type); `rema scan --specpost` on positions without members crashed.
 

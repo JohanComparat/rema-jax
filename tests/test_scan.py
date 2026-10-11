@@ -48,3 +48,27 @@ def test_scan_recovers_mock_clusters():
     np.testing.assert_allclose(cat["RA_OPT"], specs[:, 0], atol=1e-6)
     np.testing.assert_allclose(cat["DEC_OPT"], specs[:, 1], atol=1e-6)
     assert set(np.unique(mem["MEM_MATCH_ID"])) <= set(cat["MEM_MATCH_ID"])
+
+
+def test_scan_without_bright_galaxies():
+    """A region whose galaxies are all fainter than the scan's magnitude limit at low redshift (a
+    survey edge, with the calibration's background): no neighbours there, no crash."""
+    rng = np.random.default_rng(3)
+    cfg = RemaConfig()
+    rs = RSModel.from_template()
+    depth5 = np.array([24.9, 24.7, 24.2, 23.6])
+    box = Box(10.0, 10.5, 0.0, 0.5)
+
+    def field(mag_range, density):
+        gal = mocks.mock_field(rng, rs, box, density=density, depth5=depth5, mag_range=mag_range)
+        n = gal["RA"].size
+        gal["ID"] = np.arange(n, dtype=np.int64)
+        gal["ZSPEC"] = np.full(n, -1.0, np.float32)
+        return gal
+
+    bkg = Region.build(field((14.0, 22.0), 4000), rs, cfg, area_deg2=box.area_deg2()).model.bkg
+    reg = Region.build(field((21.5, 22.0), 200), rs, cfg, bkg=bkg, area_deg2=box.area_deg2())
+    pad = reg.query(np.array([10.25]), np.array([0.25]), 0.2, mag_max=15.0)
+    assert not pad.valid.any()
+    cat, _ = run_scan(reg, np.array([10.25]), np.array([0.25]))
+    assert cat["LAMBDA"].size == 1

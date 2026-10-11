@@ -215,7 +215,8 @@ class Region:
             return self.index.query(ra_c, dec_c, radius_deg, kmin=kmin)
         sub, sel = self._subindex(mag_max)
         pad = sub.query(ra_c, dec_c, radius_deg, kmin=kmin)
-        pad.idx = np.where(pad.valid, sel[pad.idx], 0)
+        pad.valid &= sel.size > 0       # none brighter than mag_max: no neighbour (e.g. a survey edge)
+        pad.idx = np.where(pad.valid, sel[pad.idx] if sel.size else 0, 0)
         return pad
 
     def neighbors(self, pad: Padded, pfree: np.ndarray | None = None,

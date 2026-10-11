@@ -8,7 +8,8 @@ position outside the galaxy tables). It builds what the scan needs around the po
 
 1. the sweeps overlapping the positions' boxes (each position buffered by ``buffer`` deg) are
    ingested whole, with their photo-z, into ``work/galaxies`` (kept and reused by later runs);
-2. the randoms of the union of the boxes are indexed once per run (``work/randoms_index/<hash>``);
+2. the randoms of the union of the boxes are indexed once per run (``work/randoms_index/<hash>``),
+   unless an existing index is given (``index``: e.g. the full-sky one of ``rema randoms-index``);
 3. the positions are grouped into sky cells of ``cell`` deg; for each group the galaxies and the
    footprint of its boxes are read, the region is built with the calibration and the positions
    are scanned.
@@ -116,7 +117,7 @@ def join_to_input(table: dict, cat: dict, nrows: int | None = None) -> dict:
 def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr11=None, calib=None,
                    work=None, cfg=None, buffer: float = 1.2, cell: float = 10.0, nrand: int = 4,
                    batch: int = 128, specpost: bool = True, galaxies=None, footprint=None,
-                   info: dict | None = None):
+                   index=None, info: dict | None = None):
     """Scan the positions of ``table`` (dict of columns): ``(joined, members)``, see the module
     docstring.
 
@@ -124,11 +125,12 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
     ``randoms/randoms-south-1-*.fits``); ``calib``: the calibration file; ``work``: the work
     directory; ``cfg``: the configuration (default: the calibration's); ``galaxies`` (a galaxy
     table or a directory of per-sweep tables) and ``footprint`` (a Footprint) replace the
-    ingestion and the randoms; ``nrand``: randoms files used for the footprints.
+    ingestion and the randoms; ``index``: a randoms index directory covering the positions, used
+    instead of indexing the randoms; ``nrand``: randoms files used for the footprints.
     """
     from ..calibration import Calibration
     from ..io.legacy import ingest_sweeps, read_galaxies
-    from ..sky.maps import build_footprint, index_randoms, read_randoms_index
+    from ..sky.maps import build_footprint, index_randoms, randoms_index_files, read_randoms_index
     from ..sky.regions import sweeps_overlapping
     from .common import Region
     from .scan import run_scan
@@ -162,15 +164,21 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
         log.info("ingesting %d sweeps into %s", len(sweeps), work / "galaxies")
         ingest_sweeps(sweeps, work / "galaxies", cfg, require_pz=True)
         gal_src = work / "galaxies"
-    index_dir = None
+    index_dir, stems = None, None
     if footprint is None and sky_all is not None:
-        index_dir = work / "randoms_index" / _box_hash(sky_all)
-        files = sorted((Path(dr11) / "randoms").glob("randoms-south-1-*.fits"))[:nrand]
-        if not files:
-            raise FileNotFoundError(f"no randoms in {Path(dr11) / 'randoms'}")
-        for f in files:
-            log.info("indexing %s over the positions' boxes", f.name)
-            index_randoms(f, index_dir, cfg, box=sky_all)
+        if index is not None:
+            index_dir = Path(index)
+        else:
+            index_dir = work / "randoms_index" / _box_hash(sky_all)
+            files = sorted((Path(dr11) / "randoms").glob("randoms-south-1-*.fits"))[:nrand]
+            if not files:
+                raise FileNotFoundError(f"no randoms in {Path(dr11) / 'randoms'}")
+            for f in files:
+                log.info("indexing %s over the positions' boxes", f.name)
+                index_randoms(f, index_dir, cfg, box=sky_all)
+        stems = randoms_index_files(index_dir)[:nrand]
+        if not stems:
+            raise FileNotFoundError(f"no randoms index in {index_dir}")
     stats["t_prepare"] = time.time() - t0
 
     cats, mems = [], []
@@ -184,9 +192,8 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
             continue
         fp = footprint
         if fp is None:
-            rnd = read_randoms_index(index_dir, cfg, sky)
-            nfiles = len(sorted(index_dir.glob("*.json")))
-            fp = build_footprint(rnd, cfg, box=sky, density=cfg.mask.randoms_density * nfiles)
+            rnd = read_randoms_index(index_dir, cfg, sky, files=stems)
+            fp = build_footprint(rnd, cfg, box=sky, density=cfg.mask.randoms_density * len(stems))
         reg = Region.build(gal, cal.rs, cfg, footprint=fp, zredcorr=cal.zredcorr, bkg=cal.bkg,
                            zlcorr=cal.zlcorr, zbkg=cal.zbkg, wcen_params=cal.wcen, sky=sky)
         log.info("group of %d positions: %d galaxies", rows.size, np.size(gal["RA"]))

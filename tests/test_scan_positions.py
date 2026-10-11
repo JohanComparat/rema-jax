@@ -103,7 +103,18 @@ def test_cli_scan_positions_ingests_and_indexes(tmp_path):
         "--work", tmp_path / "work", "--ra-col", "ra", "--dec-col", "dec", "--nrand", 1,
         "--no-specpost", "--out", tmp_path / "out2.fits")
     assert (tmp_path / "work" / "galaxies" / SWEEP_NAME).stat().st_mtime == mtime
-    assert "NSPEC" not in read_catalog(tmp_path / "out2.fits")[0]
+    out2 = read_catalog(tmp_path / "out2.fits")[0]
+    assert "NSPEC" not in out2
+    # an existing randoms index (of the whole file) gives the same footprint
+    run("randoms-index", dr11 / "randoms" / "randoms-south-1-0.fits", "--outdir", tmp_path / "index")
+    run("scan-positions", tmp_path / "pos.csv", "--dr11", dr11, "--calib", dr11 / "cal.fits",
+        "--work", tmp_path / "work", "--ra-col", "ra", "--dec-col", "dec", "--index", tmp_path / "index",
+        "--no-specpost", "--out", tmp_path / "out3.fits")
+    np.testing.assert_allclose(read_catalog(tmp_path / "out3.fits")[0]["LAMBDA"], out2["LAMBDA"], rtol=1e-5)
+    with pytest.raises(FileNotFoundError, match="no randoms index"):
+        cli.main(["scan-positions", str(tmp_path / "pos.csv"), "--dr11", str(dr11), "--calib",
+                  str(dr11 / "cal.fits"), "--work", str(tmp_path / "work"), "--ra-col", "ra", "--dec-col",
+                  "dec", "--index", str(tmp_path / "work"), "--out", str(tmp_path / "o.fits")])
 
 
 def test_cli_scan_positions_errors(tmp_path, monkeypatch):

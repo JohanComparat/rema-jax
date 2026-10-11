@@ -227,7 +227,8 @@ spectroscopic post-processing, and returns the input table with the results:
 
   - ``galaxies/`` holds the ingested sweeps (about 49 MB each), kept and reused by later runs;
   - ``randoms_index/`` holds one index of the ``--nrand`` = 4 randoms files per set of
-    positions.
+    positions; ``--index DIR`` uses an existing index instead (one of ``rema randoms-index``,
+    covering the positions), which saves a pass over the 86 GB of randoms per run.
 
 - **At CC-IN2P3**, ``scripts/scan/scan_positions.sh INPUT OUTPUT [options]`` submits the command
   as one SLURM job (V100 GPU; ``CPU=1`` for an htc job).

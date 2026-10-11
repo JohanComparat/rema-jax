@@ -89,6 +89,21 @@ input table with the results (:doc:`dr11`, "Scan a list of positions"). As a SLU
 The ingested sweeps stay in ``/sps/lsst/users/$USER/rema_scan/galaxies`` (about 49 MB each,
 reused by later runs); delete that directory when it is no longer needed.
 
+For large catalogues spread over the sky, ingest every sweep and index the randoms once, as
+arrays of CPU jobs, then point the scans at that index:
+
+.. code-block:: bash
+
+   W=/sps/lsst/users/$USER/rema_scan
+   OUTDIR=$W NRAND=4 $HOME/software/rema-jax/scripts/slurm/rema_dr11_blind.sh prepare  # ~80 GB + 12 GB
+   python $HOME/software/rema-jax/scripts/scan/public_catalogues.py $W/inputs/all   # ACT, SPT, PSZ2, MCXC, eRASS1, ...
+   $HOME/software/rema-jax/scripts/scan/scan_positions.sh $W/inputs/all/act_dr6.fits $W/out/act_dr6.fits \
+       --index $W/randoms_index
+
+``scripts/scan/public_catalogues.py`` writes the public cluster catalogues kept in
+``dr11/south/rema/external`` as scan-positions inputs (``--sample N`` for N random clusters in
+the DR11 south sweeps).
+
 How it was made
 ---------------
 

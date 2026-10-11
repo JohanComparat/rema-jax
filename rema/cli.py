@@ -380,7 +380,7 @@ def cmd_scan_positions(args):
     joined, mem = scan_positions(table, ra_col=args.ra_col, dec_col=args.dec_col, dr11=dr11, calib=calib,
                                  work=work, cfg=cfg, buffer=args.buffer, cell=args.cell, nrand=args.nrand,
                                  batch=args.batch, specpost=not args.no_specpost, galaxies=args.galaxies,
-                                 footprint=fp, info=info)
+                                 footprint=fp, index=args.index, info=info)
     hdr = {"MODE": "scan-positions", "CALSHA1": file_sha1(calib), "INPUT": Path(args.input).name,
            "NPOS": info["n_positions"], "NSCANNED": info["n_scanned"], "NFOUND": info["n_found"],
            "TTOTAL": round(info["t_total"], 1)}
@@ -841,6 +841,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--galaxies", help="galaxy table or directory of per-sweep tables to use instead of "
                    "ingesting the sweeps")
     s.add_argument("--footprint", help="footprint to use instead of building it from the randoms")
+    s.add_argument("--index", help="randoms index covering the positions (`rema randoms-index`), used "
+                   "instead of indexing the randoms of their boxes")
     s.add_argument("--cosmology", action="append", metavar="KEY=VALUE")
     s.add_argument("--set", action="append", metavar="SECTION.KEY=VALUE")
     centering(s)

@@ -102,7 +102,9 @@ arrays of CPU jobs, then point the scans at that index:
 
 ``scripts/scan/public_catalogues.py`` writes the public cluster catalogues kept in
 ``dr11/south/rema/external`` as scan-positions inputs (``--sample N`` for N random clusters in
-the DR11 south sweeps).
+the DR11 south sweeps). A catalogue of more than 200,000 rows (Wen & Han 2024) is written as
+slices of 15° in RA, ``<name>_ra<RA0>.fits``, one job each; ``scripts/scan/merge_parts.py OUT
+PART...`` joins their outputs, sorted by the row in the original table.
 
 How it was made
 ---------------

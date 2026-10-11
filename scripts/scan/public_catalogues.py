@@ -1,13 +1,15 @@
 """Inputs for rema scan-positions from the public cluster catalogues kept with the DR11 products.
 
     python scripts/scan/public_catalogues.py OUTDIR [--external DIR] [--dr11 DIR]
-        [--only act_dr6 spt_2500d ...] [--sample N] [--seed 1]
+        [--only act_dr6 spt_2500d ...] [--sample N] [--seed 1] [--split-above 200000 --split-ra 15]
 
 Writes ``OUTDIR/<name>.fits`` per catalogue: RA, DEC, Z and the catalogue's own mass, richness or
 S/N columns under common names (the loaders of docs/figures/redmapper_dr11/prepare.py), plus
 ``ROW``, the row in the original file. ``--sample N`` keeps N random clusters whose position falls
 in a DR11 south sweep (a quick validation set); without it every cluster is kept (the ones
-outside the sweeps come back unscanned).
+outside the sweeps come back unscanned). A catalogue of more than ``--split-above`` rows is written
+as slices of ``--split-ra`` deg in RA, ``<name>_ra<RA0>.fits``, one scan job each; join their
+outputs with ``scripts/scan/merge_parts.py``.
 
 Catalogues (sources in ``EXTERNAL/README.txt``): act_dr6, act_dr5, spt_2500d, psz2, mcxc,
 erass1, sdss_dr8, des_y1, wen_han_2024.
@@ -100,6 +102,8 @@ def main(argv=None):
     ap.add_argument("--only", nargs="+")
     ap.add_argument("--sample", type=int, help="N random clusters in the DR11 south sweeps")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--split-above", type=int, default=200_000, help="rows above which to split in RA")
+    ap.add_argument("--split-ra", type=float, default=15.0, help="deg of RA per slice")
     a = ap.parse_args(argv)
     warnings.filterwarnings("ignore", message=".*did not parse as fits unit")
     from rema.io.tables import write_table
@@ -131,6 +135,14 @@ def main(argv=None):
             good = np.flatnonzero(in_sweeps(cols["RA"], cols["DEC"], Path(a.dr11) / "sweep" / "11.0"))
             pick = np.sort(rng.choice(good, min(a.sample, good.size), replace=False))
             cols = {k: v[pick] for k, v in cols.items()}
+        if cols["RA"].size > a.split_above:
+            sl = np.floor(np.mod(cols["RA"], 360.0) / a.split_ra).astype(int)
+            for k in np.unique(sl):
+                f = out / f"{name}_ra{k * a.split_ra:05.1f}.fits"
+                write_table(f, {c: v[sl == k] for c, v in cols.items()}, extname="POSITIONS")
+            print(f"{name}: {cols['RA'].size:,} of {n:,} clusters -> {np.unique(sl).size} RA slices "
+                  f"{out / (name + '_ra*.fits')}")
+            continue
         write_table(out / f"{name}.fits", cols, extname="POSITIONS")
         print(f"{name}: {cols['RA'].size:,} of {n:,} clusters -> {out / (name + '.fits')}")
 

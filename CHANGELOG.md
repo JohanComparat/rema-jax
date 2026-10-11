@@ -13,7 +13,8 @@ All notable changes to `rema` are documented here.
   DR11 south production calibration by default; `scripts/scan/scan_positions.sh` submits it as a
   SLURM job at CC-IN2P3. `--index` reuses an existing randoms index;
   `scripts/scan/public_catalogues.py` writes the public cluster catalogues (ACT DR5/DR6,
-  SPT-SZ, PSZ2, MCXC, eRASS1, SDSS and DES redMaPPer, Wen & Han 2024) as inputs.
+  SPT-SZ, PSZ2, MCXC, eRASS1, SDSS and DES redMaPPer, Wen & Han 2024) as inputs, large ones in
+  RA slices that `scripts/scan/merge_parts.py` joins back.
 
 ### Fixed
 

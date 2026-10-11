@@ -105,6 +105,9 @@ arrays of CPU jobs, then point the scans at that index:
 the DR11 south sweeps). A catalogue of more than 200,000 rows (Wen & Han 2024) is written as
 slices of 15° in RA, ``<name>_ra<RA0>.fits``, one job each; ``scripts/scan/merge_parts.py OUT
 PART...`` joins their outputs, sorted by the row in the original table.
+``scripts/scan/finalize_scan.sh WORK DEST``, submitted after the scans, joins the slices, checks
+every output against its input, copies outputs, inputs and logs to ``DEST``
+(``dr11/south/rema/rema_dr11_v0.2.0_scan_public`` for the run of 2026-10-11) and deletes ``WORK``.
 
 How it was made
 ---------------

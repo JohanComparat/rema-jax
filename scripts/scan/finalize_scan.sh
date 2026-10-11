@@ -11,6 +11,8 @@ set -euo pipefail
 W=$1 D=$2
 U=/sps/lsst/users/$USER
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# sbatch runs a copy of this script from its spool directory
+[[ -f $HERE/merge_parts.py ]] || HERE=${REMA:-$HOME/software/rema-jax}/scripts/scan
 [[ $W == "$U"/rema_scan* && -d $W/inputs/full && -d $W/out/full ]] || { echo "unexpected WORK $W"; exit 1; }
 for c in $U/miniforge3 $HOME/miniforge3; do [[ -f $c/etc/profile.d/conda.sh ]] && { source $c/etc/profile.d/conda.sh; break; }; done
 conda activate $U/envs/rema

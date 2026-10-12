@@ -1,12 +1,13 @@
-"""Shared code of the figures of docs/redmapper_dr11.rst (redMaPPer blind mode on DR11).
+"""Paths, figure style, literature values and helpers for the figures of docs/redmapper_dr11.rst.
 
     python docs/figures/redmapper_dr11/make_all.py          # prepare.py, then every fig_*.py
 
+The figures are those of the page *redMaPPer blind mode on DR11*.
 Each ``fig_*.py`` script also runs on its own and writes its PNG figures next to this file.
 ``docs/notebooks/build_notebooks.py redmapper`` assembles this file, ``prepare.py`` and the
 ``fig_*.py`` scripts, cell by cell (``# %%`` markers), into the notebook
-``docs/notebooks/redmapper_dr11.ipynb``, where the figures are shown inline. Cells marked
-``# %% [script-only]`` are left out of the notebook.
+``docs/notebooks/redmapper_dr11.ipynb``, where the figures are shown inline.
+Cells marked ``# %% [script-only]`` are left out of the notebook.
 
 Two directories, from environment variables, as in the other DR11 notebooks:
 
@@ -24,15 +25,16 @@ REMA_WORK  yours, writable: ``prepare.py`` writes the reduced tables and maps (a
 # %% [markdown]
 # # redMaPPer blind mode on DR11
 #
-# The figures of the documentation page *redMaPPer blind mode on DR11*, made from the DR11
-# south production catalogue of rema (blind mode). Each section reproduces figures of the
-# redMaPPer papers (Rykoff et al. 2014, 2016; Kluge et al. 2024) and of later papers that
-# validate redMaPPer catalogues; the captions on the documentation page give the references.
+# The cells below make the figures of the documentation page *redMaPPer blind mode on DR11* from the
+# DR11 south production catalogue of `rema` (blind mode).
+# Each section reproduces figures of the redMaPPer papers (Rykoff et al. 2014, 2016; Kluge et al.
+# 2024) and of later papers that validate redMaPPer catalogues; the captions on the documentation
+# page give the references.
 #
-# The first cells set the paths, the figure style and the shared helpers. `prepare.py` then
-# reduces the catalogues (2.5 million clusters, 61 million members per part) and the DR11
-# randoms to the small tables and HEALPix maps that the figures read; it is skipped when its
-# products are up to date.
+# The first cells set the paths, the figure style and the shared helpers.
+# `prepare.py` then reduces the catalogues (up to 2.5 million clusters and 61 million members per part) and
+# the DR11 randoms to the small tables and HEALPix maps that the figures read; it is skipped when
+# its products are up to date.
 
 # %%
 import getpass
@@ -151,8 +153,8 @@ def panel_label(ax, text):
 
 
 # %% [markdown]
-# Numbers that the documentation page quotes next to the literature values are collected with
-# `record()` into `values.json` in the work directory (`make_all.py` turns them into a table).
+# `record()` collects the numbers that the documentation page quotes next to the literature values
+# into `values.json` in the work directory (`make_all.py` turns them into a table).
 
 # %%
 VALUES_FILE = WORK / "values.json"
@@ -166,8 +168,8 @@ def record(key, value):
 
 
 # %% [markdown]
-# Literature values used as references in the figures (read from the papers' tables and text;
-# values marked "read off" were read from their figures).
+# Literature values used as references in the figures, read from the papers' tables and text; values
+# marked "read off" were read from their figures.
 
 # %%
 LIT = {
@@ -318,8 +320,8 @@ def in_calib(ra, dec):
 
 
 # %% [markdown]
-# Readers of the products of `prepare.py`: each table is a directory of `.npy` columns, memory
-# mapped, so that the figures load only what they use.
+# Readers of the products of `prepare.py`: each table is a directory of memory-mapped `.npy`
+# columns, so that the figures load only what they use.
 
 # %%
 def load(name, columns=None):
@@ -345,7 +347,7 @@ def external(name):
 
 
 # %% [markdown]
-# Sky maps: HEALPix (NEST) values drawn on a Mollweide projection centred on RA = 120 deg, RA
+# Sky maps: HEALPix (NEST) values on a Mollweide projection centred on RA = 120 deg, with RA
 # increasing to the left.
 
 # %%

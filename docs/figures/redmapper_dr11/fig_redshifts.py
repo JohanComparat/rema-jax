@@ -1,5 +1,5 @@
-"""Photometric-redshift figures (Rykoff et al. 2014 Figs. 7, 9-12; Rykoff et al. 2016 Figs. 4-5;
-Kluge et al. 2024 Figs. 16-17).
+"""Photometric-redshift figures (Rykoff et al. 2014 Figs. 7, 9–12; Rykoff et al. 2016 Figs. 4–5;
+Kluge et al. 2024 Figs. 16–17).
 
     python docs/figures/redmapper_dr11/fig_redshifts.py
 """
@@ -10,13 +10,14 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Cluster redshifts
 #
-# z_λ against spectroscopic redshifts. The spectroscopic redshifts come with the DR11
-# photo-z sweeps (the compilation of their `Z_SPEC` column: SDSS, BOSS, eBOSS, DESI, GAMA,
-# ...). For a cluster they are either the redshift of the central galaxy (`CG_SPEC_Z`) or the
-# biweight mean of the members kept by the velocity clipping (`SPEC_Z_BOOT`, at least 3
-# members). The calibration area (RA 160–180° and 190–210°, Dec −10–10°) trained the
-# red-sequence model and the z_λ correction with these redshifts, so the statistics are given
-# for the rest of the sky ("independent") and for the calibration area separately.
+# z_λ is compared with the spectroscopic redshifts of the DR11 photo-z sweeps (the compilation of
+# their `Z_SPEC` column: SDSS, BOSS, eBOSS, DESI, GAMA, ...).
+# For a cluster, the spectroscopic redshift is either that of the central galaxy (`CG_SPEC_Z`) or
+# the biweight mean of the members kept by the velocity clipping (`SPEC_Z_BOOT`, at least 3
+# members).
+# The calibration area (RA 160–180° and 190–210°, Dec −10° to 10°) trained the red-sequence model
+# and the z_λ correction with these redshifts, so the statistics are given for the rest of the sky
+# ("independent") and for the calibration area separately.
 
 # %%
 cl = load("clusters")
@@ -103,11 +104,11 @@ for name, sel in (("all", base & ~calib), ("clean", clean & ~calib), ("calib", b
 # %% [markdown]
 # ### Outlier fractions (Rykoff et al. 2014 Fig. 11)
 #
-# Fraction of clusters (λ ≥ 20, central spectroscopic redshift) with |z_λ − z_spec| larger
-# than 3, 4 or 5 σ_zλ, in windows of z_λ ± 0.025, outside the calibration area. A Gaussian
-# would give 0.27%, 0.006% and 0.00006%. The clean sample (≥ 2 spectroscopic members near
-# the central) removes most of the outliers: they are mostly miscentred clusters or
-# projections, as in Rykoff et al. (2014).
+# Fraction of clusters (λ ≥ 20, central spectroscopic redshift) with |z_λ − z_spec| larger than 3, 4
+# or 5 σ_zλ, in windows of z_λ ± 0.025, outside the calibration area.
+# A Gaussian would give 0.27%, 0.006% and 0.00006%.
+# The clean sample (≥ 2 spectroscopic members near the central galaxy) removes most of the outliers:
+# as in Rykoff et al. (2014), they are mostly mis-centred clusters or projections.
 
 # %%
 fig, ax = plt.subplots(figsize=(6.5, 3.6), constrained_layout=True)
@@ -131,9 +132,9 @@ save(fig, "zl_outliers")
 # %% [markdown]
 # ### Redshift distribution (Rykoff et al. 2014 Fig. 12)
 #
-# For the clusters with λ ≥ 20 and a central spectroscopic redshift: the histogram of z_spec,
-# of z_λ, and the sum of the P(z) of each cluster (with its Poisson ±1σ band). If P(z) is a
-# fair description of the errors, the sum follows the z_spec histogram.
+# For the clusters with λ ≥ 20 and a central spectroscopic redshift: the histogram of z_spec, that
+# of z_λ, and the sum of the P(z) of the clusters (with its Poisson ±1σ band).
+# If P(z) describes the errors fairly, the sum follows the z_spec histogram.
 
 # %%
 pzb, pz = np.asarray(cl["PZBINS"]), np.asarray(cl["PZ"])
@@ -165,14 +166,15 @@ print(f"sum P(z) vs N(z_spec): chi2 = {chi2:.0f} for {ok.sum()} bins")
 record("pz_chi2", [round(float(chi2), 1), int(ok.sum())])
 
 # %% [markdown]
-# ### Bias and uncertainty against spectroscopic cluster redshifts (Kluge et al. 2024 Figs. 16-17)
+# ### Bias and uncertainty against spectroscopic cluster redshifts (Kluge et al. 2024 Figs. 16–17)
 #
-# Clusters with a velocity-clipped spectroscopic redshift (`SPEC_Z_BOOT`) from at least 10
-# members at z < 0.3, 7 at 0.3–0.6 and 3 above, as in Kluge et al. (2024), λ ≥ 10, outside the
-# calibration area. Left: running median and 16th–84th percentiles of z_λ − z_spec, with the
-# bias and the empirical uncertainty of Kluge et al. in their four redshift ranges (boxes).
-# Right: the mean formal error Z_LAMBDA_E against the empirical uncertainty (half the 16–84
-# range) and the absolute bias.
+# Clusters with a velocity-clipped spectroscopic redshift (`SPEC_Z_BOOT`) from at least 10 members
+# at z < 0.3, 7 at 0.3–0.6 and 3 above, as in Kluge et al. (2024), with λ ≥ 10, outside the
+# calibration area.
+# Left: running median and 16th–84th percentiles of z_λ − z_spec, with the bias and the empirical
+# uncertainty of Kluge et al. in their four redshift ranges (boxes).
+# Right: the mean formal error Z_LAMBDA_E against the empirical uncertainty (half the 16–84 range)
+# and the absolute bias.
 
 # %%
 zsb, nmem = np.asarray(cl["SPEC_Z_BOOT"]), np.asarray(cl["N_MEMBERS"])
@@ -223,10 +225,11 @@ for (z0, z1) in LIT["K24_zbins"]:
 # %% [markdown]
 # ### Member zred (Rykoff et al. 2014 Fig. 7)
 #
-# zred of the members with P > 0.9 against the spectroscopic redshift of their cluster
-# (central galaxy), outside the calibration area: the zred are those of the catalogue, after
-# the zred correction ("afterburner") of the calibration. Bottom: mean offset, rms, mean
-# zred error and the fraction of 4σ outliers per bin.
+# zred of the members with P > 0.9 against the spectroscopic redshift of their cluster (central
+# galaxy), outside the calibration area.
+# The zred values are those of the catalogue, after the zred correction ("afterburner") of the
+# calibration.
+# Bottom: mean offset, rms, mean zred error and fraction of 4σ outliers per bin.
 
 # %%
 mem = load("members", ["CL_ROW", "P", "ZRED", "ZRED_E", "CENT_RANK"])

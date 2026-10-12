@@ -1,5 +1,5 @@
-"""Depth, volume limit, abundance and sky-distribution figures (Rykoff et al. 2014 Figs. 17-18;
-Rykoff et al. 2016 Figs. 1-3, 6; Kluge et al. 2024 Figs. 2-3, 12-13, B.1, B.3; Baxter et al. 2016
+"""Depth, volume limit, abundance and sky-distribution figures (Rykoff et al. 2014 Figs. 17–18;
+Rykoff et al. 2016 Figs. 1–3, 6; Kluge et al. 2024 Figs. 2–3, 12–13, B.1, B.3; Baxter et al. 2016
 Fig. 2).
 
     python docs/figures/redmapper_dr11/fig_abundance.py
@@ -11,9 +11,9 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Depth, volume limit and abundance
 #
-# The maps come from the DR11 randoms (one file, 2500 per deg²) cut like the run: mask bits,
-# at least one exposure in g, r, i and z, E(B−V) < 0.2, |b| ≥ 15° and the own boxes of the
-# regions that finished.
+# The maps come from the DR11 randoms (one file, 2500 per deg²), cut like the run: mask bits, at
+# least one exposure in g, r, i and z, E(B−V) < 0.2, |b| ≥ 15° and the own boxes of the regions that
+# finished.
 
 # %%
 mp = load("maps")
@@ -31,8 +31,8 @@ record("area_total", float(area.sum()))
 # %% [markdown]
 # ### 10σ depth maps (Rykoff et al. 2016 Fig. 1; Kluge et al. 2024 Figs. 2 and B.1)
 #
-# Mean 10σ galaxy (`GALDEPTH`) depth per pixel, corrected for Galactic extinction, in the four
-# bands of the run.
+# Mean 10σ galaxy depth (`GALDEPTH`) per pixel, corrected for Galactic extinction, in the four bands
+# of the run.
 
 # %%
 fig = plt.figure(figsize=(13, 7.2), constrained_layout=True)
@@ -49,9 +49,11 @@ save(fig, "depth_maps")
 # %% [markdown]
 # ### z_vlim (Kluge et al. 2024 Figs. 3 and B.3)
 #
-# Left: the z_vlim map. Middle: m*(z) + 1.75 in the z band, which turns the 10σ depth into
-# z_vlim, and the area per z_vlim. Right: the z_vlim of this map at the positions of the eRASS1
-# clusters against the `ZVLIM_02` of Kluge et al. (2024), computed from the LS DR10 depth.
+# Left: the z_vlim map.
+# Middle: m*(z) + 1.75 in the z band, which turns the 10σ depth into z_vlim, and the area per
+# z_vlim.
+# Right: the z_vlim of this map at the positions of the eRASS1 clusters against the `ZVLIM_02` of
+# Kluge et al. (2024), computed from the LS DR10 depth.
 
 # %%
 from rema.calibration import Calibration  # noqa: E402
@@ -98,8 +100,8 @@ save(fig, "zvlim")
 # %% [markdown]
 # ### Effective area against z_vlim (Kluge et al. 2024 Fig. 3)
 #
-# Area of the run where z_vlim exceeds a given redshift, in total and in the half of the sky
-# covered by eRASS1 (Galactic longitude > 180°).
+# Area of the run where z_vlim exceeds a given redshift, in total and in the half of the sky covered
+# by eRASS1 (Galactic longitude > 180°).
 
 # %%
 lon = hp.pix2ang(NSIDE, pix, nest=True, lonlat=True)
@@ -118,11 +120,13 @@ for z in (0.6, 0.7, 0.8):
 # %% [markdown]
 # ### Cluster density against redshift (Rykoff et al. 2014 Fig. 18; Rykoff et al. 2016 Fig. 6; Kluge et al. 2024 Fig. 12)
 #
-# Clusters in the sky where z_vlim is above the upper edge of their z_λ bin, divided by the area
-# of that sky. Left: per deg² and per Δz = 0.05. Right: comoving density, with the abundance of halos
-# above M500c = 0.7, 1.0 and 1.3 × 10¹⁴ M☉ (Tinker et al. 2008 mass function, colossus,
-# Ωm = 0.3, h = 0.7, σ8 = 0.8), the levels of SDSS DR8 (Rykoff et al. 2014, z < 0.35) and the
-# densities of SDSS DR8 v6.3 and DES Y1 redMaPPer (λ ≥ 20) with their published areas.
+# Clusters in the sky where z_vlim is above the upper edge of their z_λ bin, divided by the area of
+# that sky.
+# Left: per deg² and per Δz = 0.05.
+# Right: comoving density, with the abundance of haloes above M500c = 0.7, 1.0 and 1.3 × 10¹⁴ M☉
+# (Tinker et al. 2008 mass function, colossus, Ωm = 0.3, h = 0.7, σ8 = 0.8), the levels of SDSS DR8
+# (Rykoff et al. 2014, z < 0.35) and the densities of SDSS DR8 v6.3 and DES Y1 redMaPPer (λ ≥ 20)
+# with their published areas.
 
 # %%
 try:
@@ -192,10 +196,11 @@ save(fig, "density_z")
 # %% [markdown]
 # ### Density against depth (Kluge et al. 2024 Fig. 13)
 #
-# Clusters per deg² in the plane of z_vlim (the local depth) and λ, in five bins of z_λ,
-# divided at each λ by the density in the volume-limited sky (z_vlim above the bin). The
-# vertical line marks z_vlim = z_λ: to its right the density should not depend on z_vlim (ratio
-# 1); to its left λ is extrapolated with SCALEVAL, and clusters scatter across the λ threshold.
+# Clusters per deg² in the plane of z_vlim (the local depth) and λ, in five bins of z_λ, divided at
+# each λ by the density in the volume-limited sky (z_vlim above the bin).
+# The vertical line marks z_vlim = z_λ.
+# To its right the density should not depend on z_vlim (ratio 1); to its left λ is extrapolated with
+# SCALEVAL, and clusters scatter across the λ threshold.
 
 # %%
 ZB = [(0.2, 0.3), (0.35, 0.45), (0.5, 0.6), (0.65, 0.75), (0.8, 0.9)]
@@ -221,11 +226,11 @@ fig.colorbar(im, ax=axes, label="density / volume-limited density", shrink=0.9)
 save(fig, "density_depth")
 
 # %% [markdown]
-# ### Density-contrast maps (Rykoff et al. 2014 Fig. 17; Rykoff et al. 2016 Figs. 2-3)
+# ### Density-contrast maps (Rykoff et al. 2014 Fig. 17; Rykoff et al. 2016 Figs. 2–3)
 #
-# δ = n/⟨n⟩ − 1 of clusters with λ ≥ 5 (as in Rykoff et al. 2014) in three bins of z_λ, on
-# NSIDE 32 pixels (3.4 deg²) with at least half of their area in the run and z_vlim above the
-# bin. The titles compare the rms of δ with the Poisson expectation.
+# δ = n/⟨n⟩ − 1 of clusters with λ ≥ 5 (as in Rykoff et al. 2014) in three bins of z_λ, on NSIDE 32
+# pixels (3.4 deg²) with at least half of their area in the run and z_vlim above the bin.
+# The titles compare the rms of δ with the Poisson expectation.
 
 # %%
 NS_LO = 32
@@ -255,11 +260,12 @@ save(fig, "density_maps")
 # %% [markdown]
 # ### Density against observing conditions (Baxter et al. 2016 Fig. 2)
 #
-# Clusters with λ ≥ 20 and 0.1 < z_λ < 0.5 in pixels where z_vlim > 0.5 (so depth alone should
-# not change their number), in ten quantiles of each pixel property, normalised by the mean
-# density; the error bars are Poisson. The last panel is the density against the distance to
-# the edge of the region (own box) that found the cluster, from the QA file of the merge: the
-# regions are run separately and their clusters are merged by own box.
+# Clusters with λ ≥ 20 and 0.1 < z_λ < 0.5 in pixels where z_vlim > 0.5 (so that depth alone does
+# not change their number), in ten quantiles of each pixel property, normalised by the mean density;
+# the error bars are Poisson.
+# The last panel is the density against the distance to the edge of the region (own box) that found
+# the cluster, from the QA file of the merge: the regions run separately and their clusters are
+# merged by own box.
 
 # %%
 props = [("DEPTH_Z10", "z-band 10σ depth [mag]"), ("EBV", "E(B−V)"), ("PSFSIZE_Z", "z-band PSF FWHM [″]"),

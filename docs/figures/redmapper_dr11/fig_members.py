@@ -10,9 +10,9 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Members
 #
-# The member catalogue lists every galaxy with a membership probability P ≥ 0.01 (P = PMEM ×
-# θ_L × θ_R: colour, luminosity and radial weights) and the centre candidates. The reduced
-# table of `prepare.py` keeps P ≥ 0.05 and every member with a spectroscopic redshift.
+# The member catalogue lists every galaxy with a membership probability P ≥ 0.01 (P = PMEM × θ_L ×
+# θ_R: colour, luminosity and radial weights) and the centre candidates.
+# The reduced table of `prepare.py` keeps P ≥ 0.05 and every member with a spectroscopic redshift.
 # `VEL` is the rest-frame velocity relative to the velocity-clipped cluster redshift, and
 # `ISMEMBER_SPEC` flags the members kept by the 3σ clipping (Clerc et al. 2016).
 
@@ -30,11 +30,14 @@ print(f"{P.size:,} members in the reduced table, {np.sum(zsp > 0):,} with a spec
 # ### An example cluster (Rykoff et al. 2014 Fig. 16; Kluge et al. 2024 Fig. 4)
 #
 # The cluster with the most spectroscopic members among those with λ ≥ 80 at 0.1 < z_λ < 0.3,
-# outside the calibration area. (a) members on the sky, coloured by P, with the R_λ circle
-# and the centre candidates labelled with P_cen; (b) P(z) with z_λ, the velocity-clipped
-# spectroscopic redshift and that of the central; (c) distribution of P; (d) Σ P within R
-# against the NFW filter of the richness (normalised to λ at R_λ); (e) rest-frame velocities
-# of the spectroscopic members with the clipping limits ±3σ_v.
+# outside the calibration area.
+# (a) Members on the sky, coloured by P, with the R_λ circle and the centre candidates labelled with
+# P_cen.
+# (b) P(z) with z_λ, the velocity-clipped spectroscopic redshift and that of the central galaxy.
+# (c) Distribution of P.
+# (d) Σ P within R against the Navarro–Frenk–White (NFW) filter of the richness (normalised to λ at
+# R_λ).
+# (e) Rest-frame velocities of the spectroscopic members with the clipping limits ±3σ_v.
 
 # %%
 nmem = np.asarray(cl["N_MEMBERS"])
@@ -136,10 +139,11 @@ save(fig, "member_example")
 # %% [markdown]
 # ### Membership probability against spectroscopic membership (Rozo et al. 2015b Fig. 8; Rines et al. 2018 Fig. 14)
 #
-# Members with a spectroscopic redshift, in clusters with a velocity-clipped redshift and
-# dispersion (≥ 10 spectroscopic members, unflagged), excluding the central: the fraction kept
-# by the 3σ clipping in bins of P. If P is calibrated, the fraction follows the diagonal. The
-# spectroscopic targets are the bright galaxies of SDSS, BOSS and DESI, so the test covers the
+# Members with a spectroscopic redshift, in clusters with a velocity-clipped redshift and dispersion
+# (≥ 10 spectroscopic members, unflagged), excluding the central galaxy: the fraction kept by the 3σ
+# clipping in bins of P.
+# If P is calibrated, the fraction follows the diagonal.
+# The spectroscopic targets are the bright galaxies of SDSS, BOSS and DESI, so the test covers the
 # bright end of the members.
 
 # %%
@@ -165,11 +169,11 @@ record("pmem_spec_frac", [round(float(f), 3) for f in b["mean"]])
 # %% [markdown]
 # ### Stacked velocities and projected fraction (Myles et al. 2021 Fig. 3)
 #
-# P-weighted rest-frame velocities of the spectroscopic members (not the central) of the
-# clusters above, stacked in units of each cluster's σ_v, in bins of λ. A narrow Gaussian
-# (the cluster) plus a flat background within |v| < 5000 km/s is fitted to each stack; the
-# P-weighted fraction in the flat component estimates the fraction of members that are
-# projected along the line of sight.
+# P-weighted rest-frame velocities of the spectroscopic members (central galaxy excluded) of the
+# clusters above, stacked in units of each cluster's σ_v, in bins of λ.
+# A narrow Gaussian (the cluster) plus a flat background within |v| < 5000 km/s is fitted to each
+# stack; the P-weighted fraction in the flat component estimates the fraction of members projected
+# along the line of sight.
 
 # %%
 from scipy.optimize import minimize  # noqa: E402
@@ -214,10 +218,11 @@ record("fproj", [[round(float(a_), 1), round(float(b_), 3)] for a_, b_, _ in fpr
 # %% [markdown]
 # ### Radial profiles (Rykoff et al. 2014 Fig. 16; Tomooka et al. 2020 Fig. 2)
 #
-# Left: stacked surface density of membership probability, Σ P per unit area in units of
-# R_λ, divided by λ, in bins of λ, with the NFW filter of the richness (r_s = 0.15 h⁻¹ Mpc,
-# for the median R_λ of each bin). Right: fraction of the spectroscopic members (P ≥ 0.05)
-# kept by the velocity clipping against R/R_λ.
+# Left: stacked surface density of membership probability, Σ P per unit area in units of R_λ,
+# divided by λ, in bins of λ, with the NFW filter of the richness (r_s = 0.15 h⁻¹ Mpc, for the
+# median R_λ of each bin).
+# Right: fraction of the spectroscopic members (P ≥ 0.05) kept by the velocity clipping against
+# R/R_λ.
 
 # %%
 xb = np.linspace(0.0, 1.2, 25)

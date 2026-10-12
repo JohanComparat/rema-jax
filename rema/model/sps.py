@@ -50,9 +50,12 @@ class SSPGrid:
 
     Attributes
     ----------
-    nu : frequencies [Hz], increasing.
-    age : ages [Gyr], increasing, ``age[0] = 0``.
-    fnu : F_nu at 10 pc [erg/s/cm^2/Hz], shape [len(nu), len(age)].
+    nu : jax.Array
+        Frequencies [Hz], increasing.
+    age : jax.Array
+        Ages [Gyr], increasing, with ``age[0] = 0``.
+    fnu : jax.Array
+        F_nu at 10 pc [erg/s/cm^2/Hz], of shape [len(nu), len(age)].
     """
 
     nu: jnp.ndarray

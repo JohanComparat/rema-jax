@@ -9,12 +9,12 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Richness
 #
-# λ is the sum of the membership probabilities of the galaxies brighter than 0.2 L*
-# (m*(z) + 1.75), corrected for the masked and too shallow part of the cluster aperture:
-# SCALEVAL = 1/(completeness) multiplies the observed sum, and MASKFRAC is the masked fraction
-# of the aperture (clusters with MASKFRAC > 0.2 are not kept). z_vlim is the redshift where the
-# local 10σ z-band depth reaches m* + 1.75: below it the catalogue is volume limited and
-# SCALEVAL ≈ 1.
+# λ is the sum of the membership probabilities of the galaxies brighter than 0.2 L* (m*(z) + 1.75),
+# corrected for the masked and too shallow part of the cluster aperture.
+# SCALEVAL = 1/(completeness) multiplies the observed sum, and MASKFRAC is the masked fraction of
+# the aperture (clusters with MASKFRAC > 0.2 are not kept).
+# z_vlim is the redshift where the local 10σ z-band depth reaches m* + 1.75: below it the catalogue
+# is volume limited and SCALEVAL ≈ 1.
 
 # %%
 cl = load("clusters")
@@ -65,10 +65,10 @@ record("median_zvlim", np.nanmedian(zv))
 # %% [markdown]
 # ### Richness function (cumulative counts per deg²)
 #
-# N(> λ) per deg² in four bins of z_λ, in the part of the sky where z_vlim is above the bin
-# (the volume-limited area, given in the legend). SDSS DR8
-# (Rykoff et al. 2016, 10,134 deg², λ ≥ 20) and DES Y1 (McClintock et al. 2019, 1,437 deg²,
-# λ ≥ 20) are drawn for the bins they cover; rema λ is not normalised to their filter sets.
+# N(> λ) per deg² in four bins of z_λ, in the part of the sky where z_vlim is above the bin (the
+# volume-limited area, given in the legend).
+# SDSS DR8 (Rykoff et al. 2016, 10,134 deg², λ ≥ 20) and DES Y1 (McClintock et al. 2019, 1,437 deg²,
+# λ ≥ 20) are drawn for the bins they cover; `rema` λ is not normalised to their filter sets.
 
 # %%
 ZB = [(0.1, 0.3), (0.3, 0.5), (0.5, 0.7), (0.7, 0.9)]
@@ -103,12 +103,13 @@ save(fig, "richness_function")
 # %% [markdown]
 # ### Richness against other redMaPPer catalogues (Kluge et al. 2024 Fig. 11)
 #
-# One-to-one matches within 1.5′ and |Δz|/(1+z) < 0.02, with MASKFRAC < 0.1 in rema: DES Y1
+# One-to-one matches within 1.5′ and |Δz|/(1+z) < 0.02, with MASKFRAC < 0.1 in `rema`, with DES Y1
 # redMaPPer (deeper DES photometry, griz), SDSS DR8 redMaPPer v6.3 (shallower, ugriz) and the
-# eROMaPPer λ_norm of Kluge et al. (2024) at the eRASS1 cluster positions (LS DR10, run at
-# the X-ray positions, normalised to grz). Bottom: the ratio against redshift (running median
-# and 16–84%); dotted: the ratio expected from Ider Chitham et al. (2020) for SDSS and 0.79 of
-# Kluge et al. (2024) for DES Y1.
+# eROMaPPer λ_norm of Kluge et al. (2024) at the eRASS1 cluster positions (LS DR10, run at the X-ray
+# positions, normalised to grz).
+# Bottom: the ratio against redshift (running median and 16–84%).
+# Dotted: the ratio expected from Ider Chitham et al. (2020) for SDSS, and 0.79 from Kluge et al.
+# (2024) for DES Y1.
 
 # %%
 refs = [("des_y1", "DES Y1 redMaPPer", desy1), ("sdss_dr8", "SDSS DR8 redMaPPer", sdss),
@@ -171,10 +172,11 @@ save(fig, "richness_external")
 # %% [markdown]
 # ### Richness against velocity dispersion (Kluge et al. 2024 Fig. 18)
 #
-# Clusters with at least 15 spectroscopic members after the velocity clipping and an
-# unflagged dispersion (bootstrap mean). The line is an orthogonal-distance (major-axis) fit of
-# log λ = a log σ_v + b; dotted: the relation of Kluge et al. (2024) for λ_norm (eRASS1),
-# divided by 1.039 to give their griz λ (λ_norm = 1.039 λ_griz, their Table 2).
+# Clusters with at least 15 spectroscopic members after the velocity clipping and an unflagged
+# dispersion (bootstrap mean).
+# The line is an orthogonal-distance (major-axis) fit of log λ = a log σ_v + b.
+# Dotted: the relation of Kluge et al. (2024) for λ_norm (eRASS1), divided by 1.039 to give their
+# griz λ (λ_norm = 1.039 λ_griz, their Table 2).
 
 # %%
 def orthogonal_fit(x, y):

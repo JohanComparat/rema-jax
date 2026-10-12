@@ -1,4 +1,4 @@
-"""Centring figures (Rykoff et al. 2016 Figs. 11-12; Zhang et al. 2019 Figs. 1, 3; Saro et al. 2015;
+"""Centring figures (Rykoff et al. 2016 Figs. 11–12; Zhang et al. 2019 Figs. 1, 3; Saro et al. 2015;
 Bleem et al. 2020; Seppi et al. 2023).
 
     python docs/figures/redmapper_dr11/fig_centering.py
@@ -10,9 +10,9 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Centring
 #
-# rema keeps redMaPPer's centring: up to five candidate central galaxies per cluster, each with
-# a probability P_CEN from the wcen likelihood (luminosity, zred and local density). The
-# catalogue position is the most likely central.
+# `rema` keeps redMaPPer's centring: up to five candidate central galaxies per cluster, each with a
+# probability P_CEN from the wcen likelihood (luminosity, zred and local density).
+# The catalogue position is that of the most likely central galaxy.
 
 # %%
 cl = load("clusters")
@@ -25,10 +25,10 @@ ra, dec = np.asarray(cl["RA"]), np.asarray(cl["DEC"])
 # %% [markdown]
 # ### Centring probabilities (Rykoff et al. 2014 Sect. 8)
 #
-# Distribution of the probability of the most likely central, its mean against λ and z_λ, and
+# Distribution of the probability of the most likely central galaxy, its mean against λ and z_λ, and
 # the fraction of clusters with P_cen > 0.9.
-# Rykoff et al. (2016) predicted ⟨P_cen⟩ = 0.82 for DES SV (λ ≥ 20) and measured a well-centred
-# fraction ρ0 = 0.78 ± 0.11 from X-ray and SZ centres.
+# Rykoff et al. (2016) predicted ⟨P_cen⟩ = 0.82 for DES Science Verification (SV) data (λ ≥ 20) and
+# measured a well-centred fraction ρ0 = 0.78 ± 0.11 from X-ray and SZ centres.
 
 # %%
 fig, axes = plt.subplots(1, 3, figsize=(14, 3.6), constrained_layout=True)
@@ -67,15 +67,15 @@ save(fig, "centering_pcen")
 record("pcen_mean_lam20", float(p0[lam >= 20].mean()))
 
 # %% [markdown]
-# ### Offsets from X-ray and SZ centres (Rykoff et al. 2016 Figs. 11-12; Zhang et al. 2019 Fig. 3)
+# ### Offsets from X-ray and SZ centres (Rykoff et al. 2016 Figs. 11–12; Zhang et al. 2019 Fig. 3)
 #
-# Each external cluster (redshift > 0.05) is paired with the richest rema cluster (λ ≥ 20)
-# within 10′ and |z_λ − z|/(1+z) < 0.05; the offset is in units of R_λ at z_λ. The offsets
-# are fitted with the two-component model of Rykoff et al. (2016): a fraction ρ0 of well
-# centred clusters, whose offsets follow a Rayleigh distribution of width σ0 (the positional
-# errors), and miscentred ones, Rayleigh of width σ1 (in R_λ). The external centres are the
-# eRASS1 X-ray positions (Bulbul et al. 2024), ACT DR6 SZ positions (beam 1.4′) and SPT-SZ
-# 2500d positions (Bocquet et al. 2019).
+# Each external cluster (redshift > 0.05) is paired with the richest `rema` cluster (λ ≥ 20) within
+# 10′ and |z_λ − z|/(1+z) < 0.05; the offset is in units of R_λ at z_λ.
+# The offsets are fitted with the two-component model of Rykoff et al. (2016): a fraction ρ0 of
+# well-centred clusters, whose offsets follow a Rayleigh distribution of width σ0 (the positional
+# errors), and mis-centred ones, Rayleigh of width σ1 (in R_λ).
+# The external centres are the eRASS1 X-ray positions (Bulbul et al. 2024), ACT DR6
+# Sunyaev–Zel'dovich (SZ) positions (beam 1.4′) and SPT-SZ 2500d positions (Bocquet et al. 2019).
 
 # %%
 from scipy.optimize import minimize  # noqa: E402
@@ -141,8 +141,8 @@ save(fig, "centering_offsets")
 # %% [markdown]
 # ### Offsets from other redMaPPer centres (Zhang et al. 2019 Fig. 1)
 #
-# The same pairing with the DES Y1 and SDSS DR8 redMaPPer catalogues: the fraction of clusters
-# whose central galaxy is the same (offset below 0.02 R_λ, a few arcseconds) measures how
+# The same pairing with the DES Y1 and SDSS DR8 redMaPPer catalogues gives the fraction of clusters
+# whose central galaxy is the same (offset below 0.02 R_λ, a few arcseconds), a measure of how
 # reproducible the centring is between surveys of different depth and filters.
 
 # %%

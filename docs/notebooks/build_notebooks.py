@@ -4,17 +4,22 @@
     python docs/notebooks/build_notebooks.py --execute [names] [--kernel K]         # write and execute
     python docs/notebooks/build_notebooks.py --check                                # check executed ones
 
+The four notebooks are blind, pipeline, scan and redmapper (``<name>_dr11.ipynb`` next to this
+file).
 Execution needs the DR11 data and the ``rema`` Jupyter kernel
 (``python -m ipykernel install --user --name rema``, or another one with ``--kernel``); run it on a
-GPU with ``JAX_PLATFORMS=cuda``. ``redmapper`` is assembled from the figure scripts of
-``docs/figures/redmapper_dr11`` (their ``# %%`` cells); it reads the production catalogues only.
-The order matters: ``pipeline`` compares its merged catalogue with the
-one-region catalogue of ``blind`` (same sweeps, same calibration). Every notebook reads
-REMA_DATA, the DR11 south directory (shared, read only: sweeps, randoms, and in rema/ the
-production run and the external catalogues; default the DR11 data system at CC-IN2P3 when /sps is
-mounted, else ~/data/legacysurvey/dr11/south), and writes only to REMA_WORK (default
-/sps/lsst/users/$USER/rema_work when that user space exists, else ~/rema_work). The markdown
-avoids run numbers; the cells print them.
+GPU with ``JAX_PLATFORMS=cuda``.
+``redmapper`` is assembled from the figure scripts of ``docs/figures/redmapper_dr11`` (their
+``# %%`` cells) and reads the production catalogues only.
+The order matters: ``pipeline`` compares its merged catalogue with the one-region catalogue of
+``blind`` (same sweeps, same calibration).
+
+Every notebook reads REMA_DATA, the DR11 south directory (shared, read only: sweeps, randoms, and
+in rema/ the production run and the external catalogues; default the DR11 data system at CC-IN2P3
+when /sps is mounted, else ~/data/legacysurvey/dr11/south).
+It writes only to REMA_WORK (default /sps/lsst/users/$USER/rema_work when that user space exists,
+else ~/rema_work).
+The markdown avoids run numbers; the cells print them.
 """
 
 import argparse
@@ -182,39 +187,42 @@ def blind_cells():
     c.append(md("""
     # Blind cluster finding on a set of DR11 sweeps, with spectroscopic post-processing
 
-    This notebook runs rema's blind mode on a set of up to 10 DR11 south sweeps (5° × 5° tiles),
-    processed as **one region**: there are no internal boundaries, and the outer edges of the set
-    are handled by the footprint (apertures that leave the data get MASKFRAC > 0, and clusters
-    with MASKFRAC ≥ 0.2 are dropped).
+    The blind mode of `rema` runs here on up to 10 DR11 south sweeps (5° × 5° tiles), processed as
+    **one region**, and its clusters receive spectroscopic redshifts and velocity dispersions.
+    The set has no internal boundaries, and the footprint handles its outer edges: apertures that
+    leave the data get MASKFRAC > 0, and clusters with MASKFRAC ≥ 0.2 are dropped.
 
-    The inputs are the sweeps with their row-matched photo-z sweeps (for Z_SPEC), the DR11
-    randoms files and the DR11 griz calibration of the production run. The steps are:
+    The inputs are the sweeps with their row-matched photo-z sweeps (for Z_SPEC), the DR11 randoms
+    files and the DR11 griz calibration of the production run.
+    The steps are:
 
-    - the galaxy selection, written as one table per sweep (as on the HPC);
+    - the galaxy selection, written as one table per sweep, as in the high-performance computing
+      (HPC) pipeline;
     - the mask and depth maps from the randoms;
     - zred for every galaxy;
-    - the blind run: redMaPPer's first pass, likelihood pass and percolation, with redMaPPer's
-      wcen centring;
-    - spectroscopic post-processing (Clerc et al. 2016): cluster redshift and velocity dispersion from
-      the members' Z_SPEC.
+    - the blind run: redMaPPer's first pass, likelihood pass and percolation, with redMaPPer's wcen
+      centring;
+    - spectroscopic post-processing (Clerc et al. 2016): cluster redshift and velocity dispersion
+      from the members' Z_SPEC.
 
-    Larger areas run as many regions on an HPC (`scripts/slurm/rema_dr11_blind.sh`). The
-    pipeline notebook runs the same sweeps that way and compares the two catalogues, and the
-    last section compares this catalogue with the DR11 south production catalogue.
+    Larger areas run as many regions on an HPC cluster (`scripts/slurm/rema_dr11_blind.sh`).
+    The pipeline notebook runs the same sweeps that way and compares the two catalogues; the last
+    section here compares this catalogue with the DR11 south production catalogue.
     """))
 
     c.append(md("""
     ## Setup and parameters
 
-    `SWEEPS` lists the sweep files, by name. The notebooks use two directories, given by two
-    environment variables:
+    `SWEEPS` lists the sweep files, by name.
+    The notebooks use two directories, given by two environment variables:
 
-    - `REMA_DATA`, shared and read only: the DR11 south directory, with the sweeps, the randoms
-      and, in `rema/` (`PRODUCTS`), the calibration and catalogues of the production run. At
-      CC-IN2P3 the default is the DR11 data system.
+    - `REMA_DATA`, shared and read only: the DR11 south directory, with the sweeps, the randoms and,
+      in `rema/` (`PRODUCTS`), the calibration and catalogues of the production run.
+      At CC-IN2P3 the default is the DR11 data system.
     - `REMA_WORK`, yours: everything the notebooks write (default `rema_work` in your space:
-      `/sps/lsst/users/$USER/rema_work` at CC-IN2P3, else `~/rema_work`). Run products go to
-      `WORK`, and the per-sweep galaxy tables to `GALDIR`, which the pipeline notebook shares.
+      `/sps/lsst/users/$USER/rema_work` at CC-IN2P3, else `~/rema_work`).
+      Run products go to `WORK`, and the per-sweep galaxy tables to `GALDIR`, which the pipeline
+      notebook shares.
     """))
 
     c.append(code(SETUP_COMMON + SWEEPS_DEFAULT + '''
@@ -248,18 +256,19 @@ print(f"data: {REMA_DATA}; work: {REMA_WORK}; {len(RANDOMS)} randoms files; cali
 
     The calibration file holds the red-sequence model, the zred correction, the χ² and zred
     backgrounds, the z_λ correction (with the z → zred_uncorr mapping of LNCGLIKE), the wcen
-    centring model and the configuration it was made with. Its primary header records how it was
-    made:
+    centring model and the configuration it was made with.
+    Its primary header records how it was made:
 
     - NCLUSTER: the spectroscopically seeded clusters with λ ≥ 5;
     - NSPECGAL: the spectroscopic galaxies they came from;
     - ZLNMAD: the NMAD of their z_λ against the seeds' redshifts, before the z_λ correction;
     - NWCEN: the training clusters of wcen.
 
-    The configuration read from the file drives every step below. The default calibration is
-    the one of the DR11 south production run, fitted on RA 160–180° and 190–210°,
-    Dec −10° to 10°. When the sweeps lie in that area, the comparison of z_λ with spectroscopic
-    redshifts below is not independent.
+    The configuration read from the file drives every step below.
+    The default calibration is that of the DR11 south production run, fitted on RA 160–180° and
+    190–210°, Dec −10° to 10°.
+    For sweeps in that area, the comparison of z_λ with spectroscopic redshifts below is not
+    independent.
     """))
 
     c.append(code('''
@@ -280,11 +289,12 @@ print(f"model.zrange {cfg.model.zrange}, model.chisq_mode {cfg.model.chisq_mode!
 '''))
 
     c.append(md("""
-    ## Galaxies
+    ## Galaxy selection
 
-    `ingest_sweeps` writes one compact table per sweep, named like the sweep. It is the stage the
-    HPC pipeline runs once for all 1,600 sweeps, and existing tables made with the same survey
-    configuration are kept. The selection is:
+    `ingest_sweeps` writes one compact table per sweep, named like the sweep.
+    The HPC pipeline runs this stage once for all 1,600 sweeps, and existing tables made with the
+    same survey configuration are kept.
+    The selection is:
 
     - clean MASKBITS, with large galaxies kept;
     - TYPE ≠ PSF;
@@ -316,21 +326,23 @@ print(f"{spec.sum():,} with ZSPEC > 0: " + ", ".join(f"{name} {k:,}"
     c.append(md("""
     ## Footprint and depth
 
-    The footprint plays the role of redMaPPer's mask and depth maps. It is built from the DR11
-    randoms, at 2,500 per deg² per file, on NESTED HEALPix pixels of nside 1024 (3.4′):
+    The footprint replaces redMaPPer's mask and depth maps.
+    It is built from the DR11 randoms, at 2,500 per deg² per file, on NESTED HEALPix pixels of nside
+    1024 (3.4′):
 
-    - FRACGOOD is the fraction of randoms that pass the galaxies' MASKBITS, NOBS and E(B−V)
-      cuts, times the fraction of the pixel inside the sky of the run;
+    - FRACGOOD is the fraction of randoms that pass the galaxies' MASKBITS, NOBS and E(B−V) cuts,
+      times the fraction of the pixel inside the sky of the run;
     - SIGF_<band> is the median dereddened 1σ flux error of a galaxy, from GALDEPTH.
 
-    Together they set MASKFRAC and the depth correction (SCALEVAL) of λ. A pixel holds about 8
-    randoms per file, so FRACGOOD is coarse per pixel, but λ uses it integrated over the cluster
-    aperture.
+    Together they set MASKFRAC and the depth correction (SCALEVAL) of λ.
+    A pixel holds about eight randoms per file, so FRACGOOD is coarse per pixel, but λ uses it
+    integrated over the cluster aperture.
 
-    Every randoms file present is used, as in the production run, and the density scales with
-    their number. The rows of a randoms file are in random sky order, so `read_randoms` scans the
-    whole 23 GB file. The HPC pipeline indexes every file once (`rema randoms-index`), as the
-    pipeline notebook shows.
+    Every randoms file present is used, as in the production run, and the density scales with their
+    number.
+    The rows of a randoms file are in random sky order, so `read_randoms` scans the whole 23 GB
+    file.
+    The HPC pipeline indexes every file once (`rema randoms-index`), as the pipeline notebook shows.
     """))
 
     c.append(code('''
@@ -379,15 +391,15 @@ plt.show()
     c.append(md("""
     ## zred and the run context
 
-    `Region.build` computes zred for every galaxy, with the calibrated zred correction. It also
-    sets up:
+    `Region.build` computes zred for every galaxy, with the calibrated zred correction.
+    It also sets up:
 
     - the filter: red sequence, χ² background, m* and cosmology;
     - the footprint lookups;
     - the z_λ correction.
 
-    The calibration holds a wcen model, so `centering.method: auto` resolves to wcen, which is
-    redMaPPer's CenteringWcenZred with the calibration's zred background.
+    The calibration holds a wcen model, so `centering.method: auto` resolves to wcen, redMaPPer's
+    CenteringWcenZred with the calibration's zred background.
     """))
 
     c.append(code('''
@@ -404,27 +416,25 @@ print(f"zred for {reg.gal['ZRED'].size:,} galaxies in {T['zred']:.1f} s; centrin
 
     `run_blind` follows redMaPPer's run mode:
 
-    1. **Seeds:** galaxies with zred in the model range (0.05–0.90), zred χ² < 20 and
-       m < m*(zred) + 1.75.
-    2. **First pass:** z_λ and λ in a 0.5 h⁻¹Mpc aperture centred on each seed; λ ≥ 3 is
-       kept.
-    3. **Likelihood pass:** λ with r0 = 1 h⁻¹Mpc and β = 0.2, and
-       LNLIKE = LNLAMLIKE + LNCGLIKE. Candidates with λ < 3, or with fewer than 3 members
-       besides the seed, are dropped.
+    1. **Seeds:** galaxies with zred in the model range (0.05–0.90), zred χ² < 20 and m < m*(zred) +
+       1.75.
+    2. **First pass:** z_λ and λ in a 0.5 h⁻¹Mpc aperture centred on each seed; λ ≥ 3 is kept.
+    3. **Likelihood pass:** λ with r0 = 1 h⁻¹Mpc and β = 0.2, and LNLIKE = LNLAMLIKE + LNCGLIKE.
+       Candidates with λ < 3, or with fewer than 3 members besides the seed, are dropped.
     4. **Percolation**, in order of decreasing LNLIKE, with wcen centring and redMaPPer's
-       rejections: λ/S < 3 at the seed or at the new centre, z_λ failure, or no free central
-       galaxy.
-    5. **Consolidation:** λ/S ≥ 3 and MASKFRAC < 0.2. With `own=None` every cluster is kept;
-       a region of the HPC pipeline keeps those centred in its own box.
+       rejections: λ/S < 3 at the seed or at the new centre, z_λ failure, or no free central galaxy.
+    5. **Consolidation:** λ/S ≥ 3 and MASKFRAC < 0.2.
+       With `own=None` every cluster is kept; a region of the HPC pipeline keeps those centred in
+       its own box.
 
-    The percolation is exact: it gives the result of the sequential loop, computed in batches
-    of candidates that do not depend on each other. With a checkpoint directory, a rerun resumes
-    after the first pass or the likelihood pass.
+    The percolation is exact: it gives the result of the sequential loop, computed in batches of
+    candidates that do not depend on each other.
+    With a checkpoint directory, a rerun resumes after the first pass or the likelihood pass.
 
     The log keeps the stage summaries, with the time since the start of the run in parentheses.
     In the percolation summary, a skipped candidate is one whose seed was already claimed
-    (pfree < 0.5). The dropped candidates are counted by rejection; "seed" means λ/S < 3 at the
-    seed.
+    (pfree < 0.5).
+    The dropped candidates are counted by rejection; "seed" means λ/S < 3 at the seed.
     """))
 
     c.append(code('''
@@ -441,19 +451,20 @@ print(f"{info['n_seeds']:,} seeds, {info['n_firstpass']:,} first-pass and {info[
     c.append(md("""
     ## Spectroscopic post-processing
 
-    `specpost.process` is the velocity clipping of Clerc et al. (2016):
+    `specpost.process` implements the velocity clipping of Clerc et al. (2016):
 
-    - it applies to clusters with at least 3 members with Z_SPEC;
+    - it processes the clusters with at least 3 members with Z_SPEC;
     - the cluster redshift is the biweight location of the member redshifts;
-    - members are clipped at 3σ in rest-frame velocity for 20 iterations, with the gapper σ
-      below 15 members and the biweight scale above;
+    - members are clipped at 3σ in rest-frame velocity for 20 iterations, with the gapper σ below 15
+      members and the biweight scale above;
     - the errors (SPEC_Z_BOOT, SPEC_ZERR_BOOT, VDISP_ERR) come from 64 bootstrap resamples;
-    - BEST_Z is SPEC_Z_BOOT when available and not flagged, else the central galaxy's Z_SPEC,
-      else z_λ.
+    - BEST_Z is SPEC_Z_BOOT when available and not flagged, else the central galaxy's Z_SPEC, else
+      z_λ.
 
     `write_catalog` then writes the catalogue as `rema blind` does, with CLUSTERS, MEMBERS and
-    CONFIG HDUs. The header records the sweeps and the calibration, and the pipeline notebook
-    checks both before it compares catalogues.
+    CONFIG HDUs.
+    The header records the sweeps and the calibration, which the pipeline notebook checks before it
+    compares catalogues.
     """))
 
     c.append(code('''
@@ -471,14 +482,11 @@ print(f"wrote {path} ({path.stat().st_size / 1e6:.1f} MB)")
 '''))
 
     c.append(md("""
-    ## The catalogue
+    ## The cluster catalogue
 
-    The cells below show:
-
-    - the counts above a few richness thresholds and the cumulative richness function;
-    - the z_λ distribution, which includes the calibrated z_λ correction (Z_LAMBDA_RAW does
-      not);
-    - for comparison, the redshifts of the spectroscopic galaxies.
+    The next cell prints the counts above λ = 5, 10 and 20 and draws the cumulative richness
+    function, the z_λ distribution and, for comparison, the redshifts of the spectroscopic galaxies.
+    Z_LAMBDA includes the calibrated z_λ correction; Z_LAMBDA_RAW does not.
     """))
 
     c.append(code('''
@@ -509,8 +517,9 @@ plt.show()
 
     c.append(md("""
     Spikes in the z_λ histogram that line up with spikes of the spectroscopic redshifts are
-    large-scale structure. At z_λ > 0.75, clusters with λ < 10 are mostly noise, as a null test
-    shows; see section 14 of the design notes.
+    large-scale structure.
+    At z_λ > 0.75, clusters with λ < 10 are mostly noise, as a null test shows (Sect. 14 of the
+    design notes).
     """))
 
     c.append(code('''
@@ -537,12 +546,10 @@ plt.show()
     c.append(md("""
     ### z_λ against the spectroscopic cluster redshifts
 
-    The comparison uses clusters with λ ≥ 20 and at least 3 spectroscopic members kept by the
-    clipping (N_MEMBERS ≥ 3).
-
-    - Δz = Z_LAMBDA − SPEC_Z_BOOT.
-    - The bias is the median of Δz/(1 + z).
-    - The NMAD is 1.4826 times the median absolute deviation from it.
+    The comparison uses the clusters with λ ≥ 20 and at least 3 spectroscopic members kept by the
+    clipping (N_MEMBERS ≥ 3), with Δz = Z_LAMBDA − SPEC_Z_BOOT.
+    The bias is the median of Δz/(1 + z), and the normalised median absolute deviation (NMAD) is
+    1.4826 times the median absolute deviation from it.
     """))
 
     c.append(code('''
@@ -573,9 +580,9 @@ plt.show()
     c.append(md("""
     ### The richest cluster
 
-    The cell shows its key columns and its members, coloured by PMEM with the symbol size set
-    by z-band magnitude, and its five centre candidates with their P_CEN. The circle has radius
-    R_LAMBDA.
+    The cell prints its key columns and draws its members, coloured by PMEM and sized by z-band
+    magnitude, with its five centre candidates and their P_CEN.
+    The circle has radius R_LAMBDA.
     """))
 
     c.append(code('''
@@ -619,12 +626,13 @@ plt.show()
 '''))
 
     c.append(md("""
-    ## Cross-check with ACT
+    ## Comparison with the SZ cluster ACT-CL J0012.9-0857
 
-    When the sweeps contain it, the SZ cluster ACT-CL J0012.9-0857 (Hilton et al. 2021,
-    z = 0.352) serves as an external check. The cell lists the rema clusters centred within 3′
-    of its SZ position, and the centring of the richest of them. The scan notebook measures the
-    same cluster from its position alone.
+    When the sweeps contain it, the Sunyaev–Zel'dovich (SZ) cluster ACT-CL J0012.9-0857 of the
+    Atacama Cosmology Telescope (ACT; Hilton et al. 2021, z = 0.352) serves as an external check.
+    The cell lists the `rema` clusters centred within 3′ of its SZ position, and the centring of the
+    richest of them.
+    The scan notebook measures the same cluster from its position alone.
     """))
 
     c.append(code('''
@@ -653,26 +661,26 @@ else:
 '''))
 
     c.append(md("""
-    For this cluster, the members' spectroscopic redshifts and z_λ agree with each other, and
-    both lie about 0.01 (1 + z) below the ACT redshift. No spectroscopic redshift within 6′ is
-    near the ACT value (see the scan notebook). Blind mode centres the cluster on its brightest
-    member, which lies outside the 0.4 h⁻¹Mpc search radius that scan mode uses around an input
-    position.
+    For this cluster, the members' spectroscopic redshifts and z_λ agree, and both lie about
+    0.01 (1 + z) below the ACT redshift.
+    No spectroscopic redshift within 6′ is near the ACT value (see the scan notebook).
+    Blind mode centres the cluster on its brightest member, which lies outside the 0.4 h⁻¹Mpc search
+    radius that scan mode uses around an input position.
     """))
 
     c.append(md("""
-    ## The production catalogue
+    ## Comparison with the production catalogue
 
-    The DR11 south production run used the same calibration, configuration, galaxies and
-    randoms over the whole footprint, as regions of about 100 deg² with 2° buffers. Its merged
-    catalogues are on the data system next to the sweeps (`PRODUCTS`), in two parts that meet at
-    RA 0° and 240° and at Dec −85°. Inside these sweeps, its clusters should be the clusters of
-    this notebook. Near the edges of the sweeps they may differ: the production run also had the
-    galaxies beyond them, except across the boundaries of the two parts.
+    The DR11 south production run used the same calibration, configuration, galaxies and randoms
+    over the whole footprint, as regions of about 100 deg² with 2° buffers.
+    Its merged catalogues are on the data system next to the sweeps (`PRODUCTS`), in two parts that
+    meet at RA 0° and 240° and at Dec −85°.
+    Inside these sweeps, its clusters should be those of this notebook.
+    Near the edges of the sweeps they may differ, because the production run also had the galaxies
+    beyond them, except across the boundaries of the two parts.
 
-    The cell matches the clusters by their central galaxy (ID_CENT[0]) and compares them as a
-    function of the distance to the edge of the sweeps (of their bounding box when they do not
-    tile a rectangle).
+    The cell matches the clusters by their central galaxy (ID_CENT[0]) and compares them against the
+    distance to the edge of the sweeps (of their bounding box when they do not tile a rectangle).
     """))
 
     c.append(code('''
@@ -749,9 +757,9 @@ print(f"{'total':10s} {sum(T.values()):7.1f} s on {jax.devices()[0].device_kind}
     ```
 
     - **Configuration:** `rema blind` uses the configuration stored in the calibration unless
-      `--config` is given. `rema ingest` and `rema maps` have none to read, so pass them
-      `--config` when the calibration was made with a non-default configuration (write it with
-      `cal.config.to_yaml("config.yaml")`).
+      `--config` is given.
+      `rema ingest` and `rema maps` have none to read, so pass them `--config` when the calibration
+      was made with a non-default configuration (write it with `cal.config.to_yaml("config.yaml")`).
     - **GPU:** set `JAX_PLATFORMS=cuda`.
     """))
     return c
@@ -763,38 +771,41 @@ def pipeline_cells():
     c.append(md("""
     # The HPC pipeline on a set of sweeps, and the region boundaries
 
-    The full DR11 south blind run cuts the sky into about 300 regions of about 100 deg² (292),
-    one SLURM array task each (`scripts/slurm/rema_dr11_blind.sh`; see the HPC page of the
-    documentation). This notebook runs the same stages, with the same task script
-    (`scripts/slurm/rema_task.sh`), on the sweeps of the blind notebook, cut into one region
-    per sweep. It then measures what the region boundaries change, by comparing the merged
-    catalogue with the blind notebook's one-region catalogue of the same sweeps and calibration.
+    The full DR11 south blind run on a high-performance computing (HPC) cluster cuts the sky into
+    292 regions of about 100 deg², one SLURM array task each (`scripts/slurm/rema_dr11_blind.sh`;
+    see the HPC page of the documentation).
+    The same stages, with the same task script (`scripts/slurm/rema_task.sh`), run here on the
+    sweeps of the blind notebook, cut into one region per sweep.
+    The merged catalogue is then compared with the blind notebook's one-region catalogue of the same
+    sweeps and calibration, to measure what the region boundaries change.
 
-    **How a cluster near a boundary is handled:**
+    **Clusters near a boundary:**
 
-    - A region reads the galaxies and randoms of its *data box*, which is its *own box* grown by
-      a 2° buffer, and keeps the clusters whose final centre lies in its own box.
+    - A region reads the galaxies and randoms of its *data box*, which is its *own box* grown by a
+      2° buffer, and keeps the clusters whose final centre lies in its own box.
     - The own boxes tile the sky without overlap, so the merged catalogue has no duplicates, and
       `MEM_MATCH_ID = region << 32 | rank` is unique.
-    - Sweeps are only I/O units. A cluster across two sweeps is seen whole by the region that
-      owns its centre.
+    - Sweeps are only I/O units.
+      A cluster across two sweeps is seen whole by the region that owns its centre.
     - The 2° buffer covers what changes a cluster directly: its aperture, plus a higher-ranked
       neighbour's mask radius and seed offset, at most about 1.6° at z = 0.05.
     - Percolation chains that run beyond the buffer can still change a cluster, at second order.
 
-    Run the blind notebook first. With three sweeps the regions take about 1.4 times the
-    one-region time, because the buffers are read twice.
+    Run the blind notebook first.
+    With three sweeps the regions take about 1.4 times the one-region time, because the buffers are
+    read twice.
     """))
 
     c.append(md("""
     ## Setup and parameters
 
     `SWEEPS`, `REMA_DATA` and `REMA_WORK` must be the blind notebook's (`REMA_DATA` is read only,
-    everything is written to `REMA_WORK`). `OUTDIR` is laid out like an HPC run directory, and
-    its `galaxies/` points to the per-sweep tables that the blind notebook wrote. The stages run
-    the task script with the environment variables the driver would set. `AREA_BOX` restricts
-    the run to the sweeps, `TARGET_AREA=25` with `BAND_HEIGHT=5` gives one region per sweep, and
-    `NRAND` is the number of randoms files present, as in the production run.
+    everything is written to `REMA_WORK`).
+    `OUTDIR` is laid out like an HPC run directory, and its `galaxies/` points to the per-sweep
+    tables that the blind notebook wrote.
+    The stages run the task script with the environment variables the driver would set.
+    `AREA_BOX` restricts the run to the sweeps, `TARGET_AREA=25` with `BAND_HEIGHT=5` gives one
+    region per sweep, and `NRAND` is the number of randoms files present, as in the production run.
     """))
 
     c.append(code(SETUP_COMMON + SWEEPS_DEFAULT + '''
@@ -846,17 +857,17 @@ print(f"device for the regions: {ENV['DEVICE']}")
     c.append(code(STYLE))
 
     c.append(md("""
-    ## Galaxies and randoms, once
+    ## Galaxy tables and randoms index
 
     On the HPC these two stages are arrays:
 
     - **ingest:** one task per chunk of 20 sweeps, which reads the 1.8 TB of sweeps once;
-    - **randoms:** one task per randoms file, which reads each 23 GB file once and writes a
-      copy of the needed columns sorted by HEALPix pixel.
+    - **randoms:** one task per randoms file, which reads each 23 GB file once and writes a copy of
+      the needed columns sorted by HEALPix pixel.
 
-    Afterwards a region's footprint reads only the rows of its data box. Here the per-sweep
-    tables already exist, so the ingest stage keeps them, and the randoms index covers only the
-    sweeps (`AREA_BOX`).
+    A region's footprint then reads only the rows of its data box.
+    Here the per-sweep tables already exist, so the ingest stage keeps them, and the randoms index
+    covers only the sweeps (`AREA_BOX`).
     """))
 
     c.append(code('''
@@ -873,19 +884,20 @@ print(f"randoms index: {len(rows)} files, {sum(rows):,} rows")
     c.append(md("""
     ## The region plan
 
-    `rema regions` plans the regions from the galaxy counts in the per-sweep table headers.
+    `rema regions` plans the regions from the galaxy counts in the headers of the per-sweep tables.
 
-    - Dec bands follow the sweep rows: 10° bands in production, 5° here. The polar cap
-      (|Dec| > 85°) is one full-RA ring.
-    - In each band, own boxes are runs of whole sweeps, starting after the largest RA gap so
-      that RA 0/360 is handled. Each run holds about `TARGET_AREA` deg².
+    - Dec bands follow the sweep rows: 10° bands in production, 5° here.
+      The polar cap (|Dec| > 85°) is one full-RA ring.
+    - In each band, own boxes are runs of whole sweeps, starting after the largest RA gap so that RA
+      0/360 is handled.
+      Each run holds about `TARGET_AREA` deg².
     - Regions above `MAX_GAL` galaxies, or `MAX_PAIRS` estimated percolation pairs, are split.
     - Regions are numbered by decreasing estimated cost.
 
-    Each data box is the own box grown by the buffer, cut here to the sweeps (`AREA_BOX`). The
-    planner checks the buffer against `required_buffer`. The *first-order* reach is the
-    aperture plus a neighbour's mask radius and seed offset. The *exact* reach is percolation's
-    full dependency radius.
+    Each data box is the own box grown by the buffer, cut here to the sweeps (`AREA_BOX`).
+    The planner checks the buffer against `required_buffer`: the *first-order* reach is the aperture
+    plus a neighbour's mask radius and seed offset, and the *exact* reach is the full dependency
+    radius of the percolation.
     """))
 
     c.append(code('''
@@ -918,16 +930,16 @@ plt.show()
 '''))
 
     c.append(md("""
-    ## The regions
+    ## Region runs
 
     Each region is one task: `rema maps` builds its footprint from the randoms index, and
-    `rema blind` runs with `--regions/--region-id`. On the HPC the first region runs alone to
-    fill the shared JAX compilation cache, then the others run in parallel. Here they run one
-    after the other.
+    `rema blind` runs with `--regions/--region-id`.
+    On the HPC the first region runs alone to fill the shared JAX compilation cache, then the others
+    run in parallel; here they run one after the other.
 
-    As with the driver, only the missing or stale regions run: those without a catalogue, or
-    whose catalogue was made with another plan or calibration (`rema status`). Each catalogue's
-    header records the plan, the calibration, the device and the run statistics.
+    As with the driver, only the missing or stale regions run: those without a catalogue, or whose
+    catalogue was made with another plan or calibration (`rema status`).
+    Each catalogue's header records the plan, the calibration, the device and the run statistics.
     """))
 
     c.append(code('''
@@ -947,19 +959,17 @@ Table(rows=rows, names=("REGION", "NCLUSTER", "NGAL", "NCAND", "NDEP", "TTOTAL",
 '''))
 
     c.append(md("""
-    ## Merge and QA
+    ## Merge and quality assurance
 
-    `rema merge` concatenates the region catalogues and checks them:
+    `rema merge` concatenates the region catalogues and writes a quality-assurance (QA) file:
 
     - every MEM_MATCH_ID is unique;
     - every centre lies in its region's own box;
     - clusters within 1′ and |Δz| < 0.02(1 + z) of each other in different regions are listed;
     - no member lacks a cluster;
-    - galaxies whose total membership exceeds 1 are counted, within one region and across
-      regions;
+    - galaxies whose total membership exceeds 1 are counted, within one region and across regions;
     - all regions used the same rema version, calibration and configuration;
-    - the cluster density is compared with uniform points, against the distance to internal
-      edges.
+    - the cluster density is compared with uniform points, against the distance to internal edges.
     """))
 
     c.append(code('''
@@ -973,20 +983,18 @@ merged, mmem, _ = read_catalog(OUTDIR / "clusters_dr11.fits", members=False)
 '''))
 
     c.append(md("""
-    ## Boundaries: regions against one region
+    ## Effect of the region boundaries
 
-    The blind notebook processed the same sweeps as one region, with the same calibration, so
-    its catalogue is the reference: a run without internal boundaries. The comparison:
+    The blind notebook processed the same sweeps as one region, with the same calibration, so its
+    catalogue is the reference: a run without internal boundaries.
+    Clusters are matched by their central galaxy (ID_CENT[0]).
+    For each reference cluster, the cell gives the distance to the nearest internal boundary between
+    regions and shows, against that distance, whether the cluster is found with the same centre and
+    how much its λ and z_λ change.
 
-    - Clusters are matched by their central galaxy (ID_CENT[0]).
-    - For each reference cluster, the cell gives the distance to the nearest internal boundary
-      between regions.
-    - It then shows, against that distance, whether the cluster is found with the same centre,
-      and how much its λ and z_λ change.
-
-    Far from the boundaries, only floating-point noise should remain. The catalogues are made on
-    the same device, so the arrays have the same shapes, but regions batch their candidates
-    differently.
+    Far from the boundaries, only floating-point noise should remain.
+    The catalogues are made on the same device, so the arrays have the same shapes, but regions
+    batch their candidates differently.
     """))
 
     c.append(code('''
@@ -1080,32 +1088,33 @@ if changed.any():
 '''))
 
     c.append(md("""
-    ### Reading the comparison
+    ### Interpretation of the boundary comparison
 
-    - **Same centre** gives the fraction of reference clusters whose central galaxy is the
-      central of a merged cluster. Close to a boundary, a region does not see the percolation
-      history beyond its buffer, so a low-λ cluster there can be percolated differently: it may
-      lose its candidacy, or be absorbed by, or absorb, a neighbour. The effect fades with
-      distance and with richness.
-    - **Δλ and Δz** for matched clusters measure the same differences at the level of the
-      values. Far from every boundary only floating-point noise remains: the regions batch
-      their candidates differently, and float32 results change at about 1e-4 with the batch
-      composition, which can reorder near-tied candidates.
-    - A z_λ iteration that stops at the iteration cap has not converged, and the float32 noise
-      can send it to another solution, at any distance from a boundary. The table above shows
-      whether the changed clusters are of that kind. Z_LAMBDA_NITER flags them in the
-      catalogue.
+    - **Same centre** is the fraction of reference clusters whose central galaxy is the central of a
+      merged cluster.
+      Close to a boundary, a region does not see the percolation history beyond its buffer, so a
+      low-λ cluster there can be percolated differently: it may lose its candidacy, or be absorbed
+      by, or absorb, a neighbour.
+      The effect fades with distance and with richness.
+    - **Δλ and Δz** of matched clusters measure the same differences in the values.
+      Far from every boundary only floating-point noise remains: float32 results change at about
+      1e-4 with the batch composition, which can reorder near-tied candidates.
+    - A z_λ iteration that stops at the iteration cap has not converged, and the float32 noise can
+      send it to another solution, at any distance from a boundary.
+      The table above shows whether the changed clusters are of that kind; Z_LAMBDA_NITER flags them
+      in the catalogue.
 
-    In production, a region is 10° × 10° and its buffer is 2°. Close to the boundaries, the
-    density profile in the merge QA (`edge_profile`) shows whether clusters are lost or doubled.
+    In production, a region is 10° × 10° and its buffer is 2°.
+    Close to the boundaries, the density profile in the merge QA (`edge_profile`) shows whether
+    clusters are lost or doubled.
     """))
 
     c.append(md("""
     ## Runtimes
 
-    Regions reread their buffers, so with one region per sweep the total area processed is
-    larger than the sweeps themselves. With 100 deg² regions and 2° buffers the overhead is
-    about 2×.
+    Regions reread their buffers, so with one region per sweep the total area processed is larger
+    than that of the sweeps.
+    With 100 deg² regions and 2° buffers the overhead is about 2×.
     """))
 
     c.append(code('''
@@ -1118,10 +1127,11 @@ print(f"blind runs of the regions (headers): {regions_total:.0f} s against {t_on
 '''))
 
     c.append(md("""
-    ## The same on an HPC
+    ## The same run on an HPC cluster
 
-    The driver submits these stages as SLURM jobs. Each phase submits only what is missing, and
-    the run waits for a person to check the calibration between the two phases:
+    The driver submits these stages as SLURM jobs.
+    Each phase submits only what is missing, and the run waits for a person to check the
+    calibration between the two phases:
 
     ```bash
     export DR11=/path/to/legacysurvey/dr11/south OUTDIR=$SCRATCH/rema_dr11 DEVICE=gpu PART_GPU=gpu
@@ -1133,8 +1143,8 @@ print(f"blind runs of the regions (headers): {regions_total:.0f} s against {t_on
     CALIB=$OUTDIR/calib/calib.fits scripts/slurm/rema_dr11_blind.sh status
     ```
 
-    The calibration box above is only an example: use one that `--calib-suggest` proposes. After
-    failures or timeouts, rerun the same command, and only the missing or stale regions are
+    The calibration box above is an example: use one that `--calib-suggest` proposes.
+    After failures or timeouts, rerun the same command: only the missing or stale regions are
     submitted.
     """))
     return c
@@ -1146,25 +1156,28 @@ def scan_cells():
     c.append(md(f"""
     # One cluster in scan mode, with spectroscopic post-processing
 
-    Scan mode is redMaPPer's zscan, run at given positions (X-ray or SZ candidates). At the input
-    position, λ(z) and the likelihood LNLAMLIKE(z) are computed on Δz = 0.005 steps from
-    z = 0.05 to 1.0 in a fixed 0.5 h⁻¹Mpc aperture, and ZMAX is the likelihood peak. Starting
-    from ZMAX, z_λ is refined with the percolation aperture (r0 = 1 h⁻¹Mpc, β = 0.2). An
-    optical centre is then chosen within 0.4 h⁻¹Mpc of the input position (wcen centring), and
-    λ and z_λ are recomputed there (LAMBDA_OPT, Z_LAMBDA_OPT). The spectroscopic
-    post-processing adds the cluster redshift and velocity dispersion from the members' Z_SPEC.
-    The target is the SZ cluster ACT-CL J0012.9-0857, given by its position only. The notebook
-    scan itself takes under a minute on a GPU; reading the randoms files takes most of the runtime.
+    Scan mode runs redMaPPer's zscan at given positions (X-ray or Sunyaev–Zel'dovich, SZ,
+    candidates); the target here is the SZ cluster ACT-CL J0012.9-0857, given by its position only.
+    At the input position, λ(z) and the likelihood LNLAMLIKE(z) are computed on Δz = 0.005 steps
+    from z = 0.05 to 1.0 in a fixed 0.5 h⁻¹Mpc aperture, and ZMAX is the likelihood peak.
+    Starting from ZMAX, z_λ is refined with the percolation aperture (r0 = 1 h⁻¹Mpc, β = 0.2).
+    An optical centre is then chosen within 0.4 h⁻¹Mpc of the input position (wcen centring), and λ
+    and z_λ are recomputed there (LAMBDA_OPT, Z_LAMBDA_OPT).
+    The spectroscopic post-processing adds the cluster redshift and velocity dispersion from the
+    members' Z_SPEC.
+    The scan itself takes under a minute on a GPU; reading the randoms files takes most of the
+    runtime.
     """))
 
     c.append(md("""
     ## Setup and parameters
 
-    The notebook reads `REMA_DATA`, the DR11 south directory (shared, read only: sweeps,
-    randoms, and the calibration and catalogues of the production run in `rema/`; at CC-IN2P3
-    the default is the DR11 data system), and writes to `REMA_WORK` (yours, default
-    `/sps/lsst/users/$USER/rema_work` at CC-IN2P3, else `~/rema_work`). The ACT redshift is used
-    only for the comparisons at the end.
+    The notebook reads `REMA_DATA`, the DR11 south directory (shared, read only: sweeps, randoms,
+    and the calibration and catalogues of the production run in `rema/`; at CC-IN2P3 the default is
+    the DR11 data system).
+    It writes to `REMA_WORK` (yours, default `/sps/lsst/users/$USER/rema_work` at CC-IN2P3, else
+    `~/rema_work`).
+    The ACT redshift is used only for the comparisons at the end.
     """))
 
     c.append(code(SETUP_COMMON + '''
@@ -1192,19 +1205,20 @@ print(f"rema {rema.__version__}, jax {jax.__version__}, devices: {jax.devices()}
     c.append(code(STYLE))
 
     c.append(md("""
-    ## The region around the target
+    ## Galaxies and footprint around the target
 
-    The galaxies and the footprint are needed only around the target: the box
-    `Box(RA, RA, DEC, DEC).buffered(1.0)`, about 4 deg². The largest aperture is the
-    neighbour radius of the percolation aperture, 1.2 r0 3^β = 1.5 h⁻¹Mpc, plus the 0.4 h⁻¹Mpc
-    of the centre search. At the lowest redshift of the scan, z = 0.05, these 1.9 h⁻¹Mpc
-    subtend 0.77°, so a 1° buffer is enough. The configuration comes from the calibration
-    file.
+    The galaxies and the footprint are needed only in the box `Box(RA, RA, DEC, DEC).buffered(1.0)`
+    around the target, about 4 deg².
+    The largest aperture is the neighbour radius of the percolation aperture,
+    1.2 r0 3^β = 1.5 h⁻¹Mpc, plus the 0.4 h⁻¹Mpc of the centre search.
+    At the lowest redshift of the scan, z = 0.05, these 1.9 h⁻¹Mpc subtend 0.77°, so a 1° buffer is
+    enough.
+    The configuration comes from the calibration file.
 
-    `read_randoms` scans the whole 23 GB randoms file and keeps the randoms in the box. Here the
-    file was in the page cache; read from disk it takes about a minute and dominates the
-    runtime of a single scan. On an HPC, footprints are made once per region and read back
-    with `Footprint.read`.
+    `read_randoms` scans the whole 23 GB randoms file and keeps the randoms in the box.
+    Read from disk, it takes about a minute and dominates the runtime of a single scan; here the
+    file was in the page cache.
+    On an HPC cluster, footprints are made once per region and read back with `Footprint.read`.
     """))
 
     c.append(code('''
@@ -1240,9 +1254,10 @@ print(f"footprint: {rnd['RA'].size:,} randoms, unmasked area {fp.area_deg2():.2f
     c.append(md("""
     ## Calibration and zred
 
-    The DR11 griz calibration of the production run, fitted on RA 160–180° and 190–210°,
-    Dec −10° to 10°: red sequence, zred correction, χ² and zred backgrounds, z_λ correction and
-    the wcen centring model. `Region.build` computes zred for every galaxy.
+    The calibration is the DR11 griz calibration of the production run, fitted on RA 160–180° and
+    190–210°, Dec −10° to 10°: red sequence, zred correction, χ² and zred backgrounds, z_λ
+    correction and the wcen centring model.
+    `Region.build` computes zred for every galaxy.
     """))
 
     c.append(code('''
@@ -1260,9 +1275,10 @@ print(f"zred for {reg.gal['ZRED'].size:,} galaxies in {T['zred']:.1f} s; centrin
     c.append(md("""
     ## Scan and spectroscopic post-processing
 
-    `run_scan` takes lists of positions (and identifiers), processed in batches of 128. The
-    spectroscopic post-processing uses the members of the fit at the input position (PMEM ≥
-    0.01). The output is written as `rema scan` writes it.
+    `run_scan` takes lists of positions (and identifiers), processed in batches of 128.
+    The spectroscopic post-processing uses the members of the fit at the input position
+    (PMEM ≥ 0.01).
+    The output is written as `rema scan` writes it.
     """))
 
     c.append(code('''
@@ -1282,11 +1298,12 @@ print(f"wrote {path}")
 '''))
 
     c.append(md("""
-    ## Results
+    ## Measured properties of the cluster
 
-    LMAX is λ at ZMAX in the 0.5 h⁻¹Mpc scan aperture. LAMBDA, Z_LAMBDA, SCALEVAL and MASKFRAC
-    are those of the percolation aperture at the input position, and the …_OPT columns those at
-    the optical centre. The offset in h⁻¹Mpc is at Z_LAMBDA_OPT.
+    LMAX is λ at ZMAX in the 0.5 h⁻¹Mpc scan aperture.
+    LAMBDA, Z_LAMBDA, SCALEVAL and MASKFRAC are those of the percolation aperture at the input
+    position, and the …_OPT columns those at the optical centre.
+    The offset in h⁻¹Mpc is at Z_LAMBDA_OPT.
     """))
 
     c.append(code('''
@@ -1326,23 +1343,28 @@ print(f"{zs.size} galaxies within 6′ with 0.30 < ZSPEC < 0.42: ZSPEC {zs.min()
 '''))
 
     c.append(md("""
-    z_λ at the optical centre (0.338) agrees with the spectroscopic redshift of the 14 kept
-    members (0.336 ± 0.002). z_λ and SPEC_Z_BOOT lie 0.010–0.012 (1 + z) below the ACT
-    redshift (ZMAX, on the second maximum of the scan, lies 0.03 above), and no spectroscopic redshift within 6′ is near it: the 17 between 0.30 and
-    0.42 span 0.327–0.341. The optical centre is 79″ (0.27 h⁻¹Mpc) from the SZ position, with
-    the P_CEN printed above. Blind mode centres this cluster on its brightest member, 0.49 h⁻¹Mpc from the
-    SZ position, outside the 0.4 h⁻¹Mpc search radius of scan mode (see the blind notebook).
+    z_λ at the optical centre (0.338) agrees with the spectroscopic redshift of the fourteen kept
+    members (0.336 ± 0.002).
+    z_λ and SPEC_Z_BOOT lie 0.010–0.012 (1 + z) below the ACT redshift (ZMAX, on the second maximum
+    of the scan, lies 0.03 above).
+    No spectroscopic redshift within 6′ is near the ACT redshift: the seventeen between 0.30 and
+    0.42 span 0.327–0.341.
+    The optical centre is 79″ (0.27 h⁻¹Mpc) from the SZ position, with the P_CEN printed above.
+    Blind mode centres this cluster on its brightest member, 0.49 h⁻¹Mpc from the SZ position,
+    outside the 0.4 h⁻¹Mpc search radius of scan mode (see the blind notebook).
     """))
 
     c.append(md("""
-    ## Figures
+    ## Redshift scan and redshift probability
 
-    λ(z) and LNLAMLIKE(z) along the scan, and p(z) of the refined z_λ at the input position.
-    LNLAMLIKE is undefined where λ ≤ 0; those steps are left out. Both curves have two
-    maxima, at z = 0.340 and 0.395. The second is slightly higher in λ (34.1 against 32.1) and in
-    the likelihood (40.0 against 39.6), so ZMAX = 0.395; the refinement of z_λ in the percolation
-    aperture, which starts from ZMAX, converges to the first (z_λ = 0.340), where the
-    spectroscopic members are.
+    The cell draws λ(z) and LNLAMLIKE(z) along the scan, and p(z) of the refined z_λ at the input
+    position.
+    LNLAMLIKE is undefined where λ ≤ 0; those steps are left out.
+    Both curves have two maxima, at z = 0.340 and 0.395.
+    The second is slightly higher in λ (34.1 against 32.1) and in the likelihood (40.0 against
+    39.6), so ZMAX = 0.395.
+    The refinement of z_λ in the percolation aperture starts from ZMAX and converges to the first
+    maximum (z_λ = 0.340), where the spectroscopic members are.
     """))
 
     c.append(code('''
@@ -1367,11 +1389,12 @@ plt.show()
 '''))
 
     c.append(md("""
-    Left: the members on the sky around the input position, coloured by PMEM, with symbol
-    size by z-band magnitude. The circles have radius R_LAMBDA and 0.4 h⁻¹Mpc (the centre
-    search). The centre candidates are labelled with P_CEN; the optical centre is the most
-    probable one. Right: the rest-frame velocities of the members with a spectroscopic redshift,
-    relative to SPEC_Z, with a Gaussian of width VDISP.
+    Left: members on the sky around the input position, coloured by PMEM and sized by z-band
+    magnitude.
+    The circles have radii R_LAMBDA and 0.4 h⁻¹Mpc (the centre search).
+    The centre candidates are labelled with P_CEN; the optical centre is the most probable one.
+    Right: rest-frame velocities of the members with a spectroscopic redshift, relative to SPEC_Z,
+    with a Gaussian of width VDISP.
     """))
 
     c.append(code('''
@@ -1437,10 +1460,11 @@ plt.show()
 '''))
 
     c.append(md("""
-    ## Members
+    ## Most probable members
 
-    The ten members with the highest PMEM. R is the distance from the input position in
-    h⁻¹Mpc; ZSPEC is −1 without a spectroscopic redshift.
+    The ten members with the highest PMEM.
+    R is the distance from the input position in h⁻¹Mpc; ZSPEC is −1 without a spectroscopic
+    redshift.
     """))
 
     c.append(code('''
@@ -1452,12 +1476,13 @@ members.pprint(max_width=-1)
 '''))
 
     c.append(md("""
-    ## The production catalogue
+    ## Comparison with the production catalogue
 
     The DR11 south production run found clusters blind over the whole footprint with the same
-    calibration (merged catalogues on the data system, `PRODUCTS`). The cell lists the
-    production clusters centred within 3′ of the input position: scan mode, which starts from
-    the position, and blind mode, which starts from its own seeds, should find the same system.
+    calibration (merged catalogues on the data system, `PRODUCTS`).
+    The cell lists the production clusters centred within 3′ of the input position.
+    Scan mode, which starts from the position, and blind mode, which starts from its own seeds,
+    should find the same system.
     """))
 
     c.append(code('''
@@ -1517,10 +1542,10 @@ print(positions)
          --positions positions.fits --id-col NAME --specpost --out scan.fits
     ```
 
-    MEM_MATCH_ID is then the NAME column. `rema scan` uses the calibration's configuration
-    unless `--config` is given. As for blind mode, pass `--config` to `rema ingest` and
-    `rema maps` when the calibration was made with a non-default configuration, and set
-    `JAX_PLATFORMS=cuda` to run on a GPU.
+    MEM_MATCH_ID is then the NAME column.
+    `rema scan` uses the calibration's configuration unless `--config` is given.
+    As for blind mode, pass `--config` to `rema ingest` and `rema maps` when the calibration was
+    made with a non-default configuration, and set `JAX_PLATFORMS=cuda` to run on a GPU.
     """))
     return c
 
@@ -1562,10 +1587,10 @@ def redmapper_cells():
     for name in FIGURE_SCRIPTS:
         cells += script_cells(FIGURES / f"{name}.py")
     cells.insert(1, md(f"""
-        This notebook is assembled by `docs/notebooks/build_notebooks.py redmapper` from the scripts
-        in `docs/figures/redmapper_dr11` ({", ".join(f"`{n}.py`" for n in FIGURE_SCRIPTS)}), which also
-        write the figures of the documentation page. Run as scripts, they save PNG files; here the
-        figures are shown inline.
+        `docs/notebooks/build_notebooks.py redmapper` assembles this notebook from the scripts in
+        `docs/figures/redmapper_dr11` ({", ".join(f"`{n}.py`" for n in FIGURE_SCRIPTS)}), which also
+        write the figures of the documentation page.
+        Run as scripts, they save PNG files; here the figures are shown inline.
         """))
     return cells
 

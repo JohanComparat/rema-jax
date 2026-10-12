@@ -1,4 +1,5 @@
-"""Reduced tables and maps for the figures of docs/redmapper_dr11.rst.
+"""Reduce the production catalogue, the DR11 randoms and the external catalogues for the figures of
+docs/redmapper_dr11.rst.
 
     python docs/figures/redmapper_dr11/prepare.py [--force]
 
@@ -20,10 +21,11 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Reduced tables and maps (`prepare.py`)
 #
-# The production catalogue is read once and reduced to the columns the figures use. The DR11
-# randoms give the footprint of the run, cut as the galaxies were (`MASKBITS`, at least one
-# exposure in g, r, i and z, E(B−V) < 0.2), to |b| ≥ 15° and to the own boxes of the regions
-# that finished. Each step is skipped when its products are newer than its inputs.
+# The production catalogue is read once and reduced to the columns the figures use.
+# The DR11 randoms give the footprint of the run, cut as the galaxies were (`MASKBITS`, at least one
+# exposure in g, r, i and z, E(B−V) < 0.2), to |b| ≥ 15° and to the own boxes of the regions that
+# finished.
+# Each step is skipped when its products are newer than its inputs.
 
 # %%
 from rema.calibration import Calibration
@@ -68,10 +70,11 @@ def update_meta(**kw):
 
 
 # %% [markdown]
-# ### The footprint of each part
+# ### Footprint of each part
 #
-# The own boxes of the regions that finished (the region plan minus the regions listed as
-# missing in the QA file): a random point belongs to the run if it falls in one of them.
+# The footprint of a part is the union of the own boxes of the regions that finished (the region
+# plan minus the regions listed as missing in the QA file): a random point belongs to the run if it
+# falls in one of them.
 
 # %%
 OWN = {}
@@ -97,11 +100,12 @@ def part_of(ra, dec):
 # %% [markdown]
 # ### Depth and z_vlim maps from the randoms
 #
-# Per HEALPix pixel (NSIDE 256, 0.05 deg²): the number of randoms in the run (its area at 2500
-# randoms per deg²), the mean 10σ galaxy depth in each band corrected for Galactic extinction,
-# the mean E(B−V) and z-band PSF size, and the fraction of observed randoms removed by the mask
-# bits. As in Kluge et al. (2024, Fig. B.3), z_vlim is the redshift at which a 0.2 L* galaxy,
-# m*(z) + 1.75 in the reference band (z), reaches the 10σ depth.
+# Per HEALPix pixel (NSIDE 256, 0.05 deg²), the maps hold the number of randoms in the run (its area
+# at 2500 randoms per deg²), the mean 10σ galaxy depth in each band corrected for Galactic
+# extinction, the mean E(B−V) and z-band point-spread-function (PSF) size, and the fraction of
+# observed randoms removed by the mask bits.
+# As in Kluge et al. (2024, Fig. B.3), z_vlim is the redshift at which a 0.2 L* galaxy, m*(z) + 1.75
+# in the reference band (z), reaches the 10σ depth.
 
 # %%
 MSTAR = MStar(CFG.model.mstar)
@@ -192,12 +196,12 @@ else:
           f"({time.time() - t0:.0f} s)")
 
 # %% [markdown]
-# ### Clusters
+# ### Cluster table
 #
-# All clusters of the parts present, with the part, the region (`MEM_MATCH_ID >> 32`), the
-# Galactic latitude, a flag for the calibration area (whose spectroscopic redshifts trained the
-# red-sequence model), the distance to the seams between the parts (RA 0° and 240°, Dec −85°)
-# and the depth-map values at the cluster position.
+# The cluster table holds all clusters of the parts present, with the part, the region
+# (`MEM_MATCH_ID >> 32`), the Galactic latitude, a flag for the calibration area (whose
+# spectroscopic redshifts trained the red-sequence model), the distance to the seams between the
+# parts (RA 0° and 240°, Dec −85°) and the depth-map values at the cluster position.
 
 # %%
 CL_COLS = ["RA", "DEC", "LAMBDA", "LAMBDA_E", "Z_LAMBDA", "Z_LAMBDA_E", "Z_LAMBDA_RAW", "R_LAMBDA",
@@ -245,10 +249,11 @@ else:
           f"{(~found).sum()} outside the randoms map")
 
 # %% [markdown]
-# ### Members
+# ### Member table
 #
-# Members with P ≥ 0.05, plus every member with a spectroscopic redshift, with the row of
-# their cluster and their colours (dereddened g−r, r−i, i−z; NaN when a flux is not positive).
+# The member table holds the members with P ≥ 0.05 and every member with a spectroscopic redshift,
+# with the row of their cluster and their colours (dereddened g−r, r−i, i−z; NaN when a flux is not
+# positive).
 
 # %%
 MEM_COLS = ["MEM_MATCH_ID", "RA", "DEC", "Z", "R", "P", "PFREE", "REFMAG", "ZRED", "ZRED_E", "CHISQ",
@@ -287,10 +292,10 @@ else:
 # %% [markdown]
 # ### External cluster catalogues
 #
-# Public catalogues, renamed to common columns: RA, DEC, Z (best redshift), and where they
-# exist LAMBDA (redMaPPer-like richness), M500 [10¹⁴ M☉], LX [10⁴⁴ erg/s], centre positions
-# and quality columns. Each is read once from `EXTERNAL` (`$REMA_DATA/rema/external`, sources in
-# its README).
+# The public catalogues are renamed to common columns: RA, DEC, Z (best redshift) and, where they
+# exist, LAMBDA (redMaPPer-like richness), M500 [10¹⁴ M☉], LX [10⁴⁴ erg/s], centre positions and
+# quality columns.
+# Each is read once from `EXTERNAL` (`$REMA_DATA/rema/external`, sources in its README).
 
 # %%
 def read_cds(path, columns):

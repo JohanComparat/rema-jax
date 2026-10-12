@@ -1,5 +1,5 @@
-"""Comparison with external cluster catalogues (Kluge et al. 2024 Figs. 7-8, 10; Rozo & Rykoff 2014
-Fig. 4; Rozo et al. 2015 Fig. 2; Saro et al. 2015; Bleem et al. 2020; Wen & Han 2024 Fig. 10;
+"""Comparison with external cluster catalogues (Kluge et al. 2024 Figs. 7–8, 10; Rozo & Rykoff 2014
+Fig. 4; Rozo et al. 2015a Fig. 2; Saro et al. 2015; Bleem et al. 2020; Wen & Han 2024 Fig. 10;
 Zou et al. 2021 Fig. 9).
 
     python docs/figures/redmapper_dr11/fig_external.py
@@ -11,10 +11,10 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Comparison with SZ, X-ray and optical catalogues
 #
-# External clusters are counted when they fall in the run footprint (a map pixel at least
-# half covered) at 0.05 < z < 0.9. A cluster is recovered when a rema cluster with λ ≥ 5 lies
-# within 1 h⁻¹ Mpc (projected at the external redshift) with |z_λ − z|/(1+z) < 0.05; the
-# richest such cluster is the counterpart.
+# External clusters are counted when they fall in the run footprint (a map pixel at least half
+# covered) at 0.05 < z < 0.9.
+# A cluster is recovered when a `rema` cluster with λ ≥ 5 lies within 1 h⁻¹ Mpc (projected at the
+# external redshift) with |z_λ − z|/(1+z) < 0.05; the richest such cluster is the counterpart.
 
 # %%
 cl = load("clusters")
@@ -53,9 +53,10 @@ CATS = [(k, lab) for k, lab in CATS if REFS[k] is not None]
 # %% [markdown]
 # ### Recovery of SZ- and X-ray-selected clusters (Kluge et al. 2024 Fig. 10; Rozo & Rykoff 2014 Fig. 4)
 #
-# Top: redshift distribution of the external clusters in the footprint (lines) and of the
-# recovered ones (filled). Bottom: the recovered fraction against redshift (left) and against
-# the external mass M500 (right; each catalogue's own mass scale).
+# Top: redshift distribution of the external clusters in the footprint (lines) and of the recovered
+# ones (filled).
+# Bottom: the recovered fraction against redshift (left) and against the external mass M500 (right;
+# each catalogue's own mass scale).
 
 # %%
 fig = plt.figure(figsize=(13, 7.5), constrained_layout=True)
@@ -104,9 +105,10 @@ save(fig, "external_recovery")
 # %% [markdown]
 # ### Redshift consistency (Kluge et al. 2024 Fig. 7)
 #
-# The external clusters with a spectroscopic or literature redshift (ACT DR6, SPT, MCXC), paired
-# by position only (1 h⁻¹ Mpc, the richest rema cluster with |Δz|/(1+z) < 0.3): fraction whose
-# z_λ agrees within 0.02, 0.03, 0.05 or 0.10 (in |Δz|/(1+z)), against λ.
+# The external clusters with a spectroscopic or literature redshift (ACT DR6, SPT, MCXC) are paired
+# by position only (1 h⁻¹ Mpc, the richest `rema` cluster with |Δz|/(1+z) < 0.3).
+# The figure shows the fraction whose z_λ agrees within 0.02, 0.03, 0.05 or 0.10 (in |Δz|/(1+z)),
+# against λ.
 
 # %%
 pairs = []
@@ -134,11 +136,11 @@ panel_label(ax, f"{irem.size:,} ACT DR6, SPT and MCXC clusters")
 save(fig, "external_zconsistency")
 
 # %% [markdown]
-# ### Richness against mass proxies (Rozo et al. 2015 Fig. 2; Saro et al. 2015 Fig. 4; Bleem et al. 2020 Fig. 9)
+# ### Richness against mass proxies (Rozo et al. 2015a Fig. 2; Saro et al. 2015 Fig. 4; Bleem et al. 2020 Fig. 9)
 #
-# λ of the counterparts against the SZ masses of ACT DR6 and SPT (M500c), the eRASS1 masses
-# (from the count rate, Bulbul et al. 2024) and the eRASS1 0.2–2.3 keV luminosity L500. The
-# line is a least-squares fit of ln λ on ln M (or ln L) for clusters at 0.1 < z < 0.6; the
+# λ of the counterparts against the SZ masses of ACT DR6 and SPT (M500c), the eRASS1 masses (from
+# the count rate, Bulbul et al. 2024) and the eRASS1 0.2–2.3 keV luminosity L500.
+# The line is a least-squares fit of ln λ on ln M (or ln L) for clusters at 0.1 < z < 0.6; the
 # scatter quoted is the rms of ln λ about it.
 
 # %%
@@ -174,11 +176,12 @@ save(fig, "external_mass")
 # %% [markdown]
 # ### Wen & Han (2024) clusters (Wen & Han 2024 Fig. 10; Zou et al. 2021 Fig. 9)
 #
-# Wen & Han (2024) found 1.58 million clusters in the Legacy Surveys DR9 and DR10 from the
-# stellar mass of galaxies in photometric-redshift slices. Left: fraction of rema clusters
-# with a Wen & Han counterpart (1 h⁻¹ Mpc, |Δz|/(1+z) < 0.05) against λ, in bins of z_λ. Right:
-# fraction of Wen & Han clusters in the footprint with a rema counterpart (λ ≥ 5) against their
-# mass M500, in bins of redshift.
+# Wen & Han (2024) found 1.58 million clusters in the Legacy Surveys DR9 and DR10 from the stellar
+# mass of galaxies in photometric-redshift slices.
+# Left: fraction of `rema` clusters with a Wen & Han counterpart (1 h⁻¹ Mpc, |Δz|/(1+z) < 0.05)
+# against λ, in bins of z_λ.
+# Right: fraction of Wen & Han clusters in the footprint with a `rema` counterpart (λ ≥ 5) against
+# their mass M500, in bins of redshift.
 
 # %%
 wh = external("wen_han_2024")

@@ -1,4 +1,4 @@
-"""Red-sequence calibration figures (Rykoff et al. 2014 Figs. 1, 3-5; Kluge et al. 2024 Fig. C.1).
+"""Red-sequence calibration figures (Rykoff et al. 2014 Figs. 1, 3–5; Kluge et al. 2024 Fig. C.1).
 
     python docs/figures/redmapper_dr11/fig_redsequence.py
 """
@@ -9,12 +9,12 @@ from common import *  # noqa: F403
 # %% [markdown]
 # ## Red-sequence calibration
 #
-# The red-sequence model of the production calibration (RA 160–180° and 190–210°,
-# Dec −10–10°): mean colours at the pivot magnitude, slopes and intrinsic scatters, as cubic
-# splines in redshift. It is compared with the spectroscopic training galaxies, with the
-# members of the final catalogue, with the DR10 grz model of Kluge et al. (2024) and with the
-# g − r red sequence that Comparat et al. (2025, Table 2) measured from cluster–galaxy
-# cross-correlations.
+# The red-sequence model of the production calibration (RA 160–180° and 190–210°, Dec −10° to 10°)
+# gives the mean colours at the pivot magnitude, the slopes and the intrinsic scatters as cubic
+# splines in redshift.
+# It is compared with the spectroscopic training galaxies, with the members of the final catalogue,
+# with the DR10 grz model of Kluge et al. (2024) and with the g − r red sequence that Comparat et
+# al. (2025, Table 2) measured from cluster–galaxy cross-correlations.
 
 # %%
 from rema.calibration import Calibration
@@ -58,11 +58,11 @@ def colour_at_pivot(colour, refmag, z, j):
 # %% [markdown]
 # ### Colour against redshift (Rykoff et al. 2014 Figs. 1 and 4; Kluge et al. 2024 Fig. C.1)
 #
-# Top: the spectroscopic training galaxies of the calibration area (m < m* + 1, χ² < 20 against
-# the final model), at their spectroscopic redshift. Bottom: members with P > 0.9 of the whole
-# catalogue, at the z_λ of their cluster. Colours are moved along the red-sequence slope to
-# the pivot magnitude. The training sample (`rs_specz.fits`) comes from the calibration
-# directory, when it is there.
+# Top: the spectroscopic training galaxies of the calibration area (m < m* + 1, χ² < 20 against the
+# final model), at their spectroscopic redshift.
+# Bottom: members with P > 0.9 of the whole catalogue, at the z_λ of their cluster.
+# Colours are moved along the red-sequence slope to the pivot magnitude.
+# The training sample (`rs_specz.fits`) is read from the calibration directory when it is there.
 
 # %%
 mem = load("members", ["P", "GR", "RI", "IZ", "REFMAG", "Z"])
@@ -114,9 +114,10 @@ save(fig, "rs_colour_z")
 # %% [markdown]
 # ### Red-sequence parameters (Rykoff et al. 2014 Fig. 5)
 #
-# Mean colour at the pivot, slope dc/dm and intrinsic scatter σ_int of each colour, and the
-# pivot magnitude against m*(z). Kluge et al. (2024) fitted g − r and r − z (grz bands): their
-# g − r is drawn with the rema g − r, their r − z with the rema (r − i) + (i − z).
+# Mean colour at the pivot, slope dc/dm and intrinsic scatter σ_int of each colour, and the pivot
+# magnitude against m*(z).
+# Kluge et al. (2024) fitted g − r and r − z (grz bands): their g − r is drawn with the `rema` g −
+# r, their r − z with the `rema` (r − i) + (i − z).
 
 # %%
 from rema.model.profiles import MStar  # noqa: E402
@@ -168,9 +169,8 @@ for zz in (0.2, 0.4, 0.6, 0.8):
 # %% [markdown]
 # ### Composite red sequence (Rykoff et al. 2014 Fig. 3)
 #
-# Members with P > 0.9 in four thin slices of z_λ, in the colour that straddles the 4000 Å
-# break at that redshift, against the reference (z-band) magnitude, with the model mean and
-# ±1σ_int.
+# Members with P > 0.9 in four thin slices of z_λ, in the colour that straddles the 4000 Å break at
+# that redshift, against the reference (z-band) magnitude, with the model mean and ±1σ_int.
 
 # %%
 SLICES = [(0.15, 0.16, 0), (0.30, 0.31, 0), (0.50, 0.51, 1), (0.75, 0.76, 2)]

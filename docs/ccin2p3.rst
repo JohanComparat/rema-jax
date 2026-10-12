@@ -78,13 +78,41 @@ Your own positions
 To get the scan-mode richness, redshift, centre and spectroscopic redshift at your own positions
 (X-ray or SZ candidates, say), give a table with RA and DEC to ``rema scan-positions``. It
 ingests the sweeps around the positions, builds their footprint from the randoms and returns the
-input table with the results (:doc:`dr11`, "Scan a list of positions"). As a SLURM job:
+input table with the results (:doc:`dr11`, "Scan a list of positions").
+
+Keep the tables on /sps, which the compute nodes read and where there is room (not in
+``$HOME``), in ``/sps/lsst/users/$USER/rema_scan``:
+
+- ``targets/``: your input tables (FITS, CSV, ...);
+- ``results/``: the outputs, ``<input stem>_rema.fits``;
+- ``logs/``: the job logs;
+- ``galaxies/``: the ingested sweeps, about 49 MB each, kept and reused by later jobs;
+- ``randoms_index/`` and ``jax_cache/``: made by the jobs.
+
+Submit the batch script ``scripts/scan/scan_positions.sbatch`` with ``sbatch``. It runs on one
+V100 with 45 GB for 12 h; edit its ``#SBATCH`` lines, or override them on the command line. It
+uses the DR11 south data and the production calibration at CC, and passes any further option
+to ``rema scan-positions``:
+
+.. code-block:: bash
+
+   mkdir -p /sps/lsst/users/$USER/rema_scan/{targets,results,logs}
+   cp targets.fits /sps/lsst/users/$USER/rema_scan/targets/
+   sbatch $HOME/software/rema-jax/scripts/scan/scan_positions.sbatch targets.fits --ra-col ra --dec-col dec
+   # -> /sps/lsst/users/$USER/rema_scan/results/targets_rema.fits
+   sbatch --mem=90G --time=48:00:00 $HOME/software/rema-jax/scripts/scan/scan_positions.sbatch big.fits
+
+Or let ``scripts/scan/scan_positions.sh`` build the sbatch command; it takes the output path,
+and ``CPU=1`` for an htc job:
 
 .. code-block:: bash
 
    rema-env
    $HOME/software/rema-jax/scripts/scan/scan_positions.sh targets.csv targets_rema.fits
    CPU=1 $HOME/software/rema-jax/scripts/scan/scan_positions.sh targets.fits out.fits --ra-col ra --dec-col dec
+
+Keep the rows with ``SCANNED & (LAMBDA > 0) & (MASKFRAC < 0.2)``: outside the footprint
+``MASKFRAC`` is 1 and λ is meaningless (:doc:`public_catalogues_scan`).
 
 The ingested sweeps stay in ``/sps/lsst/users/$USER/rema_scan/galaxies`` (about 49 MB each,
 reused by later runs); delete that directory when it is no longer needed.

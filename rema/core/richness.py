@@ -1,4 +1,4 @@
-"""Richness lambda of a cluster: the matched-filter membership solve.
+"""Computes the richness lambda of a cluster by the matched-filter membership solve.
 
 For a cluster at redshift z and a neighbour i at projected radius r_i (h^-1 Mpc), reference
 magnitude m_i and chi^2_i (against the red sequence at z):
@@ -10,13 +10,14 @@ magnitude m_i and chi^2_i (against the red sequence at z):
 
 and lambda solves  sum_i pmem_i(lambda) = lambda K(r_lambda),  where K is the expected fraction of
 the cluster's galaxies (within r_lambda, brighter than 0.2 L*) that are observable given the
-mask and depth (1 without a footprint; redMaPPer writes K = 1 - C). The solve is a bisection
-on a log-spaced grid of lambda values followed by Newton steps, wrapped in ``jax.lax.custom_root`` so that lambda has
-exact implicit derivatives with respect to every model parameter.
+mask and depth (1 without a footprint; redMaPPer writes K = 1 - C). The solve scans a
+log-spaced grid of lambda values, brackets the root at the last grid point with a positive
+residual and refines it with safeguarded Newton steps, inside ``jax.lax.custom_root``, so that
+lambda has exact implicit derivatives with respect to every model parameter.
 
 With the photo-z filter (``model.filter = "photoz"``) the colour term rho_chi2(chi^2_i) becomes
 the galaxy's photo-z distribution at the cluster redshift, p_i(z) = N(z; ZPHOT_i, s_i), and the
-background the stacked photo-z distributions Sigma_pz(z, m_i) per unit z (as AMICO, Bellagamba
+background the stacked photo-z distributions Sigma_pz(z, m_i) per unit z (as in AMICO, Bellagamba
 et al. 2018); chi^2_i is then x_i^2 = ((ZPHOT_i - z)/s_i)^2, cut at ``pz_nsig_max``.
 
 Outputs follow redMaPPer: LAMBDA, LAMBDA_E = sqrt((1 - <p>) lambda S) with
@@ -122,7 +123,7 @@ SQRT2PI = float(np.sqrt(2.0 * np.pi))
 
 
 def photoz_chisq(nb, z):
-    """(x^2, 2 ln s, usable) of the neighbours' photo-z at the cluster redshift z ([K])."""
+    """Return (x^2, 2 ln s, usable) of the neighbours' photo-z at the cluster redshift z ([K])."""
     usable = (nb.zphot >= 0) & (nb.zphot_e > 0)
     s = jnp.where(usable, nb.zphot_e, 1.0)
     x = (nb.zphot - z) / s
@@ -130,14 +131,14 @@ def photoz_chisq(nb, z):
 
 
 def _filter_terms(nb, z, model: FilterModel, stage: Stage):
-    """lambda-independent per-neighbour terms for one cluster (arrays [K])."""
+    """Return the lambda-independent per-neighbour terms for one cluster (arrays [K])."""
     if model.filter == "photoz":
         return _terms_pz(nb, z, model, stage)
     return _terms_rs(nb, z, model, stage)
 
 
 def _terms_pz(nb, z, model: FilterModel, stage: Stage):
-    """:func:`_filter_terms` of the photo-z filter: rho = p_i(z), Sigma_g = Sigma_pz(z, m)."""
+    """Return the :func:`_filter_terms` of the photo-z filter: rho = p_i(z), Sigma_g = Sigma_pz(z, m)."""
     D = model.mpc_per_deg(z)
     r = jnp.maximum(nb.theta * D, 1e-6)
     mstar = model.mstar(z)
@@ -158,7 +159,7 @@ def _terms_pz(nb, z, model: FilterModel, stage: Stage):
 
 
 def _terms_rs(nb, z, model: FilterModel, stage: Stage):
-    """:func:`_filter_terms` of the red-sequence filter."""
+    """Return the :func:`_filter_terms` of the red-sequence filter."""
     D = model.mpc_per_deg(z)
     r = jnp.maximum(nb.theta * D, 1e-6)
     mstar = model.mstar(z)
@@ -179,14 +180,14 @@ def _terms_rs(nb, z, model: FilterModel, stage: Stage):
 
 
 def _completeness(rl, frad, quad: RadialQuad, model: FilterModel):
-    """K(r_lambda): profile-weighted mean of the radial completeness ``frad`` within r_lambda."""
+    """Return K(r_lambda), the profile-weighted mean of the radial completeness ``frad`` within r_lambda."""
     prof_w = quad.w * 2.0 * jnp.pi * quad.r * prof.nfw_sigma(quad.r, model.nfw_rs, model.nfw_rcore)
     thr = prof.theta_r(quad.r, rl, model.rsig)
     return jnp.sum(prof_w * thr * frad) / jnp.sum(prof_w * thr)
 
 
 def grid_chunk(n: int, k: int, budget: int, cmax: int | None = None) -> int:
-    """Number of grid points to evaluate together over K = ``k`` neighbours.
+    """Return the number of grid points to evaluate together over K = ``k`` neighbours.
 
     The largest divisor c of n (at most ``cmax``) with c * k <= ``budget``, or 1. XLA's GPU
     reduction emitter unrolls (grid points x K / 256) evaluations, times a factor from the
@@ -210,7 +211,7 @@ def _sum_pmem(lam, t, stage, model):
 
 
 def _solve_lambda(t, frad, quad, stage, model, n_grid: int, n_newton: int, lam_lo: float, lam_hi: float):
-    """Root of f(x) = ln sum pmem - x - ln K, x = ln lambda, with exact implicit derivatives.
+    """Return the root of f(x) = ln sum pmem - x - ln K, x = ln lambda, with exact implicit derivatives.
 
     f is evaluated on ``n_grid`` log-spaced values of lambda; the root is bracketed by the last
     grid point with f > 0 and refined by ``n_newton`` safeguarded Newton steps.
@@ -255,7 +256,7 @@ def _solve_lambda(t, frad, quad, stage, model, n_grid: int, n_newton: int, lam_l
 
 def richness_one(nb, z, frad, fgeo, quad: RadialQuad, model: FilterModel, stage: Stage,
                  n_grid: int = 32, n_newton: int = 4, lam_lo: float = 0.5, lam_hi: float = 2000.0):
-    """Richness of one cluster (unbatched arrays); see :func:`richness`."""
+    """Return the richness of one cluster (unbatched arrays); see :func:`richness`."""
     t = _filter_terms(nb, z, model, stage)
     lam, f_lo = _solve_lambda(t, frad, quad, stage, model, n_grid, n_newton, lam_lo, lam_hi)
     s, p, thr, rl = _sum_pmem(lam, t, stage, model)
@@ -283,7 +284,7 @@ def richness_one(nb, z, frad, fgeo, quad: RadialQuad, model: FilterModel, stage:
 def richness(nb: Neighbors, z, frad, fgeo, quad: RadialQuad, model: FilterModel, stage: Stage,
              n_grid: int = 32, n_newton: int = 4, lam_lo: float = 0.5,
              lam_hi: float = 2000.0) -> Richness:
-    """Richness of a batch of clusters.
+    """Return the richness of a batch of clusters.
 
     Parameters
     ----------

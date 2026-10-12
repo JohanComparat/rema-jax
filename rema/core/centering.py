@@ -1,4 +1,4 @@
-"""Choice of the central galaxy.
+"""Chooses the central galaxy of each cluster among its neighbours, with the centring probabilities.
 
 ``center_bcg`` follows redMaPPer's CenteringBCG: among the neighbours within r_lambda (and, in
 scan mode, within ``maxrad`` of the input position), the brightest galaxy that is a likely member
@@ -83,7 +83,7 @@ ZRMOD_IDENTITY = (np.array([0.0, 1.0]), np.array([0.0, 1.0]))
 
 def center_bcg_one(nb, pmem, r, r_lambda, z, maxrad, pmem_min: float = 0.8, nsig: float = 2.0,
                    use_zphot: bool = False):
-    """(index of the central among the neighbours, found flag) for one cluster.
+    """Return the index of the central among the neighbours and a found flag, for one cluster.
 
     The redshift test uses zred, or the photo-z (and its calibrated width) with ``use_zphot``.
     """
@@ -98,7 +98,7 @@ def center_bcg_one(nb, pmem, r, r_lambda, z, maxrad, pmem_min: float = 0.8, nsig
 @partial(jax.jit, static_argnames=("use_zphot",))
 def center_bcg(nb, pmem, r, r_lambda, z, maxrad, pmem_min: float = 0.8, nsig: float = 2.0,
                use_zphot: bool = False):
-    """Batched :func:`center_bcg_one`: indices [B] and found flags [B]."""
+    """Return the central indices [B] and found flags [B] of a batch (:func:`center_bcg_one`, batched)."""
     fn = partial(center_bcg_one, pmem_min=pmem_min, nsig=nsig, use_zphot=use_zphot)
     return jax.vmap(fn, in_axes=(0, 0, 0, 0, 0, None))(nb, pmem, r, r_lambda, z, maxrad)
 
@@ -133,7 +133,7 @@ class WcenModel:
 
     @classmethod
     def create(cls, params: dict, zbkg: ZredBkg, cfg: RemaConfig, zrmod=None) -> "WcenModel":
-        """From the calibration's WCEN values (keys as :data:`WCEN_KEYS`, any case; optional
+        """Build the model from the calibration's WCEN values (keys as :data:`WCEN_KEYS`, any case; optional
         PIVOT, default ``cfg.centering.wcen_pivot``) and the static settings of
         ``cfg.centering``. ``zrmod``: the (z, zred) table of the z -> zred_uncorr mapping
         (:meth:`rema.calibration.ZlambdaCorrection.zrmod_table`); None for zrmod(z) = z."""
@@ -152,7 +152,7 @@ class WcenModel:
 
 
 def wcen_calibrated(params: dict | None) -> bool:
-    """True if ``params`` holds a usable wcen calibration: every key of :data:`WCEN_KEYS`
+    """Return True if ``params`` holds a usable wcen calibration: every key of :data:`WCEN_KEYS`
     finite, and LNW_CEN_SIGMA > 0 and SIGMA_M > 0 (redMaPPer's placeholders are -9999 and 0)."""
     if not params:
         return False
@@ -182,19 +182,19 @@ class Centering:
 
 
 def _gauss(x, mu, s):
-    """Normalised Gaussian N(x; mu, s) (redMaPPer's gaussFunction with A = 1/(sqrt(2 pi) s))."""
+    """Return the normalised Gaussian N(x; mu, s) (redMaPPer's gaussFunction with A = 1/(sqrt(2 pi) s))."""
     return jnp.exp(-0.5 * ((x - mu) / s) ** 2) / (SQRT2PI * s)
 
 
 def _interpol(v, x, xout):
-    """v(x) at ``xout``, linear between the points of the increasing x and extrapolating the end
+    """Return v(x) at ``xout``, linear between the points of the increasing x and extrapolating the end
     segments (redMaPPer's ``interpol``, utilities.py:557-583; jnp.interp would clamp)."""
     s = jnp.clip(jnp.searchsorted(x, xout) - 1, 0, x.shape[0] - 2)
     return (xout - x[s]) * (v[s + 1] - v[s]) / (x[s + 1] - x[s]) + v[s]
 
 
 def _connectivity(ci, xyz, wt, mem, D, r_lambda, rsoft: float):
-    """w of the candidates ``ci`` [kc] (indices into the K neighbours).
+    """Return the connectivity w of the candidates ``ci`` [kc] (indices into the K neighbours).
 
     The [candidates x K] sums run over chunks of candidates (``lax.map``) so that no GPU
     reduction over K is vectorised over many candidates (see ``grid_chunk``).
@@ -221,7 +221,7 @@ def _connectivity(ci, xyz, wt, mem, D, r_lambda, rsoft: float):
 
 
 def center_wcen_one(nb, xyz, zchi, rich, z, maxrad, model: FilterModel, wc: WcenModel) -> Centering:
-    """wcen centring of one cluster (unbatched arrays [K]); see :func:`center_wcen`."""
+    """Return the wcen centring of one cluster (unbatched arrays [K]); see :func:`center_wcen`."""
     K = nb.refmag.shape[0]
     kc = min(wc.ncand, K)
     ng = min(wc.maxcen, kc)
@@ -317,7 +317,7 @@ def center_wcen_one(nb, xyz, zchi, rich, z, maxrad, model: FilterModel, wc: Wcen
 
 @jax.jit
 def center_wcen(nb, xyz, zchi, rich, z, maxrad, model: FilterModel, wc: WcenModel) -> Centering:
-    """wcen centring (redMaPPer's CenteringWcenZred) of a batch of clusters.
+    """Return the wcen centring (redMaPPer's CenteringWcenZred) of a batch of clusters.
 
     Parameters
     ----------
@@ -336,7 +336,7 @@ def center_wcen(nb, xyz, zchi, rich, z, maxrad, model: FilterModel, wc: WcenMode
 
 @partial(jax.jit, static_argnames=("maxcen",))
 def as_centering(ic, found, maxcen: int = 5) -> Centering:
-    """A single central per cluster (CenteringBCG) in the :class:`Centering` layout.
+    """Return a single central per cluster (CenteringBCG) in the :class:`Centering` layout.
 
     index[:, 0] = ic and P_CEN = Q_CEN = 1 in slot 0 where ``found`` (NGOOD = 1, Q_MISS = 0);
     P_SAT, P_FG and P_C are 0 (as redMaPPer's CenteringBCG).
@@ -353,7 +353,7 @@ def as_centering(ic, found, maxcen: int = 5) -> Centering:
 
 # --------------------------------------------------------------------------- LNCGLIKE
 def lncglike_one(nb, rich, z, model: FilterModel, wc: WcenModel):
-    """LNCGLIKE of one cluster (unbatched arrays [K]); see :func:`lncglike`."""
+    """Return LNCGLIKE of one cluster (unbatched arrays [K]); see :func:`lncglike`."""
     lam, scaleval, rl = rich.lam, rich.scaleval, rich.r_lambda
     lam_ok = lam > 0
     lam_s = jnp.where(lam_ok, lam, 1.0)
@@ -387,7 +387,7 @@ def lncglike_one(nb, rich, z, model: FilterModel, wc: WcenModel):
 
 @jax.jit
 def lncglike(nb, rich, z, model: FilterModel, wc: WcenModel):
-    """LNCGLIKE [B]: redMaPPer's likelihood-pass central term (run_likelihoods.py), in log space.
+    """Return LNCGLIKE [B], redMaPPer's likelihood-pass central term (run_likelihoods.py), in log space.
 
     ln N(m_c; m* + Delta0 + Delta1 ln(lambda/pivot), sigma_m) + ln max(N(zred_c; zrmod(z),
     zred_e_c), 1e-10) + ln N(ln w; lnw_cen_mean, lnw_cen_sigma / sigscale) for the central c (the
@@ -401,7 +401,7 @@ def lncglike(nb, rich, z, model: FilterModel, wc: WcenModel):
 
 # --------------------------------------------------------------------------- W column
 def w_column(r, p, refmag, valid, mstar, r_lambda, rsoft: float = 0.05, uselum: bool = True) -> float:
-    """Catalogue connectivity W of one cluster at its final centre (host, numpy).
+    """Return the catalogue connectivity W of one cluster at its final centre (host, numpy).
 
     W = ln[sum p L / sqrt(r^2 + rsoft^2) / ((1/r_lambda) sum p L)], L = 10^(0.4 (m* - m))
     (1 without ``uselum``), over the valid neighbours with p > 0 and r < r_lambda, excluding the

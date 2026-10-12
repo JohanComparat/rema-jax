@@ -1,4 +1,4 @@
-"""Radial, luminosity and colour filters of the matched filter.
+"""Radial, luminosity and colour filters of the red-sequence matched filter.
 
 All functions are pure ``jax.numpy`` and differentiable.
 
@@ -41,7 +41,7 @@ _NTERMS = 10
 
 
 def _series(u, first):
-    """sum_k u^k / (2k + first)."""
+    """Return sum_k u^k / (2k + first), truncated at ``_NTERMS`` terms."""
     out = jnp.zeros_like(u)
     for k in range(_NTERMS - 1, -1, -1):
         out = out * u + 1.0 / (2 * k + first)
@@ -49,7 +49,7 @@ def _series(u, first):
 
 
 def nfw_h(x):
-    """h(x) = arccosh(1/x)/sqrt(1-x^2) (x<1), arccos(1/x)/sqrt(x^2-1) (x>1); h(1) = 1."""
+    """Return h(x) = arccosh(1/x)/sqrt(1-x^2) (x<1), arccos(1/x)/sqrt(x^2-1) (x>1); h(1) = 1."""
     x = jnp.asarray(x)
     u = 1.0 - x * x
     near = jnp.abs(u) < _SERIES_U
@@ -64,7 +64,7 @@ def nfw_h(x):
 
 
 def nfw_F(x):
-    """Projected NFW shape F(x) = (1 - h)/(x^2 - 1); F(1) = 1/3."""
+    """Return the projected NFW shape F(x) = (1 - h)/(x^2 - 1); F(1) = 1/3."""
     x = jnp.asarray(x)
     u = 1.0 - x * x
     near = jnp.abs(u) < _SERIES_U
@@ -74,18 +74,18 @@ def nfw_F(x):
 
 
 def nfw_g(x):
-    """g(x) = ln(x/2) + h(x); the enclosed projected mass is proportional to g."""
+    """Return g(x) = ln(x/2) + h(x); the enclosed projected mass is proportional to g."""
     return jnp.log(x / 2.0) + nfw_h(x)
 
 
 def nfw_sigma(r, rs: float = 0.15, rcore: float = 0.1):
-    """Radial filter Sigma(r) (unnormalised), flat inside ``rcore``; r in h^-1 Mpc."""
+    """Return the radial filter Sigma(r) (unnormalised), flat inside ``rcore``; r in h^-1 Mpc."""
     r = jnp.asarray(r)
     return nfw_F(jnp.maximum(r, rcore) / rs)
 
 
 def nfw_enclosed(r, rs: float = 0.15, rcore: float = 0.1):
-    """int_0^r 2 pi r' Sigma(r') dr' for :func:`nfw_sigma` (closed form)."""
+    """Return int_0^r 2 pi r' Sigma(r') dr' for :func:`nfw_sigma` (closed form)."""
     r = jnp.asarray(r)
     xc = rcore / rs
     fc = nfw_F(jnp.asarray(xc))
@@ -95,19 +95,19 @@ def nfw_enclosed(r, rs: float = 0.15, rcore: float = 0.1):
 
 
 def nfw_norm(r_lambda, rs: float = 0.15, rcore: float = 0.1):
-    """Normalisation N(r_lambda) = 1 / int_0^{r_lambda} 2 pi r Sigma dr of the radial filter."""
+    """Return the normalisation N(r_lambda) = 1 / int_0^{r_lambda} 2 pi r Sigma dr of the radial filter."""
     return 1.0 / nfw_enclosed(r_lambda, rs, rcore)
 
 
 def theta_r(r, r_lambda, rsig: float = 0.05):
-    """Soft radial cut 1/2 [1 + erf((r_lambda - r)/(sqrt(2) rsig))]."""
+    """Return the soft radial cut 1/2 [1 + erf((r_lambda - r)/(sqrt(2) rsig))]."""
     return 0.5 * (1.0 + erf((r_lambda - r) / (np.sqrt(2.0) * rsig)))
 
 
 # --------------------------------------------------------------------------- luminosity
 
 def schechter(m, mstar, alpha: float = -1.0):
-    """Schechter function in magnitudes (unnormalised)."""
+    """Return the Schechter function phi(m) in magnitudes (unnormalised)."""
     x = 10.0 ** (0.4 * (mstar - m))
     return x ** (alpha + 1.0) * jnp.exp(-x)
 
@@ -119,7 +119,7 @@ def _gl(n: int):
 
 
 def lumnorm(mstar, maxmag, alpha: float = -1.0, n: int = 64, bright: float = 8.0):
-    """int_{-inf}^{maxmag} phi(m) dm by Gauss-Legendre on [m* - bright, maxmag].
+    """Return int_{-inf}^{maxmag} phi(m) dm, computed by Gauss-Legendre on [m* - bright, maxmag].
 
     For alpha = -1 this equals 2.5/ln(10) * E1(10^{0.4 (m* - maxmag)}).
     """
@@ -134,8 +134,9 @@ def lumnorm(mstar, maxmag, alpha: float = -1.0, n: int = 64, bright: float = 8.0
 
 
 def selection_fraction(mstar, maxmag, alpha: float, mag_max):
-    """Fraction of the luminosity function brighter than ``maxmag`` that is brighter than
-    ``mag_max`` too: lumnorm(m*, min(maxmag, mag_max)) / lumnorm(m*, maxmag).
+    """Return the fraction of the luminosity function brighter than ``maxmag`` that is also brighter than ``mag_max``.
+
+    The fraction is lumnorm(m*, min(maxmag, mag_max)) / lumnorm(m*, maxmag).
 
     >>> round(float(selection_fraction(20.0, 21.75, -1.0, 30.0)), 6)
     1.0
@@ -149,12 +150,12 @@ def selection_fraction(mstar, maxmag, alpha: float, mag_max):
 
 
 def theta_i(m, maxmag, sigma_m):
-    """Soft luminosity cut 1/2 [1 + erf((maxmag - m)/(sqrt(2) sigma_m))]."""
+    """Return the soft luminosity cut 1/2 [1 + erf((maxmag - m)/(sqrt(2) sigma_m))]."""
     return 0.5 * (1.0 + erf((maxmag - m) / (np.sqrt(2.0) * jnp.maximum(sigma_m, 1e-4))))
 
 
 def maxmag_from_mstar(mstar, lval: float = 0.2):
-    """Faint limit of the richness, m*(z) - 2.5 log10(L_min/L*)."""
+    """Return the faint limit of the richness, m*(z) - 2.5 log10(L_min/L*)."""
     return mstar - 2.5 * np.log10(lval)
 
 
@@ -185,11 +186,12 @@ class MStar:
         self.m = CubicSpline(z, m, bc_type="natural")(self.z)
 
     def __call__(self, z):
+        """Return m*(z), linearly interpolated on the fine grid."""
         return jnp.interp(z, self.z, self.m)
 
 
 def _table_path(name: str, kind: str) -> str:
-    """Packaged table ``<kind>_<name>.fits`` or an explicit path."""
+    """Return the path of the packaged table ``<kind>_<name>.fits``, or ``name`` if it is a FITS path."""
     if name.endswith((".fits", ".fit")):
         return name
     return str(resources.files("rema.data").joinpath(f"{kind}_{name}.fits"))
@@ -198,7 +200,7 @@ def _table_path(name: str, kind: str) -> str:
 # --------------------------------------------------------------------------- colour
 
 def chisq_pdf(chisq, k: int):
-    """chi^2 probability density with k degrees of freedom."""
+    """Return the chi^2 probability density with k degrees of freedom."""
     chisq = jnp.maximum(jnp.asarray(chisq), 1e-30)
     half = 0.5 * k
     return jnp.exp((half - 1.0) * jnp.log(chisq) - 0.5 * chisq - half * np.log(2.0)

@@ -1,7 +1,6 @@
-"""Run configuration.
+"""Defines the run configuration :class:`RemaConfig`, written to and read from YAML.
 
-A :class:`RemaConfig` is a tree of frozen dataclasses, one per stage, written to and read from
-YAML. Defaults follow the redMaPPer v0.7.7 configuration of the DR10 run (``run_zred_iter1.yml``); the
+It is a tree of frozen dataclasses, one per stage. Defaults follow the redMaPPer v0.7.7 configuration of the DR10 run (``run_zred_iter1.yml``); the
 redMaPPer key a field corresponds to is given in its comment when the name differs.
 
 >>> cfg = RemaConfig()
@@ -63,7 +62,7 @@ class CosmologyConfig:
     ``Omega_m`` includes the neutrinos. The finder only sees the expansion history: D_A(z) in
     h^-1 Mpc sets every aperture and E(z) the zred volume factor, so ``Omega_b`` has no effect and
     ``h`` enters only through the radiation and neutrino densities. ``Omega_b`` and ``sum_mnu``
-    are ggah_mod's defaults, the values used before they were configurable.
+    default to ggah_mod's values.
 
     >>> c = CosmologyConfig(Omega_m=0.25)
     >>> c.label()
@@ -80,17 +79,17 @@ class CosmologyConfig:
     wa: float = 0.0
 
     def to_ggah(self):
-        """The ggah_mod :class:`~ggah_mod.cosmology.Cosmology` (validated)."""
+        """Return the ggah_mod :class:`~ggah_mod.cosmology.Cosmology` (validated)."""
         from ggah_mod.cosmology import Cosmology
 
         return Cosmology.create(**dataclasses.asdict(self))
 
     def header(self) -> dict[str, float]:
-        """FITS keywords of the cosmology."""
+        """Return the FITS keywords of the cosmology."""
         return {key: float(getattr(self, name)) for name, key in _COSMO_KEYS.items()}
 
     def label(self) -> str:
-        """The parameters that differ from the defaults, ``'fiducial'`` when none do."""
+        """Return the parameters that differ from the defaults, ``'fiducial'`` when none do."""
         ref = CosmologyConfig()
         diff = [f"{f.name}={getattr(self, f.name):g}" for f in dataclasses.fields(self)
                 if getattr(self, f.name) != getattr(ref, f.name)]
@@ -102,7 +101,7 @@ _COSMO_KEYS = {"Omega_m": "OMEGAM", "h": "HUBBLE", "Omega_b": "OMEGAB", "sum_mnu
 
 
 def parse_cosmology_overrides(items) -> dict[str, float]:
-    """``["Omega_m=0.25", "w0=-0.8,wa=0.1"]`` -> ``{"Omega_m": 0.25, "w0": -0.8, "wa": 0.1}``.
+    """Return the cosmology overrides ``KEY=VALUE`` (comma-separated within an item) as a dict of floats.
 
     >>> parse_cosmology_overrides(["Omega_m=0.25", "w0=-0.8,wa=0.1"])
     {'Omega_m': 0.25, 'w0': -0.8, 'wa': 0.1}
@@ -178,7 +177,7 @@ class PhotozConfig:
 
 @dataclass(frozen=True)
 class PscdConfig:
-    """``rema pscd``: Photo-z Space Cluster Detection, the AMICO matched filter (Bellagamba et al.
+    """Settings of ``rema pscd`` (Photo-z Space Cluster Detection), the AMICO matched filter (Bellagamba et al.
     2018; Maturi et al. 2019) in (position, magnitude, photo-z). The galaxy photo-z, their
     magnitude limit (``photoz.mag_max``) and the noise are those of :class:`PhotozConfig`.
 
@@ -397,7 +396,7 @@ class RemaConfig:
         return cls.from_dict(yaml.safe_load(Path(path).read_text()))
 
     def replace(self, **sections: Any) -> "RemaConfig":
-        """Copy with whole sections, or ``section={"key": value}`` updates, replaced.
+        """Return a copy with whole sections, or ``section={"key": value}`` updates, replaced.
 
         >>> RemaConfig().replace(model={"chisq_mode": "mag"}).model.chisq_mode
         'mag'
@@ -412,7 +411,7 @@ class RemaConfig:
 
 
 def apply_overrides(cfg: RemaConfig, items) -> RemaConfig:
-    """``cfg`` with ``SECTION.KEY[.SUB]=VALUE`` overrides (VALUE read as YAML).
+    """Return ``cfg`` with ``SECTION.KEY[.SUB]=VALUE`` overrides applied (VALUE read as YAML).
 
     An item ``@FILE`` merges a partial YAML configuration (e.g. ``model: {filter: photoz}``).
     Nested sections are merged, so the other keys keep their values; unknown keys are rejected.
@@ -454,7 +453,7 @@ def _merge(d: dict, upd: dict, where: str) -> None:
 
 
 def _to_plain(obj: Any) -> Any:
-    """Tuples -> lists so that the YAML is plain; keeps nested dicts."""
+    """Return ``obj`` with tuples turned into lists, recursing into dicts, so that the YAML is plain."""
     if isinstance(obj, dict):
         return {k: _to_plain(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
@@ -482,7 +481,7 @@ def _build(cls: type, d: dict[str, Any]) -> Any:
 
 
 def _is_float(ftype: Any) -> bool:
-    """A ``float`` or ``float | None`` annotation."""
+    """Return True for a ``float`` or ``float | None`` annotation."""
     import types
     import typing
 

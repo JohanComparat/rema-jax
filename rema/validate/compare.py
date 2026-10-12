@@ -1,6 +1,8 @@
-"""Comparison of two cluster catalogues (e.g. rema vs redMaPPer DR10, or vs ACT/DES).
+"""Comparison of two cluster catalogues (e.g. rema against redMaPPer DR10, or against ACT/DES).
 
-``match_catalogs`` pairs clusters one to one: candidate pairs within ``radius_arcmin`` and
+This module matches clusters between catalogues and returns recovery and agreement statistics:
+between a test and a reference catalogue, between two runs of rema on the same galaxies, and
+between different finders. ``match_catalogs`` pairs clusters one to one: candidate pairs within ``radius_arcmin`` and
 |dz| < ``dz_max`` (1 + z) are taken in order of increasing separation. ``summary`` then reports,
 for a richness threshold applied to each side, the fraction of the reference catalogue recovered
 and the fraction of the test catalogue confirmed, the median and robust scatter of ln(lambda
@@ -16,7 +18,11 @@ from ..sky.neighbors import unit_vectors
 
 
 def match_catalogs(ra1, dec1, z1, ra2, dec2, z2, radius_arcmin: float = 1.0, dz_max: float = 0.05):
-    """One-to-one matches between catalogue 1 and 2. Returns (i1, i2, separation_arcmin)."""
+    """Return the one-to-one matches between catalogues 1 and 2 as (i1, i2, separation_arcmin).
+
+    Candidate pairs within ``radius_arcmin`` and |z1 - z2| < ``dz_max`` (1 + z2) are taken in order
+    of increasing separation.
+    """
     x1, x2 = unit_vectors(ra1, dec1), unit_vectors(ra2, dec2)
     chord = 2 * np.sin(np.radians(radius_arcmin / 60.0) / 2)
     pairs = cKDTree(x2).query_ball_point(x1, chord)
@@ -45,7 +51,11 @@ def match_catalogs(ra1, dec1, z1, ra2, dec2, z2, radius_arcmin: float = 1.0, dz_
 def summary(test: dict, ref: dict, lam_min: float = 20.0, radius_arcmin: float = 1.0,
             dz_max: float = 0.05, lam_col_test: str = "LAMBDA", lam_col_ref: str = "LAMBDA",
             z_col_test: str = "Z_LAMBDA", z_col_ref: str = "Z_LAMBDA") -> dict:
-    """Recovery and agreement statistics between a test and a reference catalogue."""
+    """Return the recovery and agreement statistics between a test and a reference catalogue.
+
+    Clusters with richness >= ``lam_min`` on either side of a match enter the ln(lambda ratio) and
+    dz/(1 + z) statistics.
+    """
     i1, i2, sep = match_catalogs(test["RA"], test["DEC"], test[z_col_test], ref["RA"], ref["DEC"],
                                  ref[z_col_ref], radius_arcmin, dz_max)
     lt, lr = np.asarray(test[lam_col_test], float), np.asarray(ref[lam_col_ref], float)
@@ -70,27 +80,31 @@ def summary(test: dict, ref: dict, lam_min: float = 20.0, radius_arcmin: float =
 
 # --------------------------------------------------------------------------- two runs of rema
 def _nmad(x):
+    """Return 1.4826 times the median absolute deviation of the finite values (nan if none)."""
     x = np.asarray(x, float)
     x = x[np.isfinite(x)]
     return float(1.4826 * np.median(np.abs(x - np.median(x)))) if x.size else np.nan
 
 
 def _central(cat):
+    """Return the ID of the most likely central galaxy, ID_CENT[:, 0] (or ID_CENT if 1-d)."""
     ids = np.asarray(cat["ID_CENT"])
     return ids[:, 0] if ids.ndim == 2 else ids
 
 
 def _unique_rows(keys, rows):
-    """Keys that occur once among ``rows``, and their rows."""
+    """Return the keys that occur once among ``rows``, and their rows."""
     u, first, n = np.unique(keys[rows], return_index=True, return_counts=True)
     return u[n == 1], rows[first[n == 1]]
 
 
 def match_by_central(a: dict, b: dict, radius_arcmin: float = 1.0, dz_max: float = 0.02):
-    """One-to-one matches between two runs of the finder on the same galaxies (e.g. in two
-    cosmologies): the same central galaxy (ID_CENT[:, 0]), then the same seed (SEED_ID), then
-    the nearest within ``radius_arcmin`` and |dz| < dz_max (1 + z). Returns (ia, ib, how) with
-    how = 0, 1, 2 for the three rules."""
+    """Return the one-to-one matches between two runs of the finder on the same galaxies, as (ia, ib, how).
+
+    The runs may differ, for example, in cosmology. The rules apply in turn: the same central
+    galaxy (ID_CENT[:, 0]), then the same seed (SEED_ID), then the nearest within
+    ``radius_arcmin`` and |dz| < dz_max (1 + z); ``how`` = 0, 1, 2 gives the rule.
+    """
     ia, ib, how = [], [], []
     free_a = np.ones(len(a["RA"]), bool)
     free_b = np.ones(len(b["RA"]), bool)
@@ -116,8 +130,11 @@ def match_by_central(a: dict, b: dict, radius_arcmin: float = 1.0, dz_max: float
 
 
 def member_overlap(mem_a: dict, mem_b: dict, mmid_a, mmid_b, col: str = "PMEM") -> np.ndarray:
-    """For matched clusters (MEM_MATCH_ID pairs), sum_i min(p_a, p_b) / sum_i max(p_a, p_b) over
-    the union of their members (1: the same membership)."""
+    """Return, for matched clusters (MEM_MATCH_ID pairs), the member overlap of their memberships.
+
+    The overlap is sum_i min(p_a, p_b) / sum_i max(p_a, p_b) over the union of their members, with
+    p from column ``col``; 1 is the same membership.
+    """
     key = lambda m, mm: (np.asarray(m["MEM_MATCH_ID"], np.int64), np.asarray(m["ID"], np.int64),
                          np.asarray(m[col], float))
     ma, ia_, pa = key(mem_a, mmid_a)
@@ -139,7 +156,7 @@ def member_overlap(mem_a: dict, mem_b: dict, mmid_a, mmid_b, col: str = "PMEM") 
 
 def rerun_summary(a: dict, b: dict, lam_edges, z_edges, lam_min: float = 20.0, mem_a=None,
                   mem_b=None) -> dict:
-    """Changes between a reference run ``a`` and a re-run ``b`` of the same region.
+    """Return the changes between a reference run ``a`` and a re-run ``b`` of the same region.
 
     Matched clusters with lambda_a >= lam_min: median and NMAD of d ln(lambda), d ln(R_lambda),
     dz_lambda and dP_CEN[0], the fraction whose centre changed, the member overlap; the clusters
@@ -189,10 +206,12 @@ def rerun_summary(a: dict, b: dict, lam_edges, z_edges, lam_min: float = 20.0, m
 # --------------------------------------------------------------------------- different finders
 def match_physical(ra1, dec1, z1, ra2, dec2, z2, mpc_per_deg, rmax: float = 1.0, dz_max: float = 0.05,
                    rank2=None):
-    """One-to-one matches within a projected distance ``rmax`` [h^-1 Mpc] at z1 and
-    |z2 - z1| / (1 + z1) < ``dz_max``. Each object 1, in input order, takes the best-ranked free
-    object 2 (``rank2``, higher is better; default the closest). ``mpc_per_deg(z)``: h^-1 Mpc per
-    degree (e.g. :meth:`rema.model.cosmo.CosmoTable.mpc_per_deg`). Returns (i1, i2, distance).
+    """Return the one-to-one matches between objects of two finders as (i1, i2, distance).
+
+    Pairs lie within a projected distance ``rmax`` [h^-1 Mpc] at z1 and |z2 - z1| / (1 + z1) <
+    ``dz_max``; objects need a finite z > 0. Each object 1, in input order, takes the best-ranked
+    free object 2 (``rank2``, higher is better; default the closest). ``mpc_per_deg(z)`` gives
+    h^-1 Mpc per degree (e.g. :meth:`rema.model.cosmo.CosmoTable.mpc_per_deg`).
 
     >>> d = lambda z: 1000.0 * np.ones_like(np.asarray(z, float))      # 1000 h^-1 Mpc per degree
     >>> i1, i2, r = match_physical([10.0, 20.0], [0.0, 0.0], [0.3, 0.5], [10.0005, 20.0], [0.0, 0.0],
@@ -241,9 +260,10 @@ def match_physical(ra1, dec1, z1, ra2, dec2, z2, mpc_per_deg, rmax: float = 1.0,
 
 
 def null_threshold(real, null, area: float, rate: float):
-    """The threshold t on a detection statistic above which (strictly) the null run has at most
-    ``rate`` detections per deg^2 of ``area``, and the estimated purity of the real run above it,
-    1 - n_null(> t) / n_real(> t).
+    """Return the null-test threshold t on a detection statistic and the purity of the real run above it.
+
+    Above t (strictly) the null run has at most ``rate`` detections per deg^2 of ``area``; the
+    estimated purity of the real run above t is 1 - n_null(> t) / n_real(> t).
 
     >>> t, purity = null_threshold([5.0, 6.0, 9.0, 12.0], [4.0, 5.5, 7.0], 10.0, 0.1)
     >>> t, round(purity, 3)

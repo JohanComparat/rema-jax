@@ -38,9 +38,11 @@ class Box:
 
     @property
     def is_ring(self) -> bool:
+        """True when the box spans all RA."""
         return self.ra_max - self.ra_min >= 360.0
 
     def contains(self, ra, dec):
+        """Return the mask of points (ra, dec) in degrees inside the box (upper edges excluded)."""
         ra = np.asarray(ra, dtype=np.float64)
         dec = np.asarray(dec, dtype=np.float64)
         width = self.ra_max - self.ra_min
@@ -51,7 +53,7 @@ class Box:
         return in_ra & (dec >= self.dec_min) & (dec < self.dec_max)
 
     def buffered(self, deg: float) -> "Box":
-        """The box grown so that it holds every point within ``deg`` degrees of this one.
+        """Return the box grown so that it holds every point within ``deg`` degrees of this one.
 
         Dec grows by ``deg``. RA grows by the exact half-width of a cap of radius ``deg`` at the
         box's largest |Dec|, asin(sin deg / cos |Dec|max). A box whose buffer reaches a pole (or
@@ -70,7 +72,7 @@ class Box:
         return Box(self.ra_min - dra, self.ra_max + dra, dec_lo, dec_hi)
 
     def intersection(self, other: "Box") -> list["Box"]:
-        """Intersection with ``other`` as 0, 1 or 2 boxes (two when RA ranges meet at both ends).
+        """Return the intersection with ``other`` as 0, 1 or 2 boxes (two when RA ranges meet at both ends).
 
         >>> Box(350, 370, 0, 5).intersection(Box(5, 355, -1, 1))
         [Box(ra_min=350.0, ra_max=355.0, dec_min=0.0, dec_max=1.0), Box(ra_min=5.0, ra_max=10.0, dec_min=0.0, dec_max=1.0)]
@@ -95,7 +97,7 @@ class Box:
         return out
 
     def union(self, other: "Box") -> "Box":
-        """Bounding box of two boxes (see :func:`bounding_box` for RA wrap)."""
+        """Return the bounding box of two boxes (see :func:`bounding_box` for RA wrap)."""
         return bounding_box([self, other])
 
     def overlaps(self, other) -> bool:
@@ -111,6 +113,7 @@ class Box:
         return d < aw or (360.0 - d) < bw
 
     def area_deg2(self) -> float:
+        """Return the area of the box on the sphere, in deg^2."""
         dra = np.radians(min(360.0, self.ra_max - self.ra_min))
         return float(np.degrees(np.degrees(dra * (np.sin(np.radians(self.dec_max))
                                                    - np.sin(np.radians(self.dec_min))))))
@@ -147,11 +150,11 @@ class BoxUnion:
         return any(o.overlaps(b) for b in self.boxes for o in other.boxes)
 
     def intersect(self, box: Box) -> "BoxUnion | Box | None":
-        """Intersection with a box: a Box, a BoxUnion, or None when empty."""
+        """Return the intersection with a box: a Box, a BoxUnion, or None when empty."""
         return _union_or_box([p for b in self.boxes for p in b.intersection(box)])
 
     def area_deg2(self) -> float:
-        """Sum of the areas (the boxes are disjoint)."""
+        """Return the sum of the areas in deg^2 (the boxes are disjoint)."""
         return float(sum(b.area_deg2() for b in self.boxes))
 
     def bounding(self) -> Box:
@@ -169,12 +172,12 @@ def _union_or_box(pieces: list[Box]):
 
 
 def intersect(a, b):
-    """Intersection of two boxes or unions: a Box, a BoxUnion, or None when empty."""
+    """Return the intersection of two boxes or unions: a Box, a BoxUnion, or None when empty."""
     return _union_or_box([p for x in a.boxes for y in b.boxes for p in x.intersection(y)])
 
 
 def sweep_box(name: str | Path) -> Box:
-    """Sky box covered by a sweep (or photo-z sweep, or per-sweep galaxy table) file name."""
+    """Return the sky box covered by a sweep (or photo-z sweep, or per-sweep galaxy table) file name."""
     m = _SWEEP.search(Path(name).name)
     if m is None:
         raise ValueError(f"not a sweep file name: {name}")
@@ -184,7 +187,7 @@ def sweep_box(name: str | Path) -> Box:
 
 
 def sweep_union(names) -> Box | BoxUnion:
-    """Sky covered by a set of sweeps: one Box when they tile a rectangle, else a BoxUnion.
+    """Return the sky covered by a set of sweeps: one Box when they tile a rectangle, else a BoxUnion.
 
     >>> sweep_union(["sweep-000m005-005p000.fits", "sweep-000m010-005m005.fits"])
     Box(ra_min=0.0, ra_max=5.0, dec_min=-10.0, dec_max=0.0)
@@ -199,7 +202,10 @@ def sweep_union(names) -> Box | BoxUnion:
 
 
 def sweeps_overlapping(box, sweep_dir: str | Path, pattern: str = "sweep-*.fits") -> list[Path]:
-    """Files in ``sweep_dir`` (sweeps, or per-sweep galaxy tables) whose box overlaps ``box``."""
+    """Return the files in ``sweep_dir`` (sweeps, or per-sweep galaxy tables) whose box overlaps ``box``.
+
+    Photo-z sweeps (``*-pz.fits``) and names that are not sweep names are skipped.
+    """
     out = []
     for p in sorted(Path(sweep_dir).glob(pattern)):
         if p.name.endswith("-pz.fits"):
@@ -213,8 +219,10 @@ def sweeps_overlapping(box, sweep_dir: str | Path, pattern: str = "sweep-*.fits"
 
 
 def bounding_box(boxes: list[Box]) -> Box:
-    """Smallest RA/Dec box holding all the boxes, with RA wrap: the box starts after the largest
-    RA gap between them (so sweeps at RA 355-360 and 0-5 give RA 355-365, not 0-360).
+    """Return the smallest RA/Dec box holding all the boxes, with RA wrap.
+
+    The box starts after the largest RA gap between them, so sweeps at RA 355-360 and 0-5 give
+    RA 355-365.
 
     >>> bounding_box([Box(355, 360, 0, 5), Box(0, 5, 0, 5)])
     Box(ra_min=355.0, ra_max=365.0, dec_min=0.0, dec_max=5.0)
@@ -246,8 +254,11 @@ def bounding_box(boxes: list[Box]) -> Box:
 
 
 def sky_header(sky) -> dict:
-    """FITS header keys describing a Box (BOXRA0, BOXRA1, BOXDEC0, BOXDEC1) or a BoxUnion
-    (NBOX and B01RA0, B01RA1, B01DEC0, B01DEC1, ...)."""
+    """Return the FITS header keys describing a Box or a BoxUnion.
+
+    A Box gives BOXRA0, BOXRA1, BOXDEC0, BOXDEC1; a BoxUnion gives NBOX and B01RA0, B01RA1,
+    B01DEC0, B01DEC1, ...; None gives no keys.
+    """
     if sky is None:
         return {}
     if isinstance(sky, Box):
@@ -261,7 +272,7 @@ def sky_header(sky) -> dict:
 
 
 def sky_from_header(hdr) -> Box | BoxUnion | None:
-    """Inverse of :func:`sky_header` (None when the header describes no sky)."""
+    """Return the sky described by a header, the inverse of :func:`sky_header` (None when it describes no sky)."""
     if "NBOX" in hdr:
         return BoxUnion(tuple(Box(float(hdr[f"B{i:02d}RA0"]), float(hdr[f"B{i:02d}RA1"]),
                                   float(hdr[f"B{i:02d}DEC0"]), float(hdr[f"B{i:02d}DEC1"]))
@@ -273,6 +284,6 @@ def sky_from_header(hdr) -> Box | BoxUnion | None:
 
 
 def sky_union(boxes) -> Box | BoxUnion:
-    """One Box, or a BoxUnion of several (for repeated ``--box`` options)."""
+    """Return one Box, or a BoxUnion of several (for repeated ``--box`` options)."""
     boxes = list(boxes)
     return boxes[0] if len(boxes) == 1 else BoxUnion(tuple(boxes))

@@ -1,4 +1,4 @@
-"""Re-measurement of catalogued clusters at fixed centres, in other cosmologies.
+"""Re-measures catalogued clusters at fixed centres in other cosmologies.
 
 The cluster finder depends on the cosmology through the angular diameter distance D_A(z) in
 h^-1 Mpc (every aperture, the background per (h^-1 Mpc)^2, the mask quadrature) and through E(z)
@@ -65,7 +65,7 @@ class Centres:
 
 def centres_from_catalog(region: Region, cat: Mapping[str, np.ndarray],
                          rows: np.ndarray | None = None) -> Centres:
-    """Centres (ID_CENT[:, 0]) and start redshifts (Z_LAMBDA_RAW, else Z_LAMBDA) of catalogue rows."""
+    """Return the centres (ID_CENT[:, 0]) and start redshifts (Z_LAMBDA_RAW, else Z_LAMBDA) of catalogue rows."""
     ids = np.asarray(cat["ID_CENT"])
     ids = ids[:, 0] if ids.ndim == 2 else ids
     z0 = np.asarray(cat["Z_LAMBDA_RAW"] if "Z_LAMBDA_RAW" in cat else cat["Z_LAMBDA"], np.float64)
@@ -81,7 +81,7 @@ def centres_from_catalog(region: Region, cat: Mapping[str, np.ndarray],
 
 
 def stage_and_quad(cfg) -> tuple[Stage, RadialQuad]:
-    """The percolation aperture and its radial quadrature (as the blind mode's final step)."""
+    """Return the percolation aperture and its radial quadrature (as the blind mode's final step)."""
     rc = cfg.richness
     st = Stage.make(rc.percolation.r0, rc.percolation.beta, rc.maxrad_factor)
     q = RadialQuad.make(rmax=rc.percolation.r0 * 20.0 ** rc.percolation.beta + 5 * cfg.model.rsig)
@@ -150,7 +150,7 @@ class MemberPfree:
 
 def remeasure(region: Region, centres: Centres, *, pfree=None, fixed_z: bool = False,
               batch: int = 1024) -> dict[str, np.ndarray]:
-    """lambda, z_lambda and the aperture columns of the clusters in the region's cosmology.
+    """Return lambda, z_lambda and the aperture columns of the clusters in the region's cosmology.
 
     z_lambda is iterated from ``centres.z0`` (Z_LAMBDA_RAW, Z_LAMBDA_E_RAW before the calibrated
     correction; Z_LAMBDA, Z_LAMBDA_E after it), unless ``fixed_z``. ``pfree``: a
@@ -170,7 +170,7 @@ def remeasure(region: Region, centres: Centres, *, pfree=None, fixed_z: bool = F
 
 
 def cosmology_grid(base: CosmologyConfig, vary: Mapping[str, Sequence[float]]) -> dict[str, CosmologyConfig]:
-    """The base cosmology and one-at-a-time variations, keyed by label (base first).
+    """Return the base cosmology and one-at-a-time variations, keyed by label (base first).
 
     >>> list(cosmology_grid(CosmologyConfig(), {"Omega_m": [0.25, 0.35], "w0": [-0.8]}))
     ['fiducial', 'Omega_m=0.25', 'Omega_m=0.35', 'w0=-0.8']
@@ -189,7 +189,7 @@ def remeasure_cosmologies(region: Region, centres: Centres,
                           cosmologies: Mapping[str, CosmologyConfig], *, pfree=None,
                           fixed_z: bool = False, mstar_follows: bool = False,
                           batch: int = 1024) -> dict[str, dict[str, np.ndarray]]:
-    """:func:`remeasure` in each cosmology (zred recomputed; see :meth:`Region.with_cosmology`)."""
+    """Run :func:`remeasure` in each cosmology (zred recomputed; see :meth:`Region.with_cosmology`)."""
     res = {}
     for label, c in cosmologies.items():
         reg = region.with_cosmology(c, mstar_follows=mstar_follows)
@@ -203,7 +203,7 @@ def remeasure_cosmologies(region: Region, centres: Centres,
 
 @jax.jit
 def _richness_jvp(nb, z, frad, fgeo, quad, model, stage, dcosmo):
-    """(ln lambda, SCALEVAL, MASKFRAC) and their derivatives along ``dcosmo`` and along z."""
+    """Return (ln lambda, SCALEVAL, MASKFRAC) and their derivatives along ``dcosmo`` and along z."""
     def f(cosmo, zz):
         r = richness(nb, zz, frad, fgeo, quad, dataclasses.replace(model, cosmo=cosmo), stage)
         return jnp.log(jnp.maximum(r.lam, 1e-30)), r.scaleval, r.maskfrac
@@ -216,7 +216,7 @@ def _richness_jvp(nb, z, frad, fgeo, quad, model, stage, dcosmo):
 
 def response_jvp(region: Region, centres: Centres, params: Sequence[str] = ("Omega_m", "w0"), *,
                  z: np.ndarray | None = None, pfree=None, batch: int = 1024) -> dict[str, np.ndarray]:
-    """Derivatives at fixed redshift ``z`` (default ``centres.z0``) and fixed centre.
+    """Return the derivatives at fixed redshift ``z`` (default ``centres.z0``) and fixed centre.
 
     Columns: LNLAMBDA, DLNLAMBDA_DZ, and per parameter P: DLNLAMBDA_D<P>, DSCALEVAL_D<P>,
     DMASKFRAC_D<P> (the last two without the change of the mask completeness with D_A). The
@@ -246,7 +246,7 @@ def response_jvp(region: Region, centres: Centres, params: Sequence[str] = ("Ome
 
 def response_fd(region: Region, centres: Centres, steps: Mapping[str, float], *, pfree=None,
                 fixed_z: bool = True, batch: int = 1024) -> dict[str, np.ndarray]:
-    """Central differences d ln(lambda)/d(theta) (fixed redshift by default), for checking
+    """Return central differences d ln(lambda)/d(theta) (fixed redshift by default), for checking
     :func:`response_jvp`: DLNLAMBDA_D<P>_FD."""
     out = {}
     base = region.cfg.cosmology
@@ -263,7 +263,7 @@ def response_fd(region: Region, centres: Centres, steps: Mapping[str, float], *,
 
 
 def galaxies_near(gal: Mapping[str, np.ndarray], ra, dec, radius_deg, nside: int = 512) -> dict:
-    """The galaxies in the HEALPix pixels (``nside``) touching a disc of ``radius_deg`` (per
+    """Return the galaxies in the HEALPix pixels (``nside``) touching a disc of ``radius_deg`` (per
     centre) around any centre: a superset of those within the discs, to re-measure a few clusters
     of a large table without computing zred for all of it."""
     import healpy as hp
@@ -286,7 +286,7 @@ CAT_VALUES = ("LAMBDA", "Z_LAMBDA", "Z_LAMBDA_RAW", "R_LAMBDA", "SCALEVAL", "MAS
 
 
 def parse_vary(items) -> dict[str, list[float]]:
-    """``["Omega_m=0.25,0.35", "w0=-0.8"]`` -> ``{"Omega_m": [0.25, 0.35], "w0": [-0.8]}``.
+    """Return the one-at-a-time variations ``KEY=V1,V2,...`` as a dict of lists of floats.
 
     >>> parse_vary(["Omega_m=0.25,0.35", "w0=-0.8"])
     {'Omega_m': [0.25, 0.35], 'w0': [-0.8]}
@@ -305,7 +305,7 @@ def write_remeasure(path, cat: Mapping[str, np.ndarray], centres: Centres,
                     results: Mapping[str, Mapping[str, np.ndarray]],
                     cosmologies: Mapping[str, CosmologyConfig],
                     extra: Mapping[str, np.ndarray] | None = None, header: Mapping | None = None):
-    """CLUSTERS (catalogue identity and values, then each column of :data:`COLUMNS` as
+    """Write the CLUSTERS (catalogue identity and values, then each column of :data:`COLUMNS` as
     [n_cluster, n_cosmology] in the order of COSMOLOGIES, then ``extra``) and COSMOLOGIES HDUs."""
     from ..io.tables import table_hdu, write_fits
 
@@ -332,7 +332,7 @@ def write_remeasure(path, cat: Mapping[str, np.ndarray], centres: Centres,
 
 
 def read_remeasure(path) -> tuple[dict, list[str], dict]:
-    """(clusters, cosmology labels, primary header) of a :func:`write_remeasure` file."""
+    """Return (clusters, cosmology labels, primary header) of a :func:`write_remeasure` file."""
     from astropy.io import fits
 
     from ..io.tables import read_table

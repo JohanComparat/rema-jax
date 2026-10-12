@@ -1,6 +1,7 @@
 """HEALPix NESTED pixel indexing in JAX (for on-device map lookups).
 
-A transcription of ``ang2pix_nest_z_phi`` from the HEALPix C library (Gorski et al. 2005). Pixel
+This module computes HEALPix NESTED pixel numbers of (RA, Dec) inside jitted code. It transcribes
+``ang2pix_nest_z_phi`` from the HEALPix C library (Gorski et al. 2005). Pixel
 numbers are int32, which covers nside <= 8192. Galaxy pixels are computed on the host with
 healpy; this version serves quadrature points inside jitted code. In float32 a small fraction of
 points within ~1e-7 rad of a pixel edge can land in the neighbouring pixel, which is harmless
@@ -21,7 +22,7 @@ TWOTHIRD = 2.0 / 3.0
 
 
 def _spread_bits(v):
-    """Interleave the low 16 bits of ``v`` with zeros (Morton code helper)."""
+    """Return the low 16 bits of ``v`` interleaved with zeros (Morton code helper)."""
     v = v.astype(jnp.uint32) & 0xFFFF
     v = (v | (v << 8)) & 0x00FF00FF
     v = (v | (v << 4)) & 0x0F0F0F0F
@@ -31,7 +32,7 @@ def _spread_bits(v):
 
 
 def ang2pix_nest(nside: int, ra, dec):
-    """NESTED pixel index of (ra, dec) in degrees, as int32.
+    """Return the NESTED pixel index of (ra, dec) in degrees, as int32.
 
     ``nside`` must be a Python int (power of two, <= 8192).
     """
@@ -76,11 +77,12 @@ def ang2pix_nest(nside: int, ra, dec):
 
 
 def ang2pix_nest_np(nside: int, ra, dec) -> np.ndarray:
-    """Host version (healpy), int64."""
+    """Return the NESTED pixel index of (ra, dec) in degrees computed on the host with healpy, as int64."""
     import healpy as hp
 
     return hp.ang2pix(nside, np.asarray(ra), np.asarray(dec), nest=True, lonlat=True).astype(np.int64)
 
 
 def pix_area_deg2(nside: int) -> float:
+    """Return the area of one HEALPix pixel at ``nside``, in deg^2."""
     return 4.0 * np.pi * (180.0 / np.pi) ** 2 / (12 * nside * nside)

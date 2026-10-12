@@ -1,5 +1,7 @@
-"""PSCD detection: the amplitude cube and the extraction-and-cleaning loop (AMICO, Bellagamba
-et al. 2018, Sects. 2-3).
+"""Amplitude cube and detection loop of PSCD.
+
+This module builds the amplitude cube of a region and extracts the detections one at a time,
+cleaning each from the cube, as in AMICO (Bellagamba et al. 2018, Sects. 2-3).
 
 Per redshift slice z_k of the grid, the galaxies' weights w_i = Phi(m_i) p_i(z_k) / N(m_i, z_k)
 (times their field probability) are painted on the angular grid and convolved with the profile
@@ -13,8 +15,9 @@ refined by parabolas through the neighbouring cells, membership probabilities of
 within the truncation radius, and the members' weighted contributions subtracted from S (the
 cleaning). The S/N of the threshold is AMICO's A / sigma_A, which includes the cluster's own
 shot noise, or (``pscd.snr_kind: background``) A sqrt(alpha), against the background only. The
-redshift error Z_E is that of the members' photo-z, (sum_i P_i / s_i^2)^-1/2. The highest cell is found through the maxima of square tiles of pixels, of which only
-those touched by a cleaning are recomputed.
+redshift error Z_E is that of the members' photo-z, (sum_i P_i / s_i^2)^-1/2.
+The highest cell is found through the maxima of square tiles of pixels, of which only those
+touched by a cleaning are recomputed.
 """
 
 from __future__ import annotations
@@ -54,12 +57,14 @@ class Galaxies:
 
     @property
     def index(self) -> NeighborIndex:
+        """Neighbour index of the galaxies, built on first use."""
         if self._index is None:
             self._index = NeighborIndex(self.ra, self.dec)
         return self._index
 
     @property
     def xyz(self) -> np.ndarray:
+        """Unit vectors of the galaxies, computed on first use."""
         if self._xyz is None:
             self._xyz = unit_vectors(self.ra, self.dec)
         return self._xyz
@@ -67,6 +72,8 @@ class Galaxies:
 
 @dataclass
 class Slice:
+    """One redshift slice of the cube: kernels, magnitude integrals, noise and m*."""
+
     z: float
     kernel: np.ndarray        # Psi on the grid
     kernel200: np.ndarray     # Psi within r200, normalised to sum 1 (MASKFRAC)
@@ -76,11 +83,14 @@ class Slice:
 
     @property
     def half(self) -> int:
+        """Half-width of the kernel in pixels."""
         return self.kernel.shape[0] // 2
 
 
 @dataclass
 class Cube:
+    """Amplitude cube of a region: S, alpha, beta, gamma and the score per slice, with its inputs."""
+
     grid: Grid
     zs: np.ndarray
     slices: list
@@ -99,7 +109,7 @@ class Cube:
 
 
 def magnitude_limit(cfg: RemaConfig) -> float:
-    """Faint limit of the PSCD galaxies: the catalogue's and ``photoz.mag_max`` (99: none)."""
+    """Return the faint limit of the PSCD galaxies, the catalogue's and ``photoz.mag_max`` (99: none)."""
     lim = float(cfg.survey.mag_max) if cfg.survey.mag_max else 99.0
     if cfg.photoz.mag_max is not None:
         lim = min(lim, float(cfg.photoz.mag_max))
@@ -107,7 +117,7 @@ def magnitude_limit(cfg: RemaConfig) -> float:
 
 
 def z_grid(cfg: RemaConfig) -> np.ndarray:
-    """Redshift slices: the run's range, plus one slice on each side for the peak refinement."""
+    """Return the redshift slices: the run's range in steps of ``pscd.dz``, plus one slice on each side for the peak refinement."""
     pc = cfg.pscd
     zr = pc.zrange if pc.zrange is not None else cfg.model.zrange
     n = int(round((zr[1] - zr[0]) / pc.dz))
@@ -115,7 +125,7 @@ def z_grid(cfg: RemaConfig) -> np.ndarray:
 
 
 def _weights(gal: Galaxies, sl: Slice, tpl: Template, bkg_m: np.ndarray, nsig: float, rows=None):
-    """(galaxy indices, w_i = Phi p_i / N) of the galaxies contributing at slice ``sl``."""
+    """Return (galaxy indices, w_i = Phi p_i / N) of the galaxies contributing at slice ``sl``."""
     zp, s, m = (gal.zphot, gal.s, gal.refmag) if rows is None else (gal.zphot[rows], gal.s[rows], gal.refmag[rows])
     x = (zp - sl.z) / s
     sel = np.flatnonzero(np.abs(x) < nsig)
@@ -131,7 +141,7 @@ def _weights(gal: Galaxies, sl: Slice, tpl: Template, bkg_m: np.ndarray, nsig: f
 def build_cube(gal: Galaxies, grid: Grid, tpl: Template, bkg: ZredBkg, widths: WidthTable,
                cfg: RemaConfig, fmap: np.ndarray, sigmap: np.ndarray | None = None,
                mag_limit: float | None = None) -> Cube:
-    """The amplitude cube of a region (see the module docstring).
+    """Return the amplitude cube of a region (see the module docstring).
 
     ``fmap``: unmasked fraction of every pixel; ``sigmap``: the reference band's 1-sigma flux
     error, which with ``survey.ref_snr_min`` gives the local magnitude limit (None: everywhere
@@ -186,7 +196,7 @@ def build_cube(gal: Galaxies, grid: Grid, tpl: Template, bkg: ZredBkg, widths: W
 
 
 def amplitude(S, alpha, beta, gamma):
-    """(A, sigma_A, S/N, L = A^2 alpha); A = 0, sigma = inf where alpha = 0."""
+    """Return (A, sigma_A, S/N, L = A^2 alpha); A = 0 and sigma_A = inf where alpha = 0."""
     with np.errstate(invalid="ignore", divide="ignore", over="ignore"):
         good = alpha > 0
         A = np.where(good, (S - beta) / np.where(good, alpha, 1.0), 0.0)
@@ -197,6 +207,7 @@ def amplitude(S, alpha, beta, gamma):
 
 
 def _score(cube: Cube, k, ys, xs):
+    """Return the score L of slice ``k`` on rows ``ys`` and columns ``xs``, -inf below the S/N threshold or where A <= 0."""
     a = cube.alpha[k, ys, xs]
     A, _, snr, L = amplitude(cube.S[k, ys, xs], a, cube.beta[k, ys, xs], cube.gamma[k, ys, xs])
     if cube.cfg.pscd.snr_kind == "background":
@@ -206,6 +217,7 @@ def _score(cube: Cube, k, ys, xs):
 
 
 def _tile_max(img2d, T):
+    """Return the maxima of ``img2d`` over square tiles of T x T pixels."""
     ny, nx = img2d.shape
     ty, tx = -(-ny // T), -(-nx // T)
     pad = np.full((ty * T, tx * T), -np.inf, np.float32)
@@ -214,7 +226,7 @@ def _tile_max(img2d, T):
 
 
 def _vertex(lm, l0, lp):
-    """Offset of the parabola vertex through (-1, lm), (0, l0), (1, lp), clipped to +-0.5."""
+    """Return the offset of the parabola vertex through (-1, lm), (0, l0), (1, lp), clipped to +-0.5."""
     d = lm - 2.0 * l0 + lp
     if not (np.isfinite(d) and d < 0):
         return 0.0
@@ -223,6 +235,12 @@ def _vertex(lm, l0, lp):
 
 @dataclass
 class Detection:
+    """One detection: its cell (k, y, x), refined position and redshift, amplitude, S/N and likelihood.
+
+    ``snr_nocl`` is A sqrt(alpha), the S/N against the background only; ``n_exp`` is A beta;
+    ``mlim`` the local magnitude limit; ``maskfrac`` the masked fraction within r200.
+    """
+
     k: int
     y: int
     x: int
@@ -241,11 +259,13 @@ class Detection:
 
 
 def _cell_values(cube: Cube, k, y, x):
+    """Return :func:`amplitude` at cell (k, y, x)."""
     sl = (k, y, x)
     return amplitude(cube.S[sl], cube.alpha[sl], cube.beta[sl], cube.gamma[sl])
 
 
 def _refine(cube: Cube, k, y, x) -> Detection:
+    """Return the detection at cell (k, y, x), with position and redshift refined by parabolas through the neighbouring cells."""
     nz, ny, nx = cube.S.shape
     L = lambda kk, yy, xx: float(_cell_values(cube, kk, yy, xx)[3]) if (
         0 <= kk < nz and 0 <= yy < ny and 0 <= xx < nx) else np.nan
@@ -274,7 +294,7 @@ def _refine(cube: Cube, k, y, x) -> Detection:
 
 
 def _window(img, y, x, h):
-    """img[y-h:y+h+1, x-h:x+h+1], zero-padded at the edges."""
+    """Return img[y-h:y+h+1, x-h:x+h+1], zero-padded at the edges."""
     ny, nx = img.shape
     out = np.zeros((2 * h + 1, 2 * h + 1), img.dtype)
     y0, y1, x0, x1 = max(0, y - h), min(ny, y + h + 1), max(0, x - h), min(nx, x + h + 1)
@@ -283,8 +303,11 @@ def _window(img, y, x, h):
 
 
 def memberships(cube: Cube, gal: Galaxies, det: Detection, nsig: float):
-    """(galaxy indices, P(i in j), angular distance [deg]) of the galaxies around a detection
-    (Bellagamba et al. 2018, Eq. 24, with the current field probabilities)."""
+    """Return (galaxy indices, P(i in j), angular distance [deg]) of the galaxies around a detection.
+
+    P(i in j) is Eq. 24 of Bellagamba et al. (2018), with the current field probabilities, for the
+    galaxies within the truncation radius.
+    """
     tpl = cube.tpl
     rmax = float(tpl.rmax_deg(det.z))
     idx = np.asarray(gal.index.query_lists(np.array([det.ra]), np.array([det.dec]), rmax)[0], np.int64)
@@ -305,8 +328,7 @@ def memberships(cube: Cube, gal: Galaxies, det: Detection, nsig: float):
 
 
 def clean(cube: Cube, gal: Galaxies, idx, P, nsig: float):
-    """Remove the members' P-weighted contributions from S (and update the score); returns the
-    touched (y0, y1, x0, x1) windows."""
+    """Remove the members' P-weighted contributions from S, update the score, and return the touched (y0, y1, x0, x1) windows."""
     if idx.size == 0:
         return []
     bkg_m = np.asarray(cube.bkg.mag, np.float64)
@@ -341,6 +363,7 @@ def clean(cube: Cube, gal: Galaxies, idx, P, nsig: float):
 
 
 def _update_tiles(cube: Cube, windows):
+    """Recompute the tile maxima of the tiles that the (y0, y1, x0, x1) ``windows`` touch."""
     T = cube.cfg.pscd.tile
     tiles = set()
     for y0, y1, x0, x1 in windows:
@@ -352,7 +375,10 @@ def _update_tiles(cube: Cube, windows):
 
 
 def extract(cube: Cube, gal: Galaxies, log_every: int = 500):
-    """The detection loop. Returns (list of Detection, list of (indices, P, theta) members)."""
+    """Run the detection loop and return (list of Detection, list of (indices, P, theta) members).
+
+    The loop stops when no cell passes the threshold or after ``pscd.max_detections``.
+    """
     pc = cube.cfg.pscd
     nsig = cube.cfg.photoz.nsig_max
     T = pc.tile

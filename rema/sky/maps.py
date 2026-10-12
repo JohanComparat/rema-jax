@@ -1,6 +1,10 @@
 """Footprint, mask and depth maps built from Legacy Survey randoms.
 
-DR11 randoms are uniform points over the processed bricks (2,500 per deg^2 per file) that carry
+This module takes a randoms catalogue and returns sparse HEALPix maps of the unmasked fraction and
+of the depth, the effective area against magnitude, and a pixel-sorted index of the randoms for
+fast reads of any sky box.
+
+DR11 randoms are uniform points over the processed bricks (2 500 per deg^2 per file) that carry
 NOBS, GALDEPTH and MASKBITS at their exact positions. They give, per NESTED HEALPix pixel of
 ``nside_fine`` (1024 by default):
 
@@ -13,8 +17,8 @@ NOBS, GALDEPTH and MASKBITS at their exact positions. They give, per NESTED HEAL
   sigma_f = 1 / sqrt(GALDEPTH) / MW_TRANSMISSION (the 5-sigma depth is
   22.5 - 2.5 log10(5 / sqrt(GALDEPTH)) mag).
 
-Pixels without randoms are absent (fraction good 0). Depths of good-less pixels fall back to the
-parent pixel at ``nside_fine / 4``, then to the global median.
+Pixels without randoms are absent (fraction good 0). Depths of pixels without good randoms fall
+back to the parent pixel at ``nside_fine / 4``, then to the global median.
 
 >>> m = SparseMap(16, np.array([3, 7, 9]), {"V": np.array([1.0, 2.0, 3.0])})
 >>> m.lookup_np(np.array([0.0]), np.array([90.0]), "V")   # pixel 1 of nside 16 is absent
@@ -57,28 +61,32 @@ class SparseMap:
 
     # lookups ---------------------------------------------------------------
     def index_np(self, pix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Return the row of each pixel number in ``pix`` and whether it is in the map."""
         i = np.clip(np.searchsorted(self.pixels, pix), 0, max(self.pixels.size - 1, 0))
         found = (self.pixels.size > 0) & (self.pixels[i] == pix)
         return i, found
 
     def lookup_np(self, ra, dec, name: str) -> np.ndarray:
+        """Return column ``name`` at (ra, dec) in degrees, ``fill`` where the pixel is absent (numpy)."""
         pix = ang2pix_nest_np(self.nside, ra, dec)
         i, found = self.index_np(pix)
         return np.where(found, self.values[name][i], self.fill)
 
     def device(self, names: tuple[str, ...]) -> "DeviceMap":
-        """Arrays for jitted lookups (pixel numbers fit in int32 for nside <= 8192)."""
+        """Return the arrays of columns ``names`` for jitted lookups (pixel numbers fit in int32 for nside <= 8192)."""
         return DeviceMap(jnp.asarray(self.pixels.astype(np.int32)),
                          {n: jnp.asarray(self.values[n]) for n in names}, self.nside, self.fill)
 
     # io ----------------------------------------------------------------------
     def hdu(self, extname: str, header: dict | None = None):
+        """Return the map as a FITS table HDU (column PIXEL and the value columns; keys NSIDE, ORDERING, FILLVAL)."""
         cols = {"PIXEL": self.pixels, **self.values}
         hdr = {"NSIDE": self.nside, "ORDERING": "NESTED", "FILLVAL": self.fill, **(header or {})}
         return table_hdu(cols, hdr, extname)
 
     @classmethod
     def from_hdu(cls, path: str | Path, extname: str) -> "SparseMap":
+        """Return the map read from HDU ``extname`` of a file written with :meth:`hdu`."""
         from astropy.io import fits
 
         t = read_table(path, hdu=extname)
@@ -100,6 +108,7 @@ class DeviceMap:
     fill: float = field(default=0.0, metadata=dict(static=True))
 
     def lookup(self, ra, dec, name: str):
+        """Return column ``name`` at (ra, dec) in degrees, ``fill`` where the pixel is absent (jittable)."""
         pix = ang2pix_nest(self.nside, ra, dec)
         i = jnp.clip(jnp.searchsorted(self.pixels, pix), 0, self.pixels.size - 1)
         found = self.pixels[i] == pix
@@ -107,7 +116,7 @@ class DeviceMap:
 
 
 def sigma_flux_from_depth(depth_ivar, ebv, band: str):
-    """Dereddened 1-sigma flux error (nanomaggies) from a GALDEPTH/PSFDEPTH inverse variance.
+    """Return the dereddened 1-sigma flux error (nanomaggies) of a GALDEPTH/PSFDEPTH inverse variance.
 
     >>> round(float(sigma_flux_from_depth(66.84, 0.0, "z")), 4)   # 5-sigma depth 23.03 mag
     0.1223
@@ -118,14 +127,17 @@ def sigma_flux_from_depth(depth_ivar, ebv, band: str):
 
 
 def depth_ivar_from_mag(depth5_mag, zeropoint: float = 22.5):
-    """GALDEPTH-style inverse variance (1/nanomaggies^2) of a 5-sigma AB depth."""
+    """Return the GALDEPTH-style inverse variance (1/nanomaggies^2) of a 5-sigma AB depth."""
     f5 = 10.0 ** (-0.4 * (np.asarray(depth5_mag, np.float64) - zeropoint))
     return (5.0 / f5) ** 2
 
 
 @dataclass
 class Footprint:
-    """Fine map with NRAND, FRACGOOD and SIGF_<band>; see the module docstring."""
+    """Fine map with NRAND, COVER, FRACGOOD and SIGF_<band>, its bands, randoms density and data box.
+
+    See the module docstring for the columns.
+    """
 
     fine: SparseMap
     bands: tuple[str, ...]
@@ -134,15 +146,16 @@ class Footprint:
 
     @property
     def nside(self) -> int:
+        """HEALPix nside of the fine map."""
         return self.fine.nside
 
     def area_deg2(self) -> float:
-        """Unmasked area: sum of fraction good times pixel area."""
+        """Return the unmasked area in deg^2, the sum of FRACGOOD times the pixel area."""
         return float(np.sum(self.fine.values["FRACGOOD"]) * pix_area_deg2(self.nside))
 
     def effective_area(self, mag, band: str, snr_min: float = 5.0, mag_max: float = np.inf,
                        zeropoint: float = 22.5, sky=None) -> np.ndarray:
-        """Area (deg^2) over which a galaxy of true magnitude ``mag`` passes the selection.
+        """Return the area (deg^2) over which a galaxy of true magnitude ``mag`` passes the selection.
 
         Selection: measured flux above max(snr_min sigma_f, flux(mag_max)), with Gaussian noise.
         ``sky``: count only the pixels centred in this box (or union of boxes), for galaxies read
@@ -160,14 +173,14 @@ class Footprint:
         return np.sum(psel * frac[None, :], axis=1) * pix_area_deg2(self.nside)
 
     def pixels_in(self, sky) -> np.ndarray:
-        """Mask of the map's pixels whose centres lie in ``sky``."""
+        """Return the mask of the map's pixels whose centres lie in ``sky``."""
         import healpy as hp
 
         ra, dec = hp.pix2ang(self.nside, self.fine.pixels, nest=True, lonlat=True)
         return np.asarray(sky.contains(ra, dec), bool)
 
     def digest(self) -> str:
-        """Hash of the map (pixels and values), for checkpoint keys and provenance."""
+        """Return a SHA-1 hash of the map (pixels and values), for checkpoint keys and provenance."""
         import hashlib
 
         h = hashlib.sha1(f"{self.nside} {self.bands} {self.density}".encode())
@@ -178,11 +191,13 @@ class Footprint:
         return h.hexdigest()
 
     def write(self, path: str | Path) -> Path:
+        """Write the map to HDU FINE of ``path``, with BANDS, DENSITY and the data box in its header."""
         hdr = {"BANDS": ",".join(self.bands), "DENSITY": self.density, **sky_header(self.box)}
         return write_fits(path, [self.fine.hdu("FINE", hdr)])
 
     @classmethod
     def read(cls, path: str | Path) -> "Footprint":
+        """Return the footprint read from a file written by :meth:`write`."""
         from astropy.io import fits
 
         fine = SparseMap.from_hdu(path, "FINE")
@@ -195,7 +210,11 @@ class Footprint:
 
 
 def good_randoms(r: dict, cfg: RemaConfig) -> np.ndarray:
-    """Randoms passing the galaxies' footprint cuts (MASKBITS and NOBS in every band)."""
+    """Return the mask of randoms passing the galaxies' footprint cuts.
+
+    The cuts are MASKBITS, NOBS and a positive finite GALDEPTH in every band, and E(B-V) below
+    ``survey.ebv_max`` when it is set.
+    """
     reject = np.int64(sum(1 << int(b) for b in cfg.survey.maskbits_reject))
     ok = (r["MASKBITS"].astype(np.int64) & reject) == 0
     for b in cfg.survey.bands:
@@ -208,7 +227,7 @@ def good_randoms(r: dict, cfg: RemaConfig) -> np.ndarray:
 
 def build_footprint(randoms: dict, cfg: RemaConfig | None = None, box: Box | BoxUnion | None = None,
                     density: float | None = None) -> Footprint:
-    """Build the fine footprint/depth map from a randoms table (dict of columns).
+    """Return the fine footprint and depth map of a randoms table (dict of columns).
 
     ``box`` (a Box or a BoxUnion) is the data box: randoms outside it are ignored and pixels it
     cuts are weighted by their covered fraction. The result does not depend on the row order.
@@ -247,7 +266,7 @@ def build_footprint(randoms: dict, cfg: RemaConfig | None = None, box: Box | Box
 
 
 def box_cover(pix: np.ndarray, nside: int, box: Box | BoxUnion, nsub: int = 8) -> np.ndarray:
-    """Fraction of each NESTED pixel inside ``box`` (or a union), from nsub^2 sub-pixel centres."""
+    """Return the fraction of each NESTED pixel inside ``box`` (or a union), from nsub^2 sub-pixel centres."""
     import healpy as hp
 
     k = nsub * nsub
@@ -257,7 +276,7 @@ def box_cover(pix: np.ndarray, nside: int, box: Box | BoxUnion, nsub: int = 8) -
 
 
 def _grouped_median(group: np.ndarray, x: np.ndarray, ngroups: int) -> np.ndarray:
-    """Median of x within integer groups 0..ngroups-1 (NaN for empty groups)."""
+    """Return the median of x within integer groups 0..ngroups-1 (NaN for empty groups)."""
     out = np.full(ngroups, np.nan)
     if x.size == 0:
         return out
@@ -275,7 +294,7 @@ def _grouped_median(group: np.ndarray, x: np.ndarray, ngroups: int) -> np.ndarra
 
 def read_randoms(path: str | Path, cfg: RemaConfig | None = None, box: Box | None = None,
                  chunk: int = 5_000_000) -> dict:
-    """Read the randoms columns needed for the footprint, optionally inside ``box`` only."""
+    """Return the randoms columns needed for the footprint, optionally inside ``box`` only."""
     from astropy.io import fits
 
     cfg = cfg or RemaConfig()
@@ -308,6 +327,7 @@ RANDOMS_INDEX_NSIDE = 64
 
 
 def _randoms_columns(cfg: RemaConfig) -> list[str]:
+    """Return the names of the randoms columns read for the footprint."""
     bands = [b.upper() for b in cfg.survey.bands]
     return ["RA", "DEC", "MASKBITS", "EBV"] + [f"NOBS_{b}" for b in bands] + \
            [f"GALDEPTH_{b}" for b in bands]
@@ -316,9 +336,9 @@ def _randoms_columns(cfg: RemaConfig) -> list[str]:
 def index_randoms(path: str | Path, outdir: str | Path, cfg: RemaConfig | None = None,
                   box: Box | BoxUnion | None = None, nside_index: int = RANDOMS_INDEX_NSIDE,
                   chunk: int = 5_000_000) -> Path:
-    """Pixel-sorted copy of a randoms file, for fast reads of any sky box.
+    """Write a pixel-sorted copy of a randoms file, for fast reads of any sky box, and return its ``.npy`` path.
 
-    Writes, in ``outdir``, ``<stem>.npy`` (one structured array of the :func:`read_randoms`
+    It writes, in ``outdir``, ``<stem>.npy`` (one structured array of the :func:`read_randoms`
     columns, sorted by NESTED pixel at ``mask.nside_fine``), ``<stem>.offsets.npy`` (the first
     row of every NESTED pixel at ``nside_index``, plus one past the last) and ``<stem>.json``
     (source file, size and time, nside values, columns, number of rows), written last. An index
@@ -361,7 +381,7 @@ def index_randoms(path: str | Path, outdir: str | Path, cfg: RemaConfig | None =
 
 
 def randoms_index_files(index_dir: str | Path) -> list[str]:
-    """Stems of the complete randoms indexes in ``index_dir``, in natural order (…-2 before …-10)."""
+    """Return the stems of the complete randoms indexes in ``index_dir``, in natural order (…-2 before …-10)."""
     import re
 
     stems = [p.name.removesuffix(".json") for p in Path(index_dir).glob("*.json")
@@ -371,8 +391,10 @@ def randoms_index_files(index_dir: str | Path) -> list[str]:
 
 
 def _coarse_candidates(box: Box | BoxUnion, nside_index: int) -> np.ndarray:
-    """NESTED pixels at ``nside_index`` that can hold points of ``box``: those whose centre lies
-    within the maximum pixel radius of it."""
+    """Return the NESTED pixels at ``nside_index`` that can hold points of ``box``.
+
+    These are the pixels whose centre lies within 1.01 times the maximum pixel radius of the box.
+    """
     import healpy as hp
 
     npix = 12 * nside_index**2
@@ -386,9 +408,11 @@ def _coarse_candidates(box: Box | BoxUnion, nside_index: int) -> np.ndarray:
 
 def read_randoms_index(index_dir: str | Path, cfg: RemaConfig | None = None,
                        box: Box | BoxUnion | None = None, files: list[str] | None = None) -> dict:
-    """The randoms of ``box`` from the indexes in ``index_dir``: the same rows (in another order)
-    as :func:`read_randoms` on each indexed file, concatenated. ``files``: the index stems to use
-    (default all, see :func:`randoms_index_files`)."""
+    """Return the randoms of ``box`` read from the indexes in ``index_dir``.
+
+    The rows are those of :func:`read_randoms` on each indexed file, concatenated, in another
+    order. ``files`` gives the index stems to use (default all, see :func:`randoms_index_files`).
+    """
     import json
 
     cfg = cfg or RemaConfig()

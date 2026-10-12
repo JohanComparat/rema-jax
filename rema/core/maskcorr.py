@@ -1,4 +1,4 @@
-"""Mask and depth completeness of a cluster aperture (replaces redMaPPer's Monte-Carlo maskgals).
+"""Computes the mask and depth completeness of a cluster aperture, in place of redMaPPer's Monte-Carlo maskgals.
 
 For a cluster at (ra, dec, z), points on a polar grid (Gauss-Legendre radii of
 :class:`rema.core.richness.RadialQuad` times ``n_phi`` azimuths) are looked up in the footprint
@@ -40,7 +40,7 @@ def _gl(n):
 
 def selection_completeness(sigf, mstar, maxmag, alpha: float, snr_min: float, mag_max: float,
                            n_mag: int = 24, zeropoint: float = 22.5):
-    """S(sigma_f) for arrays ``sigf`` (broadcast with mstar/maxmag)."""
+    """Return S(sigma_f) for arrays ``sigf`` (broadcast with mstar/maxmag)."""
     x, w = _gl(n_mag)
     lo = mstar - 6.0
     hi = maxmag + 1.0
@@ -61,7 +61,7 @@ def selection_completeness(sigf, mstar, maxmag, alpha: float, snr_min: float, ma
 def radial_completeness(ra, dec, z, fmap: DeviceMap, quad: RadialQuad, model: FilterModel,
                         ref_band: str = "Z", snr_min: float = 5.0, mag_max: float = 30.0,
                         n_phi: int = 16, n_mag: int = 24):
-    """(frad, fgeo), each [B, n_r], for clusters at ``ra``, ``dec`` [deg] and ``z`` [B]."""
+    """Return (frad, fgeo), each [B, n_r], for clusters at ``ra``, ``dec`` [deg] and ``z`` [B]."""
     phi = (jnp.arange(n_phi) + 0.5) * (2.0 * jnp.pi / n_phi)                 # from north to east
     D = model.mpc_per_deg(z)                                                    # [B]
     th = jnp.deg2rad(quad.r[None, :, None] / D[:, None, None])                  # [B, n_r, 1] rad
@@ -82,6 +82,6 @@ def radial_completeness(ra, dec, z, fmap: DeviceMap, quad: RadialQuad, model: Fi
 
 
 def no_footprint(nclusters: int, quad: RadialQuad):
-    """Completeness arrays for runs without a footprint (everything observed)."""
+    """Return the completeness arrays for runs without a footprint (everything observed)."""
     ones = jnp.ones((nclusters, quad.r.shape[0]))
     return ones, ones

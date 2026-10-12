@@ -1,4 +1,7 @@
-"""Galaxy photo-z as Gaussian redshift distributions.
+"""Calibrated Gaussian photo-z distributions of the galaxies.
+
+This module takes the DR11 photo-z of each galaxy and returns the width of its Gaussian redshift
+distribution, calibrated on spectroscopic redshifts.
 
 The DR11 photo-z sweeps give, per galaxy, the median and the standard deviation of a random-forest
 redshift distribution (Zhou et al. 2021, 2023), read at ingest as ZPHOT and ZPHOT_STD. Compared
@@ -19,7 +22,10 @@ from ..config import PhotozConfig
 
 
 def err_scale(refmag, pcfg: PhotozConfig) -> np.ndarray:
-    """The factor applied to ZPHOT_STD at reference magnitude ``refmag``.
+    """Return the factor applied to ZPHOT_STD at reference magnitude ``refmag``.
+
+    The factor is interpolated linearly between the ``pcfg.err_scale_mag`` nodes and constant
+    beyond them; without nodes, ``pcfg.err_scale`` holds one value used at every magnitude.
 
     >>> pc = PhotozConfig(err_scale=(0.8, 0.6), err_scale_mag=(19.0, 22.0))
     >>> err_scale([18.0, 20.5, 23.0], pc).round(3).tolist()
@@ -38,14 +44,17 @@ def err_scale(refmag, pcfg: PhotozConfig) -> np.ndarray:
 
 
 def photoz_valid(zphot, zphot_std) -> np.ndarray:
-    """Galaxies with a usable photo-z (ingest writes -1 for a missing one)."""
+    """Return the mask of galaxies with a usable photo-z: finite, ZPHOT >= 0 and ZPHOT_STD > 0.
+
+    Ingest writes -1 for a missing photo-z.
+    """
     zp = np.asarray(zphot, np.float64)
     sd = np.asarray(zphot_std, np.float64)
     return np.isfinite(zp) & np.isfinite(sd) & (zp >= 0) & (sd > 0)
 
 
 def photoz_sigma(zphot, zphot_std, refmag, pcfg: PhotozConfig) -> np.ndarray:
-    """s_i, the calibrated photo-z width (float32); -1 for galaxies without a usable photo-z.
+    """Return s_i, the calibrated photo-z width (float32); -1 for galaxies without a usable photo-z.
 
     >>> pc = PhotozConfig(err_scale=(0.5,), err_floor=0.01)
     >>> [round(float(s), 4) for s in photoz_sigma([0.3, 0.3, -1.0], [0.1, 0.01, 0.1], [20.0] * 3, pc)]

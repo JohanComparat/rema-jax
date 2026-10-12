@@ -1,4 +1,4 @@
-"""Spectroscopic post-processing: cluster redshift and velocity dispersion from members.
+"""Computes the redshift and velocity dispersion of clusters from their spectroscopic members (post-processing).
 
 The procedure is the velocity clipping of Clerc et al. (2016), vectorised over clusters (members
 with a spectroscopic redshift padded to a common length):
@@ -49,7 +49,7 @@ def _masked(x, mask):
 
 @_quiet
 def biweight_location(x, mask, c: float = 6.0):
-    """Row-wise biweight location of x[mask] (astropy convention: M = median, MAD scale)."""
+    """Return the row-wise biweight location of x[mask] (astropy convention: M = median, MAD scale)."""
     xm = _masked(x, mask)
     with np.errstate(all="ignore"):
         M = np.nanmedian(xm, axis=-1)
@@ -66,7 +66,7 @@ def biweight_location(x, mask, c: float = 6.0):
 
 @_quiet
 def biweight_scale(x, mask, c: float = 9.0):
-    """Row-wise biweight scale of x[mask] (astropy ``biweight_scale``, modify_sample_size=False)."""
+    """Return the row-wise biweight scale of x[mask] (astropy ``biweight_scale``, modify_sample_size=False)."""
     xm = _masked(x, mask)
     n = mask.sum(axis=-1)
     with np.errstate(all="ignore"):
@@ -84,7 +84,7 @@ def biweight_scale(x, mask, c: float = 9.0):
 
 @_quiet
 def gapper(x, mask):
-    """Row-wise gapper scale (Wainer & Thissen 1976): sqrt(pi)/(n(n-1)) sum i(n-i) g_i."""
+    """Return the row-wise gapper scale (Wainer & Thissen 1976): sqrt(pi)/(n(n-1)) sum i(n-i) g_i."""
     xs = np.sort(_masked(x, mask), axis=-1)            # NaNs last
     n = mask.sum(axis=-1)
     g = np.diff(xs, axis=-1)                           # NaN beyond the valid range
@@ -103,7 +103,7 @@ def velocities(z, zc):
 def clip_velocity_batch(z, valid, *, nsig: float = 3.0, vmax_init: float = 5000.0,
                         niter: int = 20, gapper_nmax: int = 15, c_location: float = 6.0,
                         c_scale: float = 9.0, min_members: int = 3):
-    """Velocity clipping for C clusters with padded member redshifts ``z`` [C, M].
+    """Clip the velocities of C clusters with padded member redshifts ``z`` [C, M].
 
     Returns a dict of arrays [C] (ok, zspec, vdisp, vclip, vflag, gapper_used, n_members) and
     ``v``, ``kept`` [C, M].
@@ -140,7 +140,7 @@ def clip_velocity_batch(z, valid, *, nsig: float = 3.0, vmax_init: float = 5000.
 
 @_quiet
 def bootstrap_clip(z, valid, nboot: int = 64, seed: int = 12345, **kw):
-    """Bootstrap means and standard deviations of (zspec, vdisp, vclip, vflag)."""
+    """Return the bootstrap means and standard deviations of (zspec, vdisp, vclip, vflag)."""
     rng = np.random.default_rng(seed)
     C, M = z.shape
     n = valid.sum(axis=1)

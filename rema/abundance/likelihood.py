@@ -2,8 +2,8 @@
 
     ln P(theta | data) = ln L_counts + ln L_WL + ln prior.
 
-- Counts: Gaussian with a fixed covariance (Poisson at a reference model plus the super-sample
-  term of :mod:`rema.abundance.covariance`), or Poisson.
+- Counts: Gaussian with a fixed covariance (by default Poisson at a reference model; the caller
+  passes ``cov`` to add the super-sample term of :mod:`rema.abundance.covariance`), or Poisson.
 - Weak lensing: in the bins inside the range of McClintock et al. (2019) (DES Y1, lambda_DES >= 20,
   0.2 <= z <= 0.65), the model's ln <M200m | bin> against their <M | lambda, z> at the bin's mean
   richness in DES units, lambda_DES = lambda_rema exp(-ln_s0 - s1 (z - z_norm)), with the
@@ -49,6 +49,7 @@ DEFAULT_PRIORS = {
 
 
 def _emu_box():
+    """Return the training box of emu_pk."""
     from emu_pk.box import BOX
 
     return BOX
@@ -56,8 +57,11 @@ def _emu_box():
 
 @dataclass
 class WLData:
-    """The bins of the weak-lensing term: indices, mean richness (rema) and redshift, and the
-    covariance of McClintock's ln M at the fiducial richness normalisation."""
+    """Bins of the weak-lensing term and the inverse covariance of McClintock's ln M.
+
+    The bins carry their indices, mean richness (rema) and mean redshift; the covariance is
+    evaluated at the fiducial richness normalisation.
+    """
 
     i: np.ndarray
     j: np.ndarray
@@ -67,8 +71,11 @@ class WLData:
 
     @classmethod
     def from_data(cls, dv: DataVector, extra_sigma: float = 0.05) -> "WLData | None":
-        """``extra_sigma``: an uncorrelated error of ln M per bin (the relation's parameter
-        covariance alone has rank 3), of the order of the per-bin errors of the stacked masses."""
+        """Return the weak-lensing bins of a data vector, or None when no bin is in the calibrated range.
+
+        ``extra_sigma`` is an uncorrelated error of ln M per bin (the relation's parameter
+        covariance alone has rank 3), of the order of the per-bin errors of the stacked masses.
+        """
         lam, z = np.asarray(dv.lam_mean), np.asarray(dv.z_mean)
         lam_des = lam * np.exp(-(LN_S0 + S1 * (z - _MOR0.z_norm)))
         z0, z1 = MCCLINTOCK19["z_range"]
@@ -81,8 +88,12 @@ class WLData:
 
 
 class Likelihood:
-    """See the module docstring. ``cov``: covariance of the counts (flattened [n_lambda * n_z]);
-    by default Poisson at the model of ``reference`` (default: the starting point)."""
+    """Log-posterior of the counts and the weak-lensing calibration; see the module docstring.
+
+    ``cov`` is the covariance of the counts (flattened [n_lambda * n_z]); by default, for
+    ``kind="gaussian"``, it is Poisson at the model of ``reference`` (default: the ``fixed``
+    values), floored at one count.
+    """
 
     def __init__(self, data: DataVector, model: CountsModel, free: Sequence[str], *,
                  fixed: Mapping[str, float] | None = None, priors: Mapping | None = None,
@@ -110,9 +121,12 @@ class Likelihood:
 
     # ------------------------------------------------------------------ parameters
     def x0(self) -> np.ndarray:
-        """Starting point: the ``fixed`` values, or the prior mean of a parameter with a Gaussian
-        prior when its value is more than 3 sigma away (the rema fiducial h = 0.7 and
-        Omega_b = 0.0493 are not Planck's)."""
+        """Return the starting point of the free parameters.
+
+        It takes the ``fixed`` values, or the prior mean of a parameter with a Gaussian prior when
+        its value is more than 3 sigma away (the rema fiducial h = 0.7 and Omega_b = 0.0493 are
+        not Planck's).
+        """
         out = []
         h = self.fixed["h"]
         if "h" in self.free and self.priors["h"][0] == "gauss":
@@ -129,16 +143,18 @@ class Likelihood:
         return np.array(out, np.float64)
 
     def theta(self, x) -> dict:
+        """Return all parameters: the ``fixed`` values updated with the free vector ``x``."""
         th = dict(self.fixed)
         th.update({p: x[k] for k, p in enumerate(self.free)})
         return th
 
     def bounds_of(self, p: str) -> tuple[float, float]:
+        """Return the box of parameter ``p``: its flat prior, or its Gaussian prior +- 6 sigma."""
         kind, a, b = self.priors[p]
         return (a, b) if kind == "flat" else (a - 6 * b, a + 6 * b)
 
     def bounds(self) -> list[tuple[float, float]]:
-        """Box of each free parameter: flat priors, Gaussians +- 6 sigma."""
+        """Return the box of each free parameter: flat priors, Gaussians +- 6 sigma."""
         out = []
         for p in self.free:
             kind, a, b = self.priors[p]
@@ -153,10 +169,12 @@ class Likelihood:
 
     # ------------------------------------------------------------------ pieces
     def predict(self, theta: Mapping) -> dict:
+        """Return the jitted model prediction at ``theta``, in float64."""
         with _float64():
             return self._predict({k: jnp.asarray(v, jnp.float64) for k, v in theta.items()})
 
     def logprior(self, th) -> jnp.ndarray:
+        """Return the log-prior of the free parameters; -inf outside a flat prior or the emu_pk training box."""
         lp = jnp.asarray(0.0)
         for p in self.free:
             kind, a, b = self.priors[p]
@@ -179,6 +197,7 @@ class Likelihood:
         return lp
 
     def loglike_counts(self, pred) -> jnp.ndarray:
+        """Return the log-likelihood of the counts, Gaussian or Poisson (up to a constant)."""
         N = pred["N"]
         if self.kind == "poisson":
             n = jnp.asarray(self.counts)
@@ -187,12 +206,13 @@ class Likelihood:
         return -0.5 * r @ jnp.asarray(self._icov) @ r
 
     def wl_residual(self, th, pred) -> jnp.ndarray:
-        """Model ln <M | bin> minus McClintock's at the bins' mean richness in DES units."""
+        """Return the model ln <M | bin> minus McClintock's at the bins' mean richness in DES units."""
         w = self.wl
         lam_des = jnp.asarray(w.lam) * jnp.exp(-(th["ln_s0"] + th["s1"] * (jnp.asarray(w.z) - _MOR0.z_norm)))
         return pred["lnM"][w.i, w.j] - mcclintock_lnm(lam_des, jnp.asarray(w.z))
 
     def loglike_wl(self, th, pred) -> jnp.ndarray:
+        """Return the log-likelihood of the weak-lensing term (0 without one)."""
         if self.wl is None:
             return jnp.asarray(0.0)
         r = self.wl_residual(th, pred)
@@ -207,16 +227,21 @@ class Likelihood:
 
     # ------------------------------------------------------------------ public
     def logpost(self, x) -> float:
+        """Return the log-posterior at the free vector ``x``."""
         with _float64():
             return float(self._logpost(jnp.asarray(x, jnp.float64)))
 
     def value_and_grad(self, x):
+        """Return the log-posterior and its gradient at the free vector ``x``."""
         with _float64():
             v, g = self._grad(jnp.asarray(x, jnp.float64))
         return float(v), np.asarray(g, np.float64)
 
     def chi2(self, x) -> dict:
-        """chi^2 of the counts and of the weak-lensing term at ``x``."""
+        """Return chi^2 of the counts and of the weak-lensing term at ``x``, with the numbers of terms.
+
+        The counts chi^2 is nan for Poisson counts.
+        """
         with _float64():
             xx = jnp.asarray(x, jnp.float64)
             th = self.theta(xx)

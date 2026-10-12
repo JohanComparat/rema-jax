@@ -29,12 +29,17 @@ log = logging.getLogger(__name__)
 
 def run_pscd(gal: dict, cfg: RemaConfig, *, footprint=None, sky=None, own=None, region_id: int = 0,
              rs=None, area_deg2: float | None = None, info: dict | None = None):
-    """PSCD detections of a galaxy table: (catalogue, members) dicts.
+    """Return the PSCD detections of a galaxy table as (catalogue, members) dicts.
+
+    The catalogue is sorted by decreasing SNR, with MEM_MATCH_ID = ``region_id`` << 32 | rank;
+    the members are the galaxies with P >= ``pscd.pmin``. Both are empty dicts when nothing is
+    kept.
 
     ``footprint``: the region's footprint (unmasked fraction and depth; without one the whole
     grid is observed down to the magnitude limit). ``sky``: the data box (pixels outside are
     masked). ``own``: keep detections centred there. ``rs``: a red-sequence model, for the
     members' CHISQ_RS. ``area_deg2``: the area without a footprint (default: from the positions).
+    ``info``: a dict that receives the run statistics (counts, timings, grid shape).
     """
     from ..modes.common import _area_function, photoz_background, red_sequence_chisq
 

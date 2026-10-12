@@ -1,5 +1,6 @@
-"""PSCD cluster template M_c(r, m) = Psi(r) Phi(m), the noise N(m, z) and the filter's
-normalisation integrals.
+"""Cluster template, noise and normalisation integrals of the PSCD filter.
+
+The template is M_c(r, m) = Psi(r) Phi(m) and the noise N(m, z):
 
 - Psi: projected NFW (r_s = r200 / c, flat inside ``rcore``), truncated at ``rtrunc`` r200 and
   normalised to 1 inside r200; per deg^2 at the cluster redshift (r = theta D(z)).
@@ -33,7 +34,7 @@ SQRT_PI = float(np.sqrt(np.pi))
 
 # NumPy versions of rema.model.profiles (the JAX functions compile for every new array shape).
 def nfw_h(x):
-    """arccosh(1/x)/sqrt(1-x^2) (x < 1), arccos(1/x)/sqrt(x^2-1) (x > 1), 1 at x = 1."""
+    """Return h(x) = arccosh(1/x)/sqrt(1-x^2) (x < 1), arccos(1/x)/sqrt(x^2-1) (x > 1), 1 at x = 1."""
     x = np.asarray(x, np.float64)
     u = 1.0 - x * x
     out = np.ones_like(u)
@@ -47,7 +48,7 @@ def nfw_h(x):
 
 
 def nfw_F(x):
-    """Projected NFW shape (1 - h)/(x^2 - 1), 1/3 at x = 1."""
+    """Return the projected NFW shape (1 - h)/(x^2 - 1), 1/3 at x = 1."""
     x = np.asarray(x, np.float64)
     u = 1.0 - x * x
     near = np.abs(u) < 1e-3
@@ -58,12 +59,12 @@ def nfw_F(x):
 
 
 def nfw_sigma(r, rs: float, rcore: float):
-    """Projected NFW with a flat core inside ``rcore`` (unnormalised); r in h^-1 Mpc."""
+    """Return the projected NFW profile with a flat core inside ``rcore`` (unnormalised); r in h^-1 Mpc."""
     return nfw_F(np.maximum(np.asarray(r, np.float64), rcore) / rs)
 
 
 def nfw_enclosed(r, rs: float, rcore: float):
-    """int_0^r 2 pi r' nfw_sigma(r') dr'."""
+    """Return int_0^r 2 pi r' nfw_sigma(r') dr' (closed form)."""
     g = lambda x: np.log(x / 2.0) + nfw_h(x)
     r = np.asarray(r, np.float64)
     xc = np.asarray(rcore / rs)
@@ -72,7 +73,7 @@ def nfw_enclosed(r, rs: float, rcore: float):
 
 
 def schechter(m, mstar, alpha: float):
-    """Schechter function in magnitudes (unnormalised)."""
+    """Return the Schechter function in magnitudes (unnormalised)."""
     x = 10.0 ** (0.4 * (np.asarray(mstar, np.float64) - np.asarray(m, np.float64)))
     return x ** (alpha + 1.0) * np.exp(-x)
 
@@ -83,7 +84,7 @@ def _gl(n: int):
 
 
 def lumnorm(mstar: float, mlim: float, alpha: float, n: int = 64, bright: float = 8.0) -> float:
-    """int_{-inf}^{mlim} schechter dm (Gauss-Legendre on [m* - bright, mlim])."""
+    """Return int_{-inf}^{mlim} schechter dm (Gauss-Legendre on [m* - bright, mlim])."""
     x, w = _gl(n)
     lo = mstar - bright
     half, mid = 0.5 * (mlim - lo), 0.5 * (mlim + lo)
@@ -102,22 +103,26 @@ class Template:
 
     @classmethod
     def create(cls, pc: PscdConfig, mstar, cosmo) -> "Template":
+        """Return the template of ``pc`` with the m*(z) of ``mstar`` and the distances of ``cosmo``."""
         zt = np.asarray(cosmo.z, np.float64)
         return cls(pc, np.asarray(mstar.z, np.float64), np.asarray(mstar.m, np.float64), zt,
                    np.asarray(cosmo.mpc_per_deg(zt), np.float64))
 
     # ---------------------------------------------------------------- scalars of z
     def mstar(self, z):
+        """Return m*(z)."""
         return np.interp(np.asarray(z, np.float64), self.mstar_z, self.mstar_m)
 
     def mpc_per_deg(self, z):
+        """Return the physical h^-1 Mpc per degree at z."""
         return np.interp(np.asarray(z, np.float64), self.dist_z, self.dist_mpc_per_deg)
 
     def r200_deg(self, z):
+        """Return r200 [deg] at z."""
         return self.pc.r200 / self.mpc_per_deg(z)
 
     def rmax_deg(self, z):
-        """Truncation radius of the profile [deg]."""
+        """Return the truncation radius of the profile [deg] at z."""
         return self.pc.rtrunc * self.r200_deg(z)
 
     # ---------------------------------------------------------------- profile and LF
@@ -128,22 +133,25 @@ class Template:
         return float(nfw_enclosed(self.pc.r200, self.pc.r200 / self.pc.concentration, self.pc.rcore))
 
     def psi(self, theta_deg, z):
-        """Psi(theta) per deg^2 (theta in deg), 0 beyond the truncation."""
+        """Return Psi(theta) per deg^2 (theta in deg), 0 beyond the truncation."""
         D = self.mpc_per_deg(z)
         r = np.asarray(theta_deg, np.float64) * D
         out = self._sigma(r) * D * D / self._norm200()
         return np.where(r <= self.pc.rtrunc * self.pc.r200, out, 0.0)
 
     def phi(self, m, z):
-        """Phi(m) per mag: n200 galaxies brighter than m*(z) + dmag_n200."""
+        """Return Phi(m) per mag: n200 galaxies brighter than m*(z) + dmag_n200."""
         ms = float(self.mstar(z))
         norm = lumnorm(ms, ms + self.pc.dmag_n200, self.pc.alpha)
         return self.pc.n200 * schechter(m, ms, self.pc.alpha) / norm
 
     def kernel(self, z, pixel: float, nsub: int = 4, rmax: float | None = None) -> np.ndarray:
-        """Psi on the pixel grid around a centre (odd square array), averaged over nsub^2
-        sub-pixels (an even nsub never samples the centre itself); times the pixel area its sum
-        is the profile's integral. ``rmax``: truncation radius [deg] (default the profile's)."""
+        """Return Psi on the pixel grid around a centre (odd square array).
+
+        Each pixel holds the average over nsub^2 sub-pixels (an even nsub never samples the centre
+        itself); times the pixel area, the sum is the profile's integral. ``rmax`` is the
+        truncation radius [deg] (default the profile's).
+        """
         rmax = self.rmax_deg(z) if rmax is None else rmax
         h = int(np.ceil(rmax / pixel)) + 1
         off = (np.arange(nsub) + 0.5) / nsub - 0.5
@@ -168,6 +176,10 @@ class WidthTable:
     @classmethod
     def build(cls, zphot, zphot_e, refmag, dz: float = 0.05, dm: float = 0.25,
               zrange=(0.0, 1.6), mrange=(12.0, 25.0), min_count: int = 5) -> "WidthTable":
+        """Return the table of the galaxies' widths ``zphot_e`` in bins of ``dz`` in photo-z and ``dm`` in magnitude.
+
+        Bins with fewer than ``min_count`` galaxies take the value of the nearest filled bin.
+        """
         zphot, s, m = (np.asarray(a, np.float64) for a in (zphot, zphot_e, refmag))
         ok = (s > 0) & np.isfinite(zphot) & np.isfinite(m)
         ze = np.arange(zrange[0], zrange[1] + dz / 2, dz)
@@ -183,7 +195,7 @@ class WidthTable:
         return cls(0.5 * (ze[1:] + ze[:-1]), 0.5 * (me[1:] + me[:-1]), _fill(inv1, good), _fill(inv2, good))
 
     def at(self, z, m):
-        """(<1/s>, <1/s^2>) at photo-z z (scalar) and magnitudes m."""
+        """Return (<1/s>, <1/s^2>) at photo-z z (scalar) and magnitudes m."""
         iz = np.clip(np.searchsorted(self.z, z) - 1, 0, self.z.size - 2)
         t = np.clip((z - self.z[iz]) / (self.z[iz + 1] - self.z[iz]), 0.0, 1.0)
         a = (1 - t) * self.inv1[iz] + t * self.inv1[iz + 1]
@@ -192,7 +204,7 @@ class WidthTable:
 
 
 def _fill(arr, good):
-    """Empty bins take the value of the nearest filled bin (in index distance)."""
+    """Return ``arr`` with the empty bins set to the value of the nearest filled bin (in index distance)."""
     from scipy.ndimage import distance_transform_edt
 
     idx = distance_transform_edt(~good, return_distances=False, return_indices=True)
@@ -200,7 +212,7 @@ def _fill(arr, good):
 
 
 def noise_np(bkg: ZredBkg, z: float, m) -> np.ndarray:
-    """N(m, z) of the stacked photo-z background, numpy (bilinear; inf outside the table)."""
+    """Return N(m, z) of the stacked photo-z background, numpy (bilinear; inf outside the table)."""
     zt = np.asarray(bkg.zred, np.float64)
     mt = np.asarray(bkg.mag, np.float64)
     sg = np.asarray(bkg.sigma_g, np.float64)
@@ -225,6 +237,7 @@ class MagIntegrals:
     @classmethod
     def build(cls, tpl: Template, bkg: ZredBkg, widths: WidthTable, z: float, mag_max: float,
               dm: float = 0.02) -> "MagIntegrals":
+        """Return the integrals at redshift z on a grid of step ``dm`` from m*(z) - 6 to ``mag_max``."""
         lo = float(tpl.mstar(z)) - 6.0
         m = np.arange(lo, max(mag_max, lo + 1.0) + dm / 2, dm)
         phi = tpl.phi(m, z)
@@ -242,7 +255,7 @@ class MagIntegrals:
         return cls(m, cum(f1), cum(f2), cum(f3))
 
     def at(self, mlim):
-        """(I1, I2, I3) at magnitude limits ``mlim`` (any shape)."""
+        """Return (I1, I2, I3) at magnitude limits ``mlim`` (any shape)."""
         mlim = np.asarray(mlim, np.float64)
         return (np.interp(mlim, self.m, self.i1), np.interp(mlim, self.m, self.i2),
                 np.interp(mlim, self.m, self.i3))

@@ -40,6 +40,8 @@ from .redsequence import RSAt, RSModel
 @jax.tree_util.register_dataclass
 @dataclass(frozen=True)
 class ChisqBkg:
+    """Sigma_g(z, chi^2, m): galaxies per deg^2, per mag and per unit chi^2 (redMaPPer CHISQBKG)."""
+
     z: jnp.ndarray            # [nz] grid points
     chisq: jnp.ndarray        # [nc] bin centres
     mag: jnp.ndarray          # [nm] bin centres
@@ -47,7 +49,7 @@ class ChisqBkg:
     nm: jnp.ndarray           # [nm] N(m) per deg^2 per mag
 
     def lookup(self, z, chisq, mag):
-        """Sigma_g at (z, chi^2, m) (broadcast); +inf outside the table."""
+        """Return Sigma_g at (z, chi^2, m), trilinear (broadcast); +inf outside the table."""
         z, chisq, mag = jnp.broadcast_arrays(jnp.asarray(z), jnp.asarray(chisq), jnp.asarray(mag))
         fz = (z - self.z[0]) / (self.z[1] - self.z[0])
         fc = (chisq - self.chisq[0]) / (self.chisq[1] - self.chisq[0])
@@ -60,6 +62,7 @@ class ChisqBkg:
         return jnp.where(inside & (val > 0), val, jnp.inf)
 
     def to_hdus(self):
+        """Return the FITS HDUs of the table: image BKG_CHISQ and axes BKG_Z, BKG_C, BKG_M."""
         from ..io.tables import table_hdu
         from astropy.io import fits
 
@@ -72,6 +75,7 @@ class ChisqBkg:
 
     @classmethod
     def from_fits(cls, path) -> "ChisqBkg":
+        """Return the table read from a file holding the HDUs of :meth:`to_hdus`."""
         from astropy.io import fits
 
         with fits.open(path) as h:
@@ -93,7 +97,7 @@ class ZredBkg:
     sigma_g: jnp.ndarray      # [nz, nm]
 
     def lookup(self, zred, mag):
-        """Sigma_g at (zred, m), bilinear (broadcast).
+        """Return Sigma_g at (zred, m), bilinear (broadcast).
 
         As redMaPPer: +inf below the table (zred or m under the first bin edge, which includes a
         failed zred of -1) or for non-finite input; values above the table use its last bins.
@@ -108,6 +112,7 @@ class ZredBkg:
         return jnp.where(ok, val, jnp.inf)
 
     def to_hdus(self):
+        """Return the FITS HDUs of the table: image BKG_ZRED and axes BKG_ZRED_Z, BKG_ZRED_M."""
         from ..io.tables import table_hdu
         from astropy.io import fits
 
@@ -119,6 +124,7 @@ class ZredBkg:
 
     @classmethod
     def from_fits(cls, path) -> "ZredBkg":
+        """Return the table read from a file holding the HDUs of :meth:`to_hdus`."""
         from astropy.io import fits
 
         with fits.open(path) as h:
@@ -129,7 +135,7 @@ class ZredBkg:
 
 
 def _cic_1d(x, centres):
-    """Cloud-in-cell counts of ``x`` on regularly spaced ``centres`` (weight off the grid is lost)."""
+    """Return the cloud-in-cell counts of ``x`` on regularly spaced ``centres`` (weight off the grid is lost)."""
     f = (np.asarray(x, np.float64) - centres[0]) / (centres[1] - centres[0])
     i0 = np.floor(f).astype(np.int64)
     w1 = f - i0
@@ -141,7 +147,7 @@ def _cic_1d(x, centres):
 
 
 def _cic_2d(x, y, cx, cy):
-    """Cloud-in-cell counts of points (x, y) on the regular grid cx x cy: [nx, ny]."""
+    """Return the cloud-in-cell counts of points (x, y) on the regular grid cx x cy: [nx, ny]."""
     fx = (np.asarray(x, np.float64) - cx[0]) / (cx[1] - cx[0])
     fy = (np.asarray(y, np.float64) - cy[0]) / (cy[1] - cy[0])
     ix, iy = np.floor(fx).astype(np.int64), np.floor(fy).astype(np.int64)
@@ -158,7 +164,7 @@ def build_zred_bkg(zred, zred_chisq, refmag, area_fn, *, zred_range=(0.01, 1.0),
                    zredbinsize: float = 0.01, magbinsize: float = 0.2, mag_min: float = 12.0,
                    mag_max: float = 24.0, chisq_max: float = 100.0,
                    count_floor: float = 0.1) -> ZredBkg:
-    """Zred background from a galaxy table (redMaPPer's ZredBackgroundGenerator).
+    """Return the zred background of a galaxy table (redMaPPer's ZredBackgroundGenerator).
 
     Galaxies with a valid zred fit (0 <= zred chi^2 < ``chisq_max``) are counted by cloud in cell
     in (zred, m), with no luminosity cut. Every cell is floored at ``count_floor`` galaxies and
@@ -184,9 +190,11 @@ def build_zred_bkg(zred, zred_chisq, refmag, area_fn, *, zred_range=(0.01, 1.0),
 
 
 def _kernel_ratio(num: np.ndarray, den: np.ndarray, centres: np.ndarray, sigmas, min_counts: float):
-    """Kernel-smoothed num/den along the last axis, widening the kernel where den is sparse.
+    """Return num_s / den_s at each centre, kernel-smoothed along the last axis.
 
-    num: [..., nm], den: [nm]. Returns num_s / den_s evaluated at each centre.
+    num: [..., nm], den: [nm]. The Gaussian kernel takes the widths ``sigmas`` in turn and keeps,
+    at each centre, the first one holding ``min_counts`` of ``den``; centres that none reaches use
+    a flat kernel over all bins.
     """
     nm = centres.size
     out = np.zeros_like(num, dtype=np.float64)
@@ -212,7 +220,7 @@ def build_chisq_bkg(flux, ivar, refmag, rs: RSModel, mstar, area_fn, *, zrange, 
                     lmax_faint: float = 0.1, min_counts: float = 50.0,
                     sigmas=(0.2, 0.4, 0.8, 1.6, 3.2), smooth_z: float = 0.0,
                     mode: str = "lupt", eps: float = 0.015, chunk: int = 65536) -> ChisqBkg:
-    """Histogram the galaxies' chi^2 against the red sequence on a grid of redshifts.
+    """Return the chi^2 background, the galaxies' chi^2 against the red sequence histogrammed on a redshift grid.
 
     ``area_fn(m)`` returns the effective area in deg^2 over which a galaxy of magnitude m is in
     the catalogue (see :meth:`rema.sky.maps.Footprint.effective_area`).
@@ -279,7 +287,7 @@ def build_photoz_bkg(zphot, zphot_e, refmag, area_fn, *, zrange=(0.0, 1.6), zbin
                      magbinsize: float = 0.2, mag_min: float = 12.0, mag_max: float = 24.0,
                      min_counts: float = 50.0, sigmas=(0.2, 0.4, 0.8, 1.6, 3.2),
                      chunk: int = 65536) -> ZredBkg:
-    """Sigma_pz(z, m), the stacked photo-z distributions of a galaxy table.
+    """Return Sigma_pz(z, m), the stacked photo-z distributions of a galaxy table.
 
     Every galaxy with a usable photo-z (``zphot_e`` > 0) contributes its Gaussian
     N(z; zphot, zphot_e), evaluated at the redshifts of the grid (spacing ``zbinsize`` over

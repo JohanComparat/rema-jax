@@ -1,4 +1,4 @@
-"""Legacy Surveys DR11 sweeps -> compact galaxy tables.
+"""Compact galaxy tables from the Legacy Surveys DR11 sweeps.
 
 A sweep file and its row-matched photo-z file (``11.0-photo-z/<name>-pz.fits``) are reduced to
 the columns the cluster finder needs:
@@ -8,7 +8,8 @@ FLUX_IVAR[nb] (nanomaggies), REFMAG, REFMAG_ERR, EBV, TYPE (code), MASKBITS, ZSP
 ZSPEC_SRC (index into SURVEYS, 0 if none), ZPHOT, ZPHOT_STD.
 
 Selection (all explicit, see :class:`rema.config.SurveyConfig`): MASKBITS clean (objects fit as
-SGA large galaxies are kept), TYPE != PSF, NOBS >= 1 in every band, reference-band S/N >= 5,
+SGA large galaxies are kept), TYPE != PSF, TYPE != DUP, NOBS >= 1 and MW_TRANSMISSION > 0 in every
+band, reference-band S/N >= 5,
 REFMAG < mag_max and, when ``survey.ebv_max`` is set, E(B-V) < ebv_max (the randoms get the same
 cut, :func:`rema.sky.maps.good_randoms`). Fluxes are not otherwise cut, so faint or negative
 fluxes in the bluer bands are kept with their errors.
@@ -41,19 +42,23 @@ FITBITS_LARGEGALAXY = 9
 
 
 def ls_id(release, brickid, objid) -> np.ndarray:
-    """LS_ID_DR11 = RELEASE << 42 | BRICKID << 22 | OBJID."""
+    """Return LS_ID_DR11 = RELEASE << 42 | BRICKID << 22 | OBJID."""
     return ((np.asarray(release, np.int64) << 42) | (np.asarray(brickid, np.int64) << 22)
             | np.asarray(objid, np.int64))
 
 
 def pz_path(sweep: str | Path) -> Path:
-    """Row-matched photo-z sweep of a sweep file."""
+    """Return the path of the row-matched photo-z sweep of a sweep file."""
     sweep = Path(sweep)
     return sweep.parent.parent / f"{sweep.parent.name}-photo-z" / sweep.name.replace(".fits", "-pz.fits")
 
 
 def default_mag_max(cfg: RemaConfig) -> float:
-    """Reference-magnitude limit: m*(zmax) + 2.5 (the faint end of the background histogram)."""
+    """Return the reference-magnitude limit, ``survey.mag_max`` or else the faint end of the background histogram.
+
+    The faint end is m*(zmax) - 2.5 log10(``background.lmax_faint``), m*(zmax) + 2.5 by default,
+    with zmax the larger of the ``model`` and ``scan`` redshift ranges.
+    """
     from ..model.profiles import MStar
 
     if cfg.survey.mag_max is not None:
@@ -63,8 +68,11 @@ def default_mag_max(cfg: RemaConfig) -> float:
 
 
 def survey_hash(cfg: RemaConfig) -> str:
-    """Short hash of everything that decides which galaxies a table holds (the ``survey``
-    configuration and the magnitude limit), recorded as SURVHASH in galaxy tables."""
+    """Return a 12-character hash of what decides which galaxies a table holds.
+
+    The hash covers the ``survey`` configuration and the magnitude limit; galaxy tables record it
+    as SURVHASH.
+    """
     text = yaml.safe_dump({"survey": cfg.to_dict()["survey"],
                            "mag_max": round(float(default_mag_max(cfg)), 6)}, sort_keys=True)
     return hashlib.sha1(text.encode()).hexdigest()[:12]
@@ -73,10 +81,11 @@ def survey_hash(cfg: RemaConfig) -> str:
 def ingest_sweep(sweep: str | Path, cfg: RemaConfig | None = None, box: Box | None = None,
                  pz: str | Path | None = "auto", mag_max: float | None = None,
                  require_pz: bool = False) -> Table:
-    """Select and convert the galaxies of one sweep (optionally restricted to ``box``).
+    """Return the selected galaxies of one sweep, optionally restricted to ``box``.
 
-    Always returns every column, with zero rows when nothing is selected. ``require_pz``: a
-    missing photo-z file (``pz="auto"``) is an error instead of a warning.
+    The table always has every column, with zero rows when nothing is selected. With
+    ``require_pz``, a missing photo-z file (``pz="auto"``) is an error instead of a warning; without
+    a photo-z file, ZSPEC, ZPHOT and ZPHOT_STD stay at -1.
     """
     cfg = cfg or RemaConfig()
     sv = cfg.survey
@@ -168,6 +177,7 @@ def ingest_sweep(sweep: str | Path, cfg: RemaConfig | None = None, box: Box | No
 
 
 def concat(tables: list[Table]) -> Table:
+    """Return the row-wise concatenation of the non-empty tables (an empty dict if none)."""
     tables = [t for t in tables if t]
     if not tables:
         return {}
@@ -176,7 +186,7 @@ def concat(tables: list[Table]) -> Table:
 
 def ingest(sweeps: list[str | Path], out: str | Path | None = None, cfg: RemaConfig | None = None,
            box: Box | None = None) -> Table:
-    """Ingest several sweeps (restricted to ``box`` if given) into one galaxy table."""
+    """Return one galaxy table of several sweeps, restricted to ``box`` if given, and write it to ``out`` if given."""
     cfg = cfg or RemaConfig()
     mag_max = default_mag_max(cfg)
     parts = []
@@ -194,6 +204,7 @@ def ingest(sweeps: list[str | Path], out: str | Path | None = None, cfg: RemaCon
 
 
 def _table_header(cfg: RemaConfig, mag_max: float) -> dict:
+    """Return the header keys of a galaxy table: BANDS, REFBAND, MAGMAX, SNRMIN, FLXUNIT, SURVHASH."""
     return {"BANDS": ",".join(cfg.survey.bands), "REFBAND": cfg.survey.ref_band,
             "MAGMAX": mag_max, "SNRMIN": cfg.survey.ref_snr_min,
             "FLXUNIT": "nanomaggies, dereddened", "SURVHASH": survey_hash(cfg)}
@@ -201,7 +212,7 @@ def _table_header(cfg: RemaConfig, mag_max: float) -> dict:
 
 def ingest_sweeps(sweeps: list[str | Path], outdir: str | Path, cfg: RemaConfig | None = None,
                   *, require_pz: bool = True) -> list[Path]:
-    """One galaxy table per sweep, ``outdir/<sweep name>``; returns the table paths.
+    """Write one galaxy table per sweep, ``outdir/<sweep name>``, and return the table paths.
 
     A table that exists with the same SURVHASH is kept; one made with another survey
     configuration is rewritten. Empty selections give zero-row tables. The header records SWEEP,
@@ -235,7 +246,7 @@ def ingest_sweeps(sweeps: list[str | Path], outdir: str | Path, cfg: RemaConfig 
 
 def read_galaxies(source: str | Path, box: Box | BoxUnion | None = None,
                   cfg: RemaConfig | None = None) -> Table:
-    """Galaxies of one table, or of a directory of per-sweep tables cut to ``box``.
+    """Return the galaxies of one table, or of a directory of per-sweep tables, cut to ``box``.
 
     A directory needs a box (or a union of boxes): the tables of the sweeps overlapping it are
     read in name order and cut to it. Their SURVHASH must agree with each other and, when
@@ -268,8 +279,10 @@ def read_galaxies(source: str | Path, box: Box | BoxUnion | None = None,
 
 
 def galaxy_counts(galaxies_dir: str | Path) -> Table:
-    """Per-sweep summary of a directory of per-sweep tables (headers only): NAME, the sweep
-    box (RA0, RA1, DEC0, DEC1), NGAL, NZSPEC and EBVMEAN."""
+    """Return the per-sweep summary of a directory of per-sweep tables, read from the headers only.
+
+    The columns are NAME, the sweep box (RA0, RA1, DEC0, DEC1), NGAL, NZSPEC and EBVMEAN.
+    """
     rows = []
     for p in sorted(Path(galaxies_dir).glob("sweep-*.fits")):
         hdr = read_header(p)

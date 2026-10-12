@@ -1,4 +1,4 @@
-"""Scan mode and spectroscopic post-processing for a list of positions, joined to the input.
+"""Runs the scan mode and the spectroscopic post-processing on a list of positions, joined to the input.
 
 :func:`scan_positions` takes a table with RA and DEC (any number of positions, anywhere in the
 survey) and returns it with the results of :func:`rema.modes.scan.run_scan` and
@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- geometry
 def group_positions(ra, dec, cell: float = 10.0) -> list[np.ndarray]:
-    """Index arrays of the positions grouped into sky cells: Dec bands of ``cell`` deg, cut in RA
+    """Return index arrays of the positions grouped into sky cells: Dec bands of ``cell`` deg, cut in RA
     into cells of about ``cell`` deg on the sky (wider in RA towards the poles).
 
     >>> [g.tolist() for g in group_positions([1.0, 2.0, 359.0, 100.0], [0.0, 1.0, 0.0, -89.0])]
@@ -51,7 +51,7 @@ def group_positions(ra, dec, cell: float = 10.0) -> list[np.ndarray]:
 
 
 def data_box(ra, dec, buffer: float = 1.2, max_boxes: int = 50):
-    """The union of the positions' boxes, each a point buffered by ``buffer`` deg (a Box for one
+    """Return the union of the positions' boxes, each a point buffered by ``buffer`` deg (a Box for one
     position, else a BoxUnion); with more than ``max_boxes`` positions, their bounding box (a
     union of thousands of boxes makes every ``contains`` slow).
 
@@ -88,7 +88,7 @@ def _fill(dtype, shape):
 
 
 def join_to_input(table: dict, cat: dict, nrows: int | None = None) -> dict:
-    """The input columns as ``INPUT_<NAME>``, then the pipeline columns placed by the input row in
+    """Return the input columns as ``INPUT_<NAME>``, then the pipeline columns placed by the input row in
     ``cat["MEM_MATCH_ID"]``, then ``SCANNED``; rows without a result get fill values (-1 for
     numbers, empty strings, False).
 
@@ -118,8 +118,8 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
                    work=None, cfg=None, buffer: float = 1.2, cell: float = 10.0, nrand: int = 4,
                    batch: int = 128, specpost: bool = True, galaxies=None, footprint=None,
                    index=None, info: dict | None = None):
-    """Scan the positions of ``table`` (dict of columns): ``(joined, members)``, see the module
-    docstring.
+    """Scan the positions of ``table`` (dict of columns) and return ``(joined, members)`` (see the module
+    docstring).
 
     ``dr11``: the DR11 south directory (``sweep/11.0``, ``sweep/11.0-photo-z``,
     ``randoms/randoms-south-1-*.fits``); ``calib``: the calibration file; ``work``: the work

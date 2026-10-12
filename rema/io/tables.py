@@ -1,4 +1,4 @@
-"""FITS table input/output with astropy.
+"""FITS table input and output with astropy, for galaxy tables and cluster catalogues.
 
 Tables are plain ``dict[str, numpy.ndarray]`` in native byte order (FITS is big-endian; JAX and
 numpy arithmetic want native order). Writes go to a temporary file renamed into place, so an
@@ -18,6 +18,7 @@ Table = dict[str, np.ndarray]
 
 
 def _native(a: np.ndarray) -> np.ndarray:
+    """Return ``a`` in native byte order."""
     a = np.asarray(a)
     if a.dtype.byteorder not in ("=", "|"):
         a = a.astype(a.dtype.newbyteorder("="))
@@ -26,7 +27,7 @@ def _native(a: np.ndarray) -> np.ndarray:
 
 def read_table(path: str | Path, columns: Iterable[str] | None = None, rows=None,
                hdu: int | str = 1, upper: bool = True) -> Table:
-    """Read columns of a FITS binary table.
+    """Return columns of a FITS binary table as a dict of native-order arrays (byte strings stripped).
 
     Parameters
     ----------
@@ -52,16 +53,18 @@ def read_table(path: str | Path, columns: Iterable[str] | None = None, rows=None
 
 
 def read_header(path: str | Path, hdu: int | str = 1) -> fits.Header:
+    """Return a copy of the header of HDU ``hdu``."""
     with fits.open(path, memmap=True) as h:
         return h[hdu].header.copy()
 
 
 def nrows(path: str | Path, hdu: int | str = 1) -> int:
+    """Return the number of rows of a table HDU, read from its header."""
     return int(read_header(path, hdu)["NAXIS2"])
 
 
 def _fits_format(a: np.ndarray) -> tuple[str, str | None]:
-    """FITS TFORM (and TDIM for arrays with more than one trailing dimension)."""
+    """Return the FITS TFORM of an array, and its TDIM for more than one trailing dimension (else None)."""
     kind = a.dtype.kind
     size = a.dtype.itemsize
     if kind == "S" or kind == "U":
@@ -80,6 +83,10 @@ def _fits_format(a: np.ndarray) -> tuple[str, str | None]:
 
 def table_hdu(columns: Mapping[str, np.ndarray], header: Mapping[str, Any] | None = None,
               extname: str | None = None) -> fits.BinTableHDU:
+    """Return a binary table HDU of ``columns``, with the keys of ``header`` and name ``extname``.
+
+    Unicode columns are written as fixed-width strings and int8 columns as int16.
+    """
     cols = []
     for name, a in columns.items():
         a = np.asarray(a)
@@ -99,7 +106,7 @@ def table_hdu(columns: Mapping[str, np.ndarray], header: Mapping[str, Any] | Non
 
 def write_fits(path: str | Path, hdus: list[fits.hdu.base.ExtensionHDU],
                primary_header: Mapping[str, Any] | None = None) -> Path:
-    """Write HDUs atomically (temporary file + rename)."""
+    """Write HDUs after an empty primary HDU atomically (temporary file + rename) and return the path."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     prim = fits.PrimaryHDU()
@@ -114,13 +121,13 @@ def write_fits(path: str | Path, hdus: list[fits.hdu.base.ExtensionHDU],
 def write_table(path: str | Path, columns: Mapping[str, np.ndarray],
                 header: Mapping[str, Any] | None = None, extname: str | None = None,
                 primary_header: Mapping[str, Any] | None = None) -> Path:
-    """Write one binary table (plus an empty primary HDU)."""
+    """Write one binary table (plus an empty primary HDU) and return the path."""
     return write_fits(path, [table_hdu(columns, header, extname)], primary_header)
 
 
 # --------------------------------------------------------------------------- cluster catalogues
 def _fits_columns(d: Mapping[str, np.ndarray]) -> Table:
-    """Unicode columns as bytes (FITS has no unicode type)."""
+    """Return the columns with unicode ones converted to bytes (FITS has no unicode type)."""
     out = {}
     for k, v in d.items():
         a = np.asarray(v)
@@ -129,18 +136,20 @@ def _fits_columns(d: Mapping[str, np.ndarray]) -> Table:
 
 
 def _nrows(t: Mapping[str, np.ndarray]) -> int:
+    """Return the number of rows of a table (0 when it has no column)."""
     return len(next(iter(t.values()))) if t else 0
 
 
 def write_catalog(path: str | Path, cat: Mapping[str, np.ndarray], mem: Mapping[str, np.ndarray] | None,
                   cfg=None, header: Mapping[str, Any] | None = None,
                   members_path: str | Path | None = None) -> Path:
-    """Write a cluster catalogue: CLUSTERS, MEMBERS (or ``members_path``) and CONFIG HDUs.
+    """Write a cluster catalogue with CLUSTERS, MEMBERS (or ``members_path``) and CONFIG HDUs.
 
     The primary header gets REMAVER, NCLUSTER, NMEMBER, the cosmology of ``cfg`` (OMEGAM, HUBBLE,
     OMEGAB, MNU, W0, WA), its membership filter (FILTER) and null test (NULL, when there is one),
-    and ``header``. An empty catalogue keeps
-    empty CLUSTERS and MEMBERS HDUs, which :func:`read_catalog` reads back as empty dicts.
+    and ``header``. An empty catalogue keeps empty CLUSTERS and MEMBERS HDUs, which
+    :func:`read_catalog` reads back as empty dicts. A separate members file gets the same primary
+    header.
     """
     from .. import __version__
 
@@ -165,8 +174,10 @@ def write_catalog(path: str | Path, cat: Mapping[str, np.ndarray], mem: Mapping[
 
 
 def read_catalog(path: str | Path, members: bool = True) -> tuple[Table, Table, fits.Header]:
-    """(clusters, members, primary header) of a catalogue written by :func:`write_catalog`; empty
-    dicts for empty or absent HDUs."""
+    """Return (clusters, members, primary header) of a catalogue written by :func:`write_catalog`.
+
+    Empty or absent HDUs give empty dicts, and so does MEMBERS when ``members`` is False.
+    """
     with fits.open(path, memmap=True) as h:
         hdr = h[0].header.copy()
         full = {x.name for x in h if x.name in ("CLUSTERS", "MEMBERS") and x.data is not None

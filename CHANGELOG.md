@@ -4,9 +4,15 @@
 
 ### Documentation
 
-- Every paper cited in the README and the documentation links to its published version (DOI), or
-  to arXiv for a preprint; the reference lists (redMaPPer results page, photo-z finders, public
-  catalogues scan) give both.
+- Citations through sphinxcontrib-bibtex (new `docs` dependency): `docs/references.bib` holds
+  the 60 cited papers, built from their Crossref and arXiv records, and the new Literature page
+  lists them with a link to the published version (DOI), or to arXiv for a preprint.
+  The pages cite them in author–year form with pinpoints (`:cite:t:`, `:cite:p:`); the README
+  links to the DOIs.
+- The README, the documentation pages, the CHANGELOG, the notebook markdown and the docstrings
+  follow the author's house style: pages open on what they take and produce, one sentence per
+  source line, British spelling, small counts in words, thousands grouped with a narrow
+  no-break space, descriptive headings.
 - References added for the methods named without one: asinh magnitudes, the gapper and biweight
   estimators, HEALPix, the Navarro–Frenk–White (NFW) profile, the Bruzual & Charlot (2003) models
   (BC03), EzGal, L-BFGS, the No-U-Turn Sampler (NUTS) and super-sample variance.

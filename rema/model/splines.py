@@ -43,7 +43,7 @@ class NaturalSpline:
 
     @staticmethod
     def _second_derivative_operator(x: np.ndarray) -> np.ndarray:
-        """Matrix G with M = G @ y, the spline second derivatives at the nodes (M_0 = M_-1 = 0)."""
+        """Return the matrix G with M = G @ y, the spline second derivatives at the nodes (M_0 = M_-1 = 0)."""
         n = x.size
         G = np.zeros((n, n))
         if n < 3:
@@ -67,7 +67,7 @@ class NaturalSpline:
 
     # ------------------------------------------------------------------ basis
     def basis(self, z) -> np.ndarray:
-        """Basis matrix W with ``s(z) = W @ y``; shape ``z.shape + (n,)`` (numpy, float64)."""
+        """Return the basis matrix W with ``s(z) = W @ y``; shape ``z.shape + (n,)`` (numpy, float64)."""
         z = np.asarray(z, dtype=np.float64)
         flat = z.reshape(-1)
         W = np.zeros((flat.size, self.n))
@@ -114,12 +114,12 @@ class NaturalSpline:
         return W.reshape(z.shape + (self.n,))
 
     def __call__(self, z, y):
-        """Evaluate with numpy (host)."""
+        """Return s(z) for node values ``y``, evaluated with numpy on the host."""
         return self.basis(z) @ np.asarray(y, dtype=np.float64)
 
     # ------------------------------------------------------------------ JAX
     def eval_jax(self, z, y):
-        """Evaluate at traced ``z`` with node values ``y`` (both may be JAX arrays).
+        """Return s(z) at traced ``z`` for node values ``y`` (both may be JAX arrays).
 
         ``y`` may carry trailing dimensions: shape ``(n, ...)`` gives ``z.shape + (...)``.
         """

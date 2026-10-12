@@ -6,7 +6,7 @@ with Omega_j the area of redshift bin j (sr), dn/dln M the Tinker et al. (2008) 
 M200m (ggah_mod: emu_pk linear spectrum of the cold matter, sigma(M) and its slope by autodiff),
 P_i the probability that the richness measured in the catalogue falls in bin i
 (:mod:`rema.abundance.mor`), and K_ij the probability that z_lambda falls in bin j: Gaussian with
-the clusters' median z_lambda error, a bias ``dz_bias``.
+the clusters' median z_lambda error (floored at ``sigma_z_floor``) and a bias ``dz_bias``.
 
 The finder's response to the cosmology (:mod:`rema.abundance.response`) enters when the
 mass-richness relation describes the richness the finder would measure in the true cosmology
@@ -45,7 +45,7 @@ DEG2_SR = (np.pi / 180.0) ** 2
 
 
 def cosmology(theta: Mapping):
-    """ggah_mod Cosmology of ``theta`` (defaults :data:`COSMO_DEFAULTS`); traceable."""
+    """Return the ggah_mod Cosmology of ``theta`` (defaults :data:`COSMO_DEFAULTS`); traceable."""
     from ggah_mod.cosmology import Cosmology
 
     kw = {k: theta.get(k, v) for k, v in COSMO_DEFAULTS.items()}
@@ -53,6 +53,7 @@ def cosmology(theta: Mapping):
 
 
 def mass_richness(theta: Mapping) -> MassRichness:
+    """Return the :class:`~rema.abundance.mor.MassRichness` of ``theta`` (defaults for the missing parameters)."""
     ref = MassRichness()
     return dataclasses.replace(ref, **{f: theta.get(k, getattr(ref, f)) for k, f in MOR_FIELDS.items()})
 
@@ -74,6 +75,12 @@ class CountsSetup:
     def from_data(cls, dv: DataVector, dz: float = 0.01, zpad: float = 0.15,
                   log10m: tuple[float, float] = (12.8, 16.0), nm: int = 120, nk: int = 512,
                   sigma_z_floor: float = 0.005) -> "CountsSetup":
+        """Return the setup of a data vector.
+
+        The true-redshift grid has step ``dz`` and extends ``zpad`` beyond the bins; the mass grid
+        has ``nm`` points over ``log10m`` [h^-1 Msun]; the photo-z errors are interpolated from the
+        bins (missing values take the median, else 0.02) and floored at ``sigma_z_floor``.
+        """
         le, ze = np.asarray(dv.lam_edges, np.float64), np.asarray(dv.z_edges, np.float64)
         zt = np.arange(max(dz, ze[0] - zpad), ze[-1] + zpad + dz / 2, dz)
         zc = 0.5 * (ze[1:] + ze[:-1])
@@ -92,6 +99,7 @@ class CountsSetup:
 
 
 def _trapz_weights(x: np.ndarray) -> np.ndarray:
+    """Return the trapezoid-rule weights of the grid ``x``."""
     w = np.zeros_like(x)
     d = np.diff(x)
     w[:-1] += 0.5 * d
@@ -124,7 +132,7 @@ class CountsModel:
         self._omega = np.asarray(s.area_deg2) * DEG2_SR
 
     def halo_tables(self, cosmo):
-        """dn/dln M [(h^-1 Mpc)^-3] and the Tinker et al. (2010) bias, [n_zt, n_m]."""
+        """Return dn/dln M [(h^-1 Mpc)^-3] and the Tinker et al. (2010) bias, [n_zt, n_m] each."""
         from ggah_mod.halos.linear_bias import bias_tinker10
         from ggah_mod.halos.mass_function import dndm
         from ggah_mod.halos.variance import dln_sigma_dln_mass, sigma_of_mass
@@ -142,7 +150,7 @@ class CountsModel:
         return jax.vmap(one)(pcb, jnp.asarray(s.zt))
 
     def predict(self, theta: Mapping) -> dict:
-        """{"N": [n_lambda, n_z], "lnM": ln <M200m | bin> [h^-1 Msun], "bias": <b | bin>}."""
+        """Return {"N": [n_lambda, n_z], "lnM": ln <M200m | bin> [h^-1 Msun], "bias": <b | bin>}."""
         from ggah_mod.cosmology import comoving_volume_element
 
         s = self.setup
@@ -183,7 +191,7 @@ class CountsModel:
         return out
 
     def sigma8(self, theta: Mapping):
-        """sigma_8 of the total matter at z = 0."""
+        """Return sigma_8 of the total matter at z = 0."""
         from ggah_mod.cosmology.amplitude import sigma8
 
         cosmo = cosmology(theta)

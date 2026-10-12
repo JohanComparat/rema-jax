@@ -1,10 +1,10 @@
-"""The data vector: cluster counts N(lambda_i, z_j) in the volume-limited survey.
+"""Data vector of the abundance analysis: cluster counts N(lambda_i, z_j) in the volume-limited survey.
 
 A cluster is counted in redshift bin j when its z_lambda is in the bin and the depth at its
 position reaches the bin's upper edge (ZVLIM >= z_hi); the area of the bin is that of the pixels
 with z_vlim >= z_hi (:meth:`rema.abundance.area.ZvlimMap.area_above`). Clusters outside the
-pixels kept (``pix_keep``) or flagged by ``cluster_keep`` (e.g. near a seam) are left out, and so
-must their area be.
+pixels kept (``pix_keep``) or not selected by ``cluster_keep`` (e.g. near a seam) are left out,
+and so must their area be.
 """
 
 from __future__ import annotations
@@ -19,8 +19,11 @@ from .area import ZvlimMap
 
 @dataclass
 class DataVector:
-    """Counts [n_lambda, n_z] with the bin edges, the area of each z bin [deg2], and per bin the
-    mean lambda, mean z_lambda and median z_lambda error of the clusters counted."""
+    """Counts [n_lambda, n_z] with the bin edges, the area of each z bin [deg2] and per-bin means.
+
+    Per bin, ``lam_mean``, ``z_mean`` and ``sigma_z`` are the mean lambda, mean z_lambda and
+    median z_lambda error of the clusters counted.
+    """
 
     lam_edges: np.ndarray
     z_edges: np.ndarray
@@ -33,9 +36,11 @@ class DataVector:
 
     @property
     def shape(self) -> tuple[int, int]:
+        """Shape (n_lambda, n_z) of the counts."""
         return self.counts.shape
 
     def write(self, path):
+        """Write HDUs COUNTS, LAMBDA_EDGES and Z_BINS to ``path``, with ``meta`` in the primary header."""
         from ..io.tables import table_hdu, write_fits
 
         bins = table_hdu({"COUNTS": self.counts.astype(np.float64), "LAMBDA_MEAN": self.lam_mean,
@@ -47,6 +52,7 @@ class DataVector:
 
     @classmethod
     def read(cls, path) -> "DataVector":
+        """Return the data vector read from a file written by :meth:`write`."""
         from astropy.io import fits
 
         from ..io.tables import read_table
@@ -63,9 +69,12 @@ class DataVector:
 def build_data_vector(cat: Mapping[str, np.ndarray], zmap: ZvlimMap, lam_edges: Sequence[float],
                       z_edges: Sequence[float], *, pix_keep=None, cluster_keep=None,
                       zvlim_col: str = "ZVLIM") -> DataVector:
-    """Counts of ``cat`` (LAMBDA, Z_LAMBDA, Z_LAMBDA_E, RA, DEC, and ZVLIM or the map's value at
-    the position) in the volume-limited sky of ``zmap``, restricted to the pixels ``pix_keep``
-    (boolean over the map's pixels) and the clusters ``cluster_keep``."""
+    """Return the counts of ``cat`` in the volume-limited sky of ``zmap``.
+
+    ``cat`` holds LAMBDA, Z_LAMBDA, Z_LAMBDA_E, RA, DEC, and ZVLIM (else the map's value at the
+    position is used). The counts are restricted to the pixels ``pix_keep`` (boolean over the
+    map's pixels) and the clusters ``cluster_keep``.
+    """
     le, ze = np.asarray(lam_edges, np.float64), np.asarray(z_edges, np.float64)
     lam, z = np.asarray(cat["LAMBDA"], np.float64), np.asarray(cat["Z_LAMBDA"], np.float64)
     ze_err = np.asarray(cat.get("Z_LAMBDA_E", np.full(lam.size, np.nan)), np.float64)

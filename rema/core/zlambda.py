@@ -1,4 +1,4 @@
-"""Cluster photometric redshift z_lambda.
+"""Computes the cluster photometric redshift z_lambda, its error and its redshift distribution.
 
 redMaPPer's iteration (``Zlambda.calc_zlambda``): at the current z, compute the richness and the
 colour membership probabilities pcol; keep a soft top fraction of the members,
@@ -40,7 +40,7 @@ class ZLambda:
 
 
 def _member_lnl_one(nb, z, model: FilterModel):
-    """ln L_i(z) = -chi^2/2 - ln det/2 for every neighbour at one redshift: [K].
+    """Return ln L_i(z) = -chi^2/2 - ln det/2 for every neighbour at one redshift: [K].
 
     With the photo-z filter, chi^2 = ((ZPHOT - z)/s)^2 and ln det = 2 ln s: ln p_i(z).
     """
@@ -54,7 +54,7 @@ def _member_lnl_one(nb, z, model: FilterModel):
 
 
 def _weighted_lnl(nb, pw, zgrid, model: FilterModel, chunk: int = 7):
-    """L(z) = sum_i pw_i ln L_i(z) on a grid, up to ``chunk`` grid points at a time.
+    """Return L(z) = sum_i pw_i ln L_i(z) on a grid, up to ``chunk`` grid points at a time.
 
     Memory is O(chunk K); for large K fewer points are evaluated together (see ``grid_chunk``).
     """
@@ -76,7 +76,7 @@ def _weights(pcol, topfrac: float, soft: float):
 
 
 def _parabola_vertex(zg, L):
-    """Vertex of the parabola through the best grid point and its neighbours."""
+    """Return the vertex of the parabola through the best grid point and its neighbours."""
     g = zg.shape[0]
     i = jnp.clip(jnp.argmax(L), 1, g - 2)
     y0, y1, y2 = L[i - 1], L[i], L[i + 1]
@@ -93,7 +93,7 @@ def zlambda_one(nb, z0, frad, fgeo, quad: RadialQuad, model: FilterModel, stage:
                 maxiter: int = 5, tol: float = 2e-4, ngrid: int = 21, half_width: float = 0.03,
                 npz: int = 21, topfrac: float = 0.7, soft: float = 0.04, zmin: float = 0.01,
                 zmax: float = 1.5, calc_err: bool = True):
-    """z_lambda of one cluster starting from z0 (without z_e and p(z) unless ``calc_err``)."""
+    """Return z_lambda of one cluster, starting from z0 (without z_e and p(z) unless ``calc_err``)."""
     offs = jnp.linspace(-half_width, half_width, ngrid)
 
     def body(carry):
@@ -144,7 +144,7 @@ def zlambda(nb, z0, frad, fgeo, quad: RadialQuad, model: FilterModel, stage: Sta
             maxiter: int = 5, tol: float = 2e-4, ngrid: int = 21, half_width: float = 0.03,
             npz: int = 21, topfrac: float = 0.7, soft: float = 0.04,
             calc_err: bool = True) -> ZLambda:
-    """z_lambda of a batch of clusters (arrays [B, K]; z0 [B]).
+    """Return z_lambda of a batch of clusters (arrays [B, K]; z0 [B]).
 
     ``calc_err=False`` (first pass, as in redMaPPer) skips the curvature and p(z) grids;
     z_e, pzbins and pz are then -1.

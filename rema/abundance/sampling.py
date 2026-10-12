@@ -17,7 +17,11 @@ from .likelihood import Likelihood
 
 
 def map_fit(lik: Likelihood, x0=None, maxiter: int = 1000, tol: float = 1e-12) -> tuple[np.ndarray, dict]:
-    """Maximum of the log-posterior (L-BFGS-B in coordinates scaled to the prior box)."""
+    """Return the maximum of the log-posterior and a dict of fit information.
+
+    The fit runs L-BFGS-B in coordinates scaled to the prior box; ``at_bound`` lists the free
+    parameters that end on a bound.
+    """
     from scipy.optimize import minimize
 
     lo, hi = (np.array(b, np.float64) for b in zip(*lik.bounds()))
@@ -42,7 +46,7 @@ def map_fit(lik: Likelihood, x0=None, maxiter: int = 1000, tol: float = 1e-12) -
 
 
 def laplace(lik: Likelihood, x) -> np.ndarray:
-    """Covariance of the parameters from the Hessian of the log-posterior at ``x``."""
+    """Return the covariance of the parameters from the Hessian of the log-posterior at ``x``."""
     with _float64():
         H = np.asarray(jax.jit(jax.hessian(lik._logpost_impl))(jnp.asarray(x, jnp.float64)))
     return np.linalg.inv(-H)
@@ -50,10 +54,10 @@ def laplace(lik: Likelihood, x) -> np.ndarray:
 
 def nuts(lik: Likelihood, x0=None, warmup: int = 500, samples: int = 1000, seed: int = 0,
          progress: bool = False) -> dict:
-    """NUTS chain (blackjax window adaptation, then sampling) of the free parameters.
+    """Return a NUTS chain (blackjax window adaptation, then sampling) of the free parameters.
 
-    Returns {"samples": [samples, n_free], "logpost": [samples], "accept": mean acceptance,
-    "names": free names}.
+    The dict holds "samples" [samples, n_free], "logpost" [samples], "accept" (mean acceptance),
+    "names" (free names) and "step_size" (adapted step size).
     """
     import blackjax
 

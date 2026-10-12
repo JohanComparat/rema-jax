@@ -23,7 +23,7 @@ from .area import ZvlimMap
 
 def sigma2_b_slabs(zmap: ZvlimMap, z_edges: Sequence[float], theta: Mapping, pk=None,
                    pix_keep=None, ell_max: int | None = None) -> np.ndarray:
-    """sigma_b^2 of each redshift bin's volume-limited footprint and slab."""
+    """Return sigma_b^2 of each redshift bin's volume-limited footprint and slab (0 for a bin without pixels)."""
     from ggah_mod.cosmology import make_pk
     from ggah_mod.covariance.geometry import from_healpix_mask
     from ggah_mod.covariance.supersample import slab_sigma2_b
@@ -53,7 +53,10 @@ def sigma2_b_slabs(zmap: ZvlimMap, z_edges: Sequence[float], theta: Mapping, pk=
 
 
 def counts_covariance(N: np.ndarray, bias: np.ndarray, sigma2_b: np.ndarray | None = None) -> np.ndarray:
-    """Covariance of the flattened counts [n_lambda * n_z] (row-major, lambda first)."""
+    """Return the covariance of the flattened counts [n_lambda * n_z] (row-major, lambda first).
+
+    The Poisson term is floored at one count; without ``sigma2_b`` the covariance is Poisson only.
+    """
     N, bias = np.asarray(N, np.float64), np.asarray(bias, np.float64)
     nl, nz = N.shape
     C = np.diag(np.maximum(N.ravel(), 1.0))

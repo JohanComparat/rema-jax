@@ -13,11 +13,13 @@ Commands (each reads and writes FITS files, so stages can be resumed and run per
   blind      blind cluster finding over a region (red-sequence or, with
              --set model.filter=photoz, photo-z filter)
   pscd       photo-z space cluster detection over a region (the AMICO matched filter)
+  remeasure  catalogued clusters re-measured at fixed centres in other cosmologies
   specpost   spectroscopic redshift and velocity dispersion of a cluster catalogue
   calibrate  red-sequence calibration on DR11 (spectroscopic seeds)
   randoms-index  DR11 randoms -> pixel-sorted copy, for fast footprints of any box
   regions    per-sweep galaxy tables -> region plan of a large run
   status     done / missing / stale regions of a run
+  todo       missing ingest chunks and randoms indexes (for the driver)
   merge      region catalogues -> one catalogue, with boundary QA
 
 Boxes: ``--box RA0 RA1 DEC0 DEC1`` (repeatable: a union of boxes) gives the data box, and
@@ -51,7 +53,7 @@ def _cfg(path):
 
 
 def _config_diff(a, b) -> list[str]:
-    """Dotted keys (``section.key``) whose values differ between two configurations."""
+    """Return the dotted keys (``section.key``) whose values differ between two configurations."""
     def flat(d, prefix=""):
         out = {}
         for k, v in d.items():
@@ -63,7 +65,7 @@ def _config_diff(a, b) -> list[str]:
 
 
 def _with_cosmology(cfg, args):
-    """``cfg`` with the ``--cosmology KEY=VALUE`` overrides of ``args`` applied."""
+    """Return ``cfg`` with the ``--cosmology KEY=VALUE`` overrides of ``args`` applied."""
     from .config import parse_cosmology_overrides
 
     over = parse_cosmology_overrides(getattr(args, "cosmology", None))
@@ -75,7 +77,7 @@ def _with_cosmology(cfg, args):
 
 
 def _with_overrides(cfg, args):
-    """``cfg`` with the ``--set`` overrides of ``args`` applied (logged)."""
+    """Return ``cfg`` with the ``--set`` overrides of ``args`` applied (logged)."""
     from .config import apply_overrides
 
     items = getattr(args, "set", None)
@@ -92,7 +94,7 @@ def _no_photoz(cfg, what: str):
 
 
 def _run_cfg(path, stored, source: str):
-    """Configuration of a run: ``--config`` if given, else the one stored with the input (the
+    """Return the configuration of a run: ``--config`` if given, else the one stored with the input (the
     calibration, or a catalogue's CONFIG HDU), else the defaults. A ``--config`` that differs from
     the stored one is used, with a warning listing the differences."""
     from .config import RemaConfig
@@ -111,7 +113,7 @@ def _run_cfg(path, stored, source: str):
 
 
 def _catalog_cfg(path):
-    """Configuration in the CONFIG HDU of a catalogue written by rema (None without one)."""
+    """Return the configuration in the CONFIG HDU of a catalogue written by rema (None without one)."""
     import yaml
     from astropy.io import fits
 
@@ -133,14 +135,14 @@ def _box(vals):
 
 
 def _sky(boxes):
-    """A Box, a BoxUnion (several ``--box``) or None."""
+    """Return a Box, a BoxUnion (several ``--box``) or None."""
     from .sky.regions import Box, sky_union
 
     return sky_union([Box(*map(float, b)) for b in boxes]) if boxes else None
 
 
 def _plan_region(args):
-    """(own Box, data Box/BoxUnion, plan meta) of ``--regions/--region-id``, or None."""
+    """Return (own Box, data Box/BoxUnion, plan meta) of ``--regions/--region-id``, or None."""
     if not getattr(args, "regions", None):
         return None
     from .pipeline import plan_boxes, read_plan
@@ -153,7 +155,7 @@ def _plan_region(args):
 
 
 def _data_sky(args):
-    """The data box of a command: from the plan, else from ``--box``."""
+    """Return the data box of a command: from the plan, else from ``--box``."""
     pr = _plan_region(args)
     if pr is not None:
         return pr[1]
@@ -201,7 +203,7 @@ def _region(args, need_bkg=True, rebuild_bkg=False, sky=None, rs_only: str | Non
 
 
 def _centring(reg) -> str:
-    """Resolved centring method of a run (logged, with a warning when a wcen model goes unused)."""
+    """Return the resolved centring method of a run (logged, with a warning when a wcen model goes unused)."""
     method = reg.centering_method()
     if method == "bcg" and reg.wcen is not None:
         log.warning("the calibration has a wcen model but the configuration selects BCG centring "
@@ -327,7 +329,7 @@ def cmd_scan(args):
 
 
 def _read_any_table(path) -> dict:
-    """A table in any format astropy reads (FITS, CSV, ECSV, ...) as a dict of numpy columns."""
+    """Read a table in any format astropy reads (FITS, CSV, ECSV, ...) as a dict of numpy columns."""
     from astropy.table import Table
 
     t = Table.read(path)
@@ -353,7 +355,7 @@ def _default_dr11() -> str | None:
 
 
 def cmd_scan_positions(args):
-    """Scan mode + spectroscopic post-processing for the positions of a table, joined to it."""
+    """Run the scan mode and the spectroscopic post-processing on the positions of a table, joined to it."""
     import os
 
     from .calibration import Calibration
@@ -427,7 +429,7 @@ def cmd_blind(args):
 
 
 def cmd_pscd(args):
-    """Photo-z space cluster detection (the AMICO matched filter) over a region."""
+    """Run the photo-z space cluster detection (the AMICO matched filter) over a region."""
     import jax
 
     from .calibration import Calibration
@@ -573,7 +575,7 @@ def cmd_calibrate(args):
 
 
 def _survey_sweeps(directory) -> set[str]:
-    """Sweep names of a survey: the files in ``directory`` and those its checksum lists name."""
+    """Return the sweep names of a survey: the files in ``directory`` and those its checksum lists name."""
     d = Path(directory)
     names = {p.name for p in d.glob("sweep-*.fits") if not p.name.endswith("-pz.fits")}
     for sums in d.glob("*.sha256sum"):
@@ -657,7 +659,7 @@ def cmd_status(args):
 
 
 def array_spec(ids) -> str:
-    """SLURM array specification of integer IDs, with ranges: [0, 1, 2, 5] -> "0-2,5"."""
+    """Return the SLURM array specification of integer IDs, with ranges: [0, 1, 2, 5] -> "0-2,5"."""
     ids = sorted(set(int(i) for i in ids))
     out, i = [], 0
     while i < len(ids):
@@ -670,7 +672,7 @@ def array_spec(ids) -> str:
 
 
 def cmd_todo(args):
-    """Array specs of the ingest chunks and randoms files whose outputs are missing."""
+    """Print the array specs of the ingest chunks and randoms files whose outputs are missing."""
     from .sky.regions import sweep_box
 
     sweeps = _sweeps([args.sweeps])
@@ -963,7 +965,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _setup_jax():
-    """Persistent compilation cache and no GPU memory preallocation (before JAX starts)."""
+    """Enable the persistent compilation cache and disable GPU memory preallocation (before JAX starts)."""
     import os
 
     os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")

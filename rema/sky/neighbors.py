@@ -1,6 +1,7 @@
-"""Neighbour search on the sphere and padding into fixed-shape batches.
+"""Neighbour search on the sphere, padded into fixed-shape batches.
 
-The galaxies of a region go into a KD-tree of unit vectors (scipy). A query returns, for each
+This module takes galaxy and centre positions and returns, per centre, the padded list of galaxies
+within an angular radius. The galaxies of a region go into a KD-tree of unit vectors (scipy). A query returns, for each
 centre, the galaxies within an angular radius; the ragged lists are padded to K, the next power of
 two of the largest list (at least ``kmin``), so each K compiles once. Angular separations are
 computed in float64 on the host and passed to the device in float32.
@@ -21,6 +22,7 @@ from scipy.spatial import cKDTree
 
 
 def unit_vectors(ra, dec) -> np.ndarray:
+    """Return the unit vectors [..., 3] of (ra, dec) in degrees."""
     ra = np.radians(np.asarray(ra, np.float64))
     dec = np.radians(np.asarray(dec, np.float64))
     c = np.cos(dec)
@@ -28,13 +30,13 @@ def unit_vectors(ra, dec) -> np.ndarray:
 
 
 def radec_from_unit(xyz) -> tuple[float, float]:
-    """(RA, Dec) in degrees of a unit vector (any norm > 0)."""
+    """Return (RA, Dec) in degrees of a vector of any norm > 0."""
     x, y, z = (float(v) for v in np.asarray(xyz, np.float64))
     return float(np.degrees(np.arctan2(y, x)) % 360.0), float(np.degrees(np.arctan2(z, np.hypot(x, y))))
 
 
 def n_workers() -> int:
-    """CPUs this process may use (the SLURM allocation, not the whole node)."""
+    """Return the number of CPUs this process may use: its CPU affinity (the SLURM allocation), else the CPU count."""
     import os
 
     try:
@@ -44,6 +46,7 @@ def n_workers() -> int:
 
 
 def next_pow2(n: int, kmin: int = 128) -> int:
+    """Return the smallest power of two >= ``n``, and at least ``kmin``."""
     return max(kmin, 1 << int(np.ceil(np.log2(max(n, 1)))))
 
 
@@ -58,19 +61,22 @@ class Padded:
 
 
 class NeighborIndex:
+    """KD-tree of the unit vectors of galaxies at (ra, dec) in degrees."""
+
     def __init__(self, ra, dec):
         self.xyz = unit_vectors(ra, dec)
         self.tree = cKDTree(self.xyz)
         self.n = self.xyz.shape[0]
 
     def query_lists(self, ra_c, dec_c, radius_deg) -> list[np.ndarray]:
+        """Return, per centre, the unsorted indices of the galaxies within ``radius_deg``."""
         xc = unit_vectors(ra_c, dec_c)
         rad = np.broadcast_to(np.asarray(radius_deg, np.float64), (xc.shape[0],))
         chord = 2.0 * np.sin(np.radians(rad) / 2.0)
         return list(self.tree.query_ball_point(xc, chord, workers=n_workers(), return_sorted=False))
 
     def query(self, ra_c, dec_c, radius_deg, k: int | None = None, kmin: int = 128) -> Padded:
-        """Neighbours within ``radius_deg`` (scalar or per centre), padded to K.
+        """Return the neighbours within ``radius_deg`` (scalar or per centre), padded to K and sorted by separation.
 
         If ``k`` is given and a list is longer, the farthest neighbours are dropped.
         """
@@ -97,6 +103,6 @@ class NeighborIndex:
 
 
 def bucket_order(counts: np.ndarray, kmin: int = 128) -> list[tuple[int, np.ndarray]]:
-    """Group items by the power-of-two bucket of their neighbour count: [(K, indices), ...]."""
+    """Return the items grouped by the power-of-two bucket of their neighbour count: [(K, indices), ...]."""
     ks = np.array([next_pow2(int(c), kmin) for c in counts])
     return [(int(k), np.flatnonzero(ks == k)) for k in np.unique(ks)]

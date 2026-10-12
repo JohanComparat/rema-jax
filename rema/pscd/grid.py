@@ -1,8 +1,10 @@
-"""The angular grid of PSCD: a gnomonic projection of the region, cloud-in-cell painting of
-galaxy weights and convolution with the cluster profile.
+"""Angular grid of PSCD on a gnomonic projection of the region.
 
-The tangent point is the centre of the region's bounding box; over the 10-20 deg of a region the
-projection distorts distances by less than 1 % (a cluster profile spans at most a degree).
+This module projects the galaxies onto the plane tangent at the region's centre, paints their
+weights on a pixel grid by cloud in cell and convolves the images with the cluster profile.
+
+The tangent point is the normalised mean of the covered points' unit vectors; over the 10-20 deg of a region the
+projection distorts distances by less than 1% (a cluster profile spans at most a degree).
 """
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ from ..sky.neighbors import radec_from_unit, unit_vectors
 
 
 def gnomonic(ra, dec, ra0: float, dec0: float):
-    """(xi, eta) [deg] of (ra, dec) on the plane tangent at (ra0, dec0)."""
+    """Return (xi, eta) [deg] of (ra, dec) on the plane tangent at (ra0, dec0)."""
     a, d = np.radians(np.asarray(ra, np.float64)), np.radians(np.asarray(dec, np.float64))
     a0, d0 = np.radians(ra0), np.radians(dec0)
     cosc = np.sin(d0) * np.sin(d) + np.cos(d0) * np.cos(d) * np.cos(a - a0)
@@ -26,7 +28,7 @@ def gnomonic(ra, dec, ra0: float, dec0: float):
 
 
 def inverse_gnomonic(xi, eta, ra0: float, dec0: float):
-    """(ra, dec) [deg] of tangent-plane coordinates (xi, eta) [deg].
+    """Return (ra, dec) [deg] of tangent-plane coordinates (xi, eta) [deg].
 
     >>> ra, dec = inverse_gnomonic(*gnomonic([10.0, 359.0], [-50.0, 3.0], 5.0, -20.0), 5.0, -20.0)
     >>> np.round(ra, 8).tolist(), np.round(dec, 8).tolist()
@@ -44,8 +46,10 @@ def inverse_gnomonic(xi, eta, ra0: float, dec0: float):
 
 @dataclass
 class Grid:
-    """Pixels of side ``pixel`` [deg] on the tangent plane at (ra0, dec0); pixel (iy, ix) is
-    centred at xi = x0 + ix pixel, eta = y0 + iy pixel."""
+    """Pixels of side ``pixel`` [deg] on the plane tangent at (ra0, dec0).
+
+    Pixel (iy, ix) is centred at xi = x0 + ix pixel, eta = y0 + iy pixel.
+    """
 
     ra0: float
     dec0: float
@@ -57,7 +61,7 @@ class Grid:
 
     @classmethod
     def covering(cls, ra, dec, pixel: float, margin: float = 0.0) -> "Grid":
-        """The grid covering the points (ra, dec), plus ``margin`` deg on every side."""
+        """Return the grid covering the points (ra, dec), plus ``margin`` deg on every side."""
         ra, dec = np.asarray(ra, np.float64), np.asarray(dec, np.float64)
         if ra.size == 0:
             raise ValueError("no point to cover")
@@ -71,32 +75,34 @@ class Grid:
 
     @property
     def shape(self):
+        """Grid shape (ny, nx)."""
         return self.ny, self.nx
 
     @property
     def area(self) -> float:
-        """Pixel area [deg^2]."""
+        """Return the pixel area [deg^2]."""
         return self.pixel * self.pixel
 
     def to_pix(self, ra, dec):
-        """Fractional pixel coordinates (px, py) of sky positions."""
+        """Return the fractional pixel coordinates (px, py) of sky positions."""
         xi, eta = gnomonic(ra, dec, self.ra0, self.dec0)
         return (xi - self.x0) / self.pixel, (eta - self.y0) / self.pixel
 
     def to_sky(self, px, py):
-        """Sky positions of fractional pixel coordinates."""
+        """Return the sky positions (ra, dec) [deg] of fractional pixel coordinates."""
         return inverse_gnomonic(self.x0 + np.asarray(px) * self.pixel, self.y0 + np.asarray(py) * self.pixel,
                                 self.ra0, self.dec0)
 
     def centres(self):
-        """(ra, dec) of every pixel centre, [ny, nx] each."""
+        """Return (ra, dec) of every pixel centre, [ny, nx] each."""
         px, py = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         return self.to_sky(px, py)
 
 
 def paint(px, py, w, shape) -> np.ndarray:
-    """Cloud-in-cell sum of the weights ``w`` at fractional pixel coordinates on a grid of
-    ``shape`` (ny, nx); weight falling off the grid is lost.
+    """Return the cloud-in-cell sum of the weights ``w`` at fractional pixel coordinates.
+
+    The grid has ``shape`` (ny, nx); weight falling off the grid is lost.
 
     >>> img = paint([1.25], [2.0], [4.0], (4, 4))
     >>> img[2, 1], img[2, 2], img.sum()
@@ -116,7 +122,7 @@ def paint(px, py, w, shape) -> np.ndarray:
 
 
 def convolve(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
-    """``img`` convolved with a centred, odd-sized ``kernel`` (same shape as ``img``; zero outside).
+    """Return ``img`` convolved with a centred, odd-sized ``kernel`` (same shape as ``img``; zero outside).
 
     >>> k = np.zeros((3, 3)); k[1, 1] = 2.0; k[1, 2] = 1.0
     >>> np.round(convolve(np.eye(4), k)[1], 6).tolist()

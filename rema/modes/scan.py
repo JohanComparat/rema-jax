@@ -1,4 +1,4 @@
-"""Scan mode: richness and redshift at given positions (redMaPPer "zscan").
+"""Measures richness and redshift at given positions (scan mode, redMaPPer "zscan").
 
 For every input position (e.g. X-ray or SZ cluster candidates):
 
@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 
 @partial(jax.jit, static_argnames=())
 def _scan_kernel(nb, zsteps, frad, fgeo, quad, model, stage):
-    """lambda and LNLAMLIKE for B clusters x S redshift steps (frad, fgeo: [B, S, n])."""
+    """Return lambda and LNLAMLIKE for B clusters x S redshift steps (frad, fgeo: [B, S, n])."""
     def one_cluster(nb1, fr, fg):
         def one_step(z, fr1, fg1):
             r = richness_one(nb1, z, fr1, fg1, quad, model, stage)
@@ -48,7 +48,7 @@ def _scan_kernel(nb, zsteps, frad, fgeo, quad, model, stage):
 
 
 def _z_chunks(zsteps: np.ndarray, zstep: float, width: float = 0.1) -> list[np.ndarray]:
-    """Consecutive runs of the scan grid, ``width`` in redshift each; every step exactly once.
+    """Return consecutive runs of the scan grid, ``width`` in redshift each; every step exactly once.
 
     >>> z = np.round(np.arange(0.05, 1.0 + 0.0025, 0.005), 6)
     >>> c = _z_chunks(z, 0.005)
@@ -70,7 +70,7 @@ def _completeness_grid(region: Region, ra, dec, zsteps, quad):
 
 
 def _refine(region: Region, ra, dec, z0, stage: Stage, quad: RadialQuad):
-    """z_lambda iteration around (ra, dec) starting at z0; returns (zl, pad, nb).
+    """Iterate z_lambda around (ra, dec) from z0 and return (zl, pad, nb).
 
     Every position keeps its own aperture and magnitude limit (galaxies fainter than
     maxmag + 0.5 have theta_i ~ 0), and the neighbour arrays are cropped to the largest count:
@@ -95,7 +95,7 @@ def _refine(region: Region, ra, dec, z0, stage: Stage, quad: RadialQuad):
 
 
 def _crop_padded(pad):
-    """Valid neighbours first in every row, cropped to a power of two >= the largest count."""
+    """Put the valid neighbours first in every row, cropped to a power of two >= the largest count."""
     order = np.argsort(~pad.valid, axis=1, kind="stable")
     counts = pad.valid.sum(axis=1)
     K = next_pow2(int(counts.max(initial=1)))
@@ -106,7 +106,7 @@ def _crop_padded(pad):
 
 
 def run_scan(region: Region, ra, dec, ids=None, batch: int = 128):
-    """Scan the given positions. Returns (catalogue, members) as dicts of numpy arrays."""
+    """Scan the given positions and return (catalogue, members) as dicts of numpy arrays."""
     cfg = region.cfg
     ra = np.atleast_1d(np.asarray(ra, np.float64))
     dec = np.atleast_1d(np.asarray(dec, np.float64))
@@ -205,7 +205,7 @@ def run_scan(region: Region, ra, dec, ids=None, batch: int = 128):
 
 
 def _centre(region: Region, pad, nb, rich, z):
-    """Centring (host arrays) of a batch of scan positions, within scan_maxrad of each position."""
+    """Return the centring (host arrays) of a batch of scan positions, within scan_maxrad of each position."""
     cfg = region.cfg
     maxrad = jnp.float32(cfg.centering.scan_maxrad)
     if region.centering_method() == "wcen":
@@ -221,7 +221,7 @@ def _centre(region: Region, pad, nb, rich, z):
 
 
 def member_table(region: Region, match_ids, pad, rich, z, pmin: float = 0.01) -> dict:
-    """Members (pmem >= pmin) of a batch of clusters."""
+    """Return the members (pmem >= pmin) of a batch of clusters."""
     pmem = np.asarray(rich.pmem)
     sel = pad.valid & (pmem >= pmin)
     b, k = np.nonzero(sel)

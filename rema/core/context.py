@@ -1,7 +1,7 @@
-"""Everything the cluster kernels need, bundled as one pytree.
+"""Bundles everything the cluster kernels need into one pytree, :class:`FilterModel`.
 
-:class:`FilterModel` holds the red-sequence model, the chi^2 background, the cosmology table and
-m*(z), plus the static constants of the matched filter. It is passed as an argument to the jitted
+It holds the red-sequence model, the chi^2 background, the cosmology table and
+m*(z), and the static constants of the matched filter. It is passed as an argument to the jitted
 kernels (array leaves are traced, constants are static), so a recalibrated model does not trigger
 recompilation as long as array shapes are unchanged. With ``filter = "photoz"`` the colour term
 is replaced by the galaxies' photo-z, and ``pzbkg`` holds the stacked photo-z background.

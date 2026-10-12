@@ -39,11 +39,12 @@ def _spline(nodes: tuple[float, ...]) -> NaturalSpline:
 
 
 def npairs(ncol: int) -> int:
+    """Return the number of colour pairs, ncol (ncol - 1) / 2."""
     return ncol * (ncol - 1) // 2
 
 
 def corr_from_partial(z):
-    """Correlation matrix from partial correlations ``z[..., npairs]`` in (-1, 1).
+    """Return the correlation matrix of the partial correlations ``z[..., npairs]`` in (-1, 1).
 
     Pairs are ordered (1,0), (2,0), (2,1), (3,0), ... (row-major lower triangle).
     """
@@ -71,7 +72,7 @@ def corr_from_partial(z):
 
 
 def partial_from_corr(R: np.ndarray) -> np.ndarray:
-    """Inverse of :func:`corr_from_partial` for one correlation matrix (numpy)."""
+    """Return the partial correlations of one correlation matrix, the inverse of :func:`corr_from_partial` (numpy)."""
     L = np.linalg.cholesky(np.asarray(R, dtype=np.float64))
     n = L.shape[0]
     out = []
@@ -92,13 +93,19 @@ class RSAt(NamedTuple):
     pivot: jnp.ndarray     # [...]
 
     def colours(self, refmag):
-        """Model colours at reference magnitude ``refmag``."""
+        """Return the model colours at reference magnitude ``refmag``."""
         return self.mean + self.slope * (refmag - self.pivot)[..., None]
 
 
 @jax.tree_util.register_dataclass
 @dataclass(frozen=True)
 class RSModel:
+    """Red-sequence model: node values of the mean colours, slopes, scatter, correlations and pivot.
+
+    The leaves are the node values; the node positions ``z_*``, the bands, the reference band
+    and the scatter floor ``min_sigma`` are static.
+    """
+
     mean: jnp.ndarray          # [n_mean, ncol]
     slope: jnp.ndarray         # [n_slope, ncol]
     log_sigma: jnp.ndarray     # [n_sigma, ncol]
@@ -127,11 +134,12 @@ class RSModel:
         return self.bands.index(self.ref_band)
 
     def band_offsets_matrix(self) -> tuple[np.ndarray, list[int]]:
-        """T with (m_b - m_ref) = T @ c for the non-reference bands, and their indices."""
+        """Return T with (m_b - m_ref) = T @ c for the non-reference bands, and their indices."""
         return band_offsets_matrix(self.nband, self.iref)
 
     # ------------------------------------------------------------------ evaluation
     def at(self, z) -> RSAt:
+        """Return the model evaluated at redshift(s) ``z``."""
         z = jnp.asarray(z)
         mean = _spline(self.z_mean).eval_jax(z, self.mean)
         slope = _spline(self.z_slope).eval_jax(z, self.slope)
@@ -148,6 +156,7 @@ class RSModel:
     # ------------------------------------------------------------------ constructors
     @classmethod
     def from_arrays(cls, nodes: dict, values: dict, bands, ref_band, min_sigma=0.01) -> "RSModel":
+        """Return the model of node positions ``nodes`` (keys mean, slope, sigma, corr, pivot) and node ``values``."""
         return cls(mean=jnp.asarray(values["mean"]), slope=jnp.asarray(values["slope"]),
                    log_sigma=jnp.asarray(values["log_sigma"]), corr=jnp.asarray(values["corr"]),
                    pivot=jnp.asarray(values["pivot"]),
@@ -158,7 +167,7 @@ class RSModel:
 
     @classmethod
     def from_redmapper_pars(cls, path: str, mean_nodes=None) -> "RSModel":
-        """Read a redMaPPer ``*_pars.fit`` file (colour, slope, sigma/correlation, pivot nodes).
+        """Return the model read from a redMaPPer ``*_pars.fit`` file (colour, slope, sigma/correlation, pivot nodes).
 
         Colours with different node sets are resampled onto common ``mean_nodes`` (default:
         the union of the colour nodes) by evaluating redMaPPer's natural splines there.
@@ -206,7 +215,7 @@ class RSModel:
                       template_bands=None, zrange=(0.05, 0.95),
                       dz_mean=0.05, dz_other=0.1, sigma=0.05, mstar="des_z03",
                       pivot_offset=0.5) -> "RSModel":
-        """Initial model from a template of adjacent colours (zero slope, constant scatter).
+        """Return an initial model from a template of adjacent colours (zero slope, constant scatter).
 
         ``template`` is a packaged table (``colors_<template>.fits`` in :mod:`rema.data`, e.g.
         ``bc03_legacy_grizw1``, ``bc03_lsst_ugrizy``, ``bc03_euclid_visyjh``) or a FITS file with
@@ -254,6 +263,7 @@ class RSModel:
 
     # ------------------------------------------------------------------ io
     def to_hdus(self):
+        """Return one FITS table HDU per quantity: RS_MEAN, RS_SLOPE, RS_LOG_SIGMA, RS_CORR, RS_PIVOT."""
         from ..io.tables import table_hdu
 
         hdus = []
@@ -267,6 +277,7 @@ class RSModel:
 
     @classmethod
     def from_fits(cls, path) -> "RSModel":
+        """Return the model read from a file holding the HDUs of :meth:`to_hdus`."""
         from astropy.io import fits
 
         nodes, values = {}, {}
@@ -288,7 +299,7 @@ class RSModel:
 
 
 def band_offsets_matrix(nband: int, iref: int) -> tuple[np.ndarray, list[int]]:
-    """Matrix T [nband-1, ncol] with m_b - m_ref = sum_j T[b, j] c_j for b != ref.
+    """Return the matrix T [nband-1, ncol] with m_b - m_ref = sum_j T[b, j] c_j for b != ref.
 
     >>> T, others = band_offsets_matrix(4, 3)
     >>> others, T.tolist()
@@ -318,11 +329,13 @@ class ZredCorrection:
 
     @classmethod
     def identity(cls) -> "ZredCorrection":
+        """Return the correction that leaves zred and zred_e unchanged."""
         z = jnp.asarray([0.0, 2.0])
         return cls(jnp.zeros(2), jnp.zeros(2), jnp.ones(2), z, z)
 
     @classmethod
     def from_redmapper_pars(cls, path: str) -> "ZredCorrection":
+        """Return the corrections read from a redMaPPer ``*_pars.fit`` file."""
         from astropy.io import fits
 
         with fits.open(path) as h:
@@ -336,7 +349,7 @@ class ZredCorrection:
                        col("corr_slope_z"))
 
     def apply(self, zred_u, zred_u_e, refmag, pivot_fn, niter: int = 5):
-        """Corrected (zred, zred_e) from uncorrected values (redMaPPer ``compute_zreds``)."""
+        """Return the corrected (zred, zred_e) of uncorrected values (redMaPPer ``compute_zreds``)."""
         piv = pivot_fn(zred_u)
         dz = jnp.zeros_like(zred_u)
         for _ in range(niter):

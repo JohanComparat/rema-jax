@@ -1,4 +1,4 @@
-"""Cosmological distances, tabulated from :mod:`ggah_mod.cosmology`.
+"""Tables of cosmological distances, computed with :mod:`ggah_mod.cosmology`.
 
 Lengths are in h^-1 Mpc, the redMaPPer convention: radii such as r_lambda = r0 (lambda/100)^beta
 are physical h^-1 Mpc, so the angular scale of a cluster is set by the angular diameter
@@ -37,7 +37,7 @@ PARAMS = tuple(f.name for f in dataclasses.fields(CosmologyConfig))
 
 @contextlib.contextmanager
 def _float64():
-    """Enable 64-bit JAX inside the block (the API name moved between JAX releases)."""
+    """Enable 64-bit JAX inside the block (``jax.enable_x64``, or ``jax.experimental.enable_x64`` in older JAX)."""
     ctx = getattr(jax, "enable_x64", None)
     if ctx is None:  # pragma: no cover - older JAX
         from jax.experimental import enable_x64 as ctx
@@ -77,7 +77,7 @@ class CosmoTable:
 
     @classmethod
     def from_cosmology(cls, cosmo, z) -> "CosmoTable":
-        """Tables of a ggah_mod cosmology on the grid ``z``; traceable.
+        """Return the tables of a ggah_mod cosmology on the grid ``z``; traceable.
 
         Inside a trace build ``cosmo`` with the plain ``Cosmology(...)`` constructor
         (``Cosmology.create`` validates on concrete values).
@@ -95,7 +95,10 @@ class CosmoTable:
     @classmethod
     def from_config(cls, c: CosmologyConfig | None = None, zmax: float = 2.0,
                     dz: float = 1e-3) -> "CosmoTable":
-        """Tabulate in float64, stored in the default JAX precision."""
+        """Return the table of ``c`` (default :class:`~rema.config.CosmologyConfig`) up to ``zmax`` in steps of ``dz``.
+
+        The table is computed in float64 and stored in the default JAX precision.
+        """
         c = c or CosmologyConfig()
         with _float64():
             tab = cls.from_cosmology(c.to_ggah(), jnp.asarray(_grid(zmax, dz), dtype=jnp.float64))
@@ -107,7 +110,7 @@ class CosmoTable:
     @classmethod
     def create(cls, Omega_m: float = 0.3, h: float = 0.7, zmax: float = 2.0,
                dz: float = 1e-3, **kw) -> "CosmoTable":
-        """Tabulate the distances of a flat cosmology with ggah_mod, in float64.
+        """Return the table of a flat cosmology, computed with ggah_mod in float64.
 
         ``kw``: the other fields of :class:`~rema.config.CosmologyConfig`.
         """
@@ -116,7 +119,7 @@ class CosmoTable:
     @classmethod
     def jvp(cls, c: CosmologyConfig | None, params: Sequence[str], zmax: float = 2.0,
             dz: float = 1e-3) -> tuple["CosmoTable", dict[str, "CosmoTable"]]:
-        """The table of ``c`` and, for each parameter, its derivative table d(table)/d(param).
+        """Return the table of ``c`` and, for each parameter, its derivative table d(table)/d(param).
 
         Forward mode in float64, stored in the default precision. A derivative table goes with
         the table as the tangent of ``jax.jvp`` through any function of a :class:`CosmoTable`.
@@ -144,33 +147,35 @@ class CosmoTable:
     # Parameters ----------------------------------------------------------------
     @property
     def Omega_m(self):
+        """Matter density parameter of the table."""
         return self.params[PARAMS.index("Omega_m")]
 
     @property
     def h(self):
+        """Dimensionless Hubble parameter of the table."""
         return self.params[PARAMS.index("h")]
 
     # Lookups (linear interpolation; work on numpy or traced inputs) -----------
     def da(self, z):
-        """Angular diameter distance [Mpc/h]."""
+        """Return the angular diameter distance [Mpc/h] at z."""
         return jnp.interp(z, self.z, self.da_tab)
 
     def dc(self, z):
-        """Comoving distance [Mpc/h]."""
+        """Return the comoving distance [Mpc/h] at z."""
         return jnp.interp(z, self.z, self.dc_tab)
 
     def ez(self, z):
-        """E(z) = H(z)/H0."""
+        """Return E(z) = H(z)/H0."""
         return jnp.interp(z, self.z, self.ez_tab)
 
     def dvdz(self, z):
-        """Comoving volume element [(Mpc/h)^3 / sr]."""
+        """Return the comoving volume element dV/dz/dOmega [(Mpc/h)^3 / sr] at z."""
         return jnp.interp(z, self.z, self.dvdz_tab)
 
     def mpc_per_deg(self, z):
-        """Physical h^-1 Mpc subtended by one degree at redshift z (redMaPPer ``mpc_scale``)."""
+        """Return the physical h^-1 Mpc subtended by one degree at redshift z (redMaPPer ``mpc_scale``)."""
         return self.da(z) * DEG
 
     def volume_factor(self, z, zref):
-        """redMaPPer's zred volume factor, Delta D_c(zref) / Delta D_c(z) = E(z) / E(zref)."""
+        """Return redMaPPer's zred volume factor, Delta D_c(zref) / Delta D_c(z) = E(z) / E(zref)."""
         return self.ez(z) / self.ez(zref)

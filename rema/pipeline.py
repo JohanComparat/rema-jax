@@ -1,4 +1,4 @@
-"""Production runs over large areas: region planning, status, merging and boundary QA.
+"""Cuts a large area into regions for a production run, tracks their status, merges them and checks the boundaries.
 
 A large area is cut into regions. Each region has an *own box* and a *data box*, which is the own
 box grown by a buffer. A region reads the galaxies and randoms of its data box and keeps the
@@ -62,7 +62,7 @@ def file_sha1(path: str | Path) -> str:
 
 # --------------------------------------------------------------------------- planning
 def _covered_area(tiles: list[tuple[float, float]], ngal: np.ndarray, box) -> tuple[float, float]:
-    """(galaxies, area with galaxies) of the tiles inside ``box`` (a Box or BoxUnion), each tile
+    """Return (galaxies, area with galaxies) of the tiles inside ``box`` (a Box or BoxUnion), each tile
     counted by the fraction of its area inside the box."""
     n = a = 0.0
     for (ra0, dec0), g in zip(tiles, ngal):
@@ -82,7 +82,7 @@ def _pairs(ngal: float, area: float) -> float:
 
 
 def _ra_runs(cols: np.ndarray, k: int) -> list[tuple[float, float]]:
-    """Runs of ``k`` 5-deg columns covering the occupied columns ``cols`` (RA starts), starting
+    """Return the runs of ``k`` 5-deg columns covering the occupied columns ``cols`` (RA starts), starting
     after the largest circular gap: [(ra_start, ra_end)], ra_end possibly > 360."""
     cols = np.unique(np.mod(cols, 360.0))
     if cols.size == 1:
@@ -96,7 +96,7 @@ def _ra_runs(cols: np.ndarray, k: int) -> list[tuple[float, float]]:
 
 
 def galactic_latitude(ra, dec) -> np.ndarray:
-    """Galactic latitude b [deg] of ICRS positions [deg]."""
+    """Return the Galactic latitude b [deg] of ICRS positions [deg]."""
     import astropy.units as u
     from astropy.coordinates import SkyCoord
 
@@ -104,7 +104,7 @@ def galactic_latitude(ra, dec) -> np.ndarray:
 
 
 def box_abs_glat(box: Box, n: int = 41) -> tuple[float, float]:
-    """(smallest, largest) |b| [deg] over an n x n grid of ``box``."""
+    """Return (smallest, largest) |b| [deg] over an n x n grid of ``box``."""
     ra = np.linspace(box.ra_min, box.ra_max, n) % 360.0
     dec = np.linspace(box.dec_min, box.dec_max, n)
     r, d = np.meshgrid(ra, dec)
@@ -116,7 +116,7 @@ def plan_regions(counts: Table, *, target_area: float = 100.0, buffer: float = 2
                  band_height: float = 10.0, polar_cap: float = 85.0, max_gal: float | None = None,
                  max_pairs: float | None = None, sky: Box | BoxUnion | None = None,
                  glat_min: float | None = None):
-    """Regions for a blind run over the tiles in ``counts``. Returns (plan table, meta dict).
+    """Return the regions for a blind run over the tiles in ``counts``, as (plan table, meta dict).
 
     Parameters
     ----------
@@ -245,7 +245,7 @@ def read_plan(path: str | Path) -> tuple[Table, dict]:
 
 
 def plan_boxes(plan: Table, region_id: int, meta: dict | None = None):
-    """(own Box, data Box or BoxUnion) of a region; the data box is cut to the plan's sky."""
+    """Return (own Box, data Box or BoxUnion) of a region; the data box is cut to the plan's sky."""
     i = int(np.flatnonzero(plan["REGION_ID"] == region_id)[0])
     own = Box(*(float(plan[f"OWN_{a}"][i]) for a in ("RA0", "RA1", "DEC0", "DEC1")))
     data = Box(*(float(plan[f"DATA_{a}"][i]) for a in ("RA0", "RA1", "DEC0", "DEC1")))
@@ -256,12 +256,12 @@ def plan_boxes(plan: Table, region_id: int, meta: dict | None = None):
 
 
 def required_buffer(cfg: RemaConfig, lam: float = 100.0, z: float | None = None) -> dict:
-    """Buffers (deg) that a region needs around a cluster of richness ``lam`` at redshift ``z``
+    """Return the buffers (deg) that a region needs around a cluster of richness ``lam`` at redshift ``z``
     (default: the low end of ``model.zrange``, where angles are largest).
 
     ``exact``: percolation's dependency radius, read + reach from 2 lambda as
     :func:`rema.modes.blind.percolate` bounds them. ``first_order``: the cluster's aperture plus
-    a higher-ranked neighbour's mask radius and seed offset, which is what changes its members
+    a higher-ranked neighbour's mask radius and seed offset, which change its members
     directly.
     """
     from .model.cosmo import CosmoTable
@@ -282,7 +282,7 @@ def required_buffer(cfg: RemaConfig, lam: float = 100.0, z: float | None = None)
 
 
 def uncovered_tiles(counts: Table, index_dir: str | Path, sky=None) -> list[str]:
-    """Tiles with randoms but no per-sweep galaxy table (within ``sky`` when given): data missing
+    """Return the tiles with randoms but no per-sweep galaxy table (within ``sky`` when given): data missing
     from the mirror, which the footprint would count as observed."""
     import healpy as hp
 
@@ -315,7 +315,7 @@ def _tile_name(ra0: float, dec0: float) -> str:
 
 def calib_suggest(counts: Table, area: float = 400.0, ebv_max: float = 0.05,
                   n: int = 5) -> list[dict]:
-    """Calibration areas: square blocks of tiles of about ``area`` deg^2, every tile with
+    """Return calibration areas: square blocks of tiles of about ``area`` deg^2, every tile with
     galaxies and mean E(B-V) < ``ebv_max``, ranked by their number of spectroscopic redshifts
     (NZSPEC); the ``n`` best that do not overlap."""
     ra0 = np.asarray(counts["RA0"], float)
@@ -350,7 +350,7 @@ def region_path(runs_dir: str | Path, region_id: int) -> Path:
 
 def region_status(plan_path: str | Path, runs_dir: str | Path, calib: str | Path | None = None,
                   version: str | None = None) -> dict:
-    """done / missing / stale region IDs, and ``prime``: the missing region of median cost.
+    """Return the done / missing / stale region IDs, and ``prime``: the missing or stale region of median cost.
 
     A region is stale when its catalogue was made with another plan (PLANHASH), calibration
     (CALSHA1, when ``calib`` is given) or rema version (REMAVER, when ``version`` is given).
@@ -379,7 +379,7 @@ def region_status(plan_path: str | Path, runs_dir: str | Path, calib: str | Path
 
 
 def close_pairs(cat: Table, radius_arcmin: float = 1.0, dz: float = 0.02):
-    """Index pairs (i, j), i < j, of clusters within ``radius_arcmin`` and |dz| < dz (1 + z)."""
+    """Return the index pairs (i, j), i < j, of clusters within ``radius_arcmin`` and |dz| < dz (1 + z)."""
     from scipy.spatial import cKDTree
 
     from .sky.neighbors import unit_vectors
@@ -410,7 +410,7 @@ def _zstats(cat: Table) -> tuple[int, float, float]:
 
 
 def cut_glat(cat: Table, mem: Table, glat_min: float) -> tuple[Table, Table, int]:
-    """Clusters at |b| >= ``glat_min`` deg and their members; also returns the number removed."""
+    """Return the clusters at |b| >= ``glat_min`` deg, their members and the number of clusters removed."""
     if not cat:
         return cat, mem, 0
     keep = np.abs(galactic_latitude(cat["RA"], cat["DEC"])) >= glat_min
@@ -424,7 +424,7 @@ def cut_glat(cat: Table, mem: Table, glat_min: float) -> tuple[Table, Table, int
 
 def merge_regions(plan_path: str | Path, runs_dir: str | Path, *, allow_missing: bool = False,
                   calib: str | Path | None = None):
-    """Concatenate the region catalogues. Returns (clusters, members, regions table, qa dict).
+    """Concatenate the region catalogues and return (clusters, members, regions table, qa dict).
 
     Raises when regions are missing or stale, unless ``allow_missing``. See the module docstring
     for the QA.
@@ -496,7 +496,7 @@ def merge_regions(plan_path: str | Path, runs_dir: str | Path, *, allow_missing:
 
 def edge_profile(cat: Table, plan: Table, meta: dict | None = None,
                  bins: np.ndarray | None = None, nrand: int = 200_000, seed: int = 1) -> Table:
-    """Cluster density against the distance (deg) to the nearest internal edge of their own box
+    """Return the cluster density against the distance (deg) to the nearest internal edge of their own box
     (an edge shared with another region), relative to points spread uniformly over the own
     boxes: a dip or a bump near 0 reveals a boundary effect."""
     bins = np.arange(0.0, 3.01, 0.25) if bins is None else np.asarray(bins)

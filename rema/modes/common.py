@@ -1,4 +1,4 @@
-"""Shared run context: galaxies, neighbour search, model, footprint.
+"""Builds the shared run context of a sky region: galaxies, neighbour search, model and footprint.
 
 A :class:`Region` holds the galaxy table of a sky region (from ``rema ingest``), its zred, a
 neighbour index, the filter model (red sequence + background + cosmology + m*), the wcen
@@ -67,7 +67,7 @@ class Region:
               area_deg2: float | None = None, zlcorr=None, zbkg: ZredBkg | None = None,
               wcen_params: dict | None = None, cosmo: CosmoTable | None = None,
               pzbkg: ZredBkg | None = None, sky=None) -> "Region":
-        """Region of a galaxy table with the given model.
+        """Build the region of a galaxy table with the given model.
 
         ``cosmo``: the distance table (default: tabulated from ``cfg.cosmology``). ``sky``: the
         data box of the galaxies, over which the footprint's effective area is counted when
@@ -140,7 +140,7 @@ class Region:
     def with_cosmology(self, cosmology: CosmologyConfig | dict | None = None, *,
                        cosmo: CosmoTable | None = None, recompute_zred: bool = True,
                        mstar_follows: bool = False) -> "Region":
-        """The region in another cosmology, with the same galaxies, calibration and footprint.
+        """Return the region in another cosmology, with the same galaxies, calibration and footprint.
 
         ``cosmology`` replaces (a dataclass) or updates (a dict) the configuration's cosmology;
         ``cosmo`` gives the distance table directly (e.g. a table built inside a trace). zred
@@ -173,7 +173,7 @@ class Region:
         return dataclasses.replace(self, gal=gal, cfg=cfg, model=model)
 
     def centering_method(self, method: str | None = None) -> str:
-        """"bcg" or "wcen": ``method`` or cfg.centering.method; "auto" is wcen when calibrated."""
+        """Return "bcg" or "wcen": ``method`` or cfg.centering.method; "auto" is wcen when calibrated."""
         method = method or self.cfg.centering.method
         if method == "wcen" and self.model.filter == "photoz":
             raise ValueError("wcen centring is calibrated on zred: the photo-z filter uses BCG centring")
@@ -193,7 +193,7 @@ class Region:
         return self._index
 
     def _subindex(self, mag_max: float, max_cached: int = 8):
-        """Index of galaxies brighter than mag_max (rounded up to 0.5 mag).
+        """Return the index of galaxies brighter than mag_max (rounded up to 0.5 mag).
 
         At most ``max_cached`` indices are kept (least recently used dropped first): each costs
         ~40 bytes per galaxy.
@@ -210,7 +210,7 @@ class Region:
         return val
 
     def query(self, ra_c, dec_c, radius_deg, mag_max: float | None = None, kmin: int = 128) -> Padded:
-        """Neighbours within ``radius_deg`` (and brighter than ``mag_max``); indices into ``gal``."""
+        """Return the neighbours within ``radius_deg`` (and brighter than ``mag_max``); indices into ``gal``."""
         if mag_max is None:
             return self.index.query(ra_c, dec_c, radius_deg, kmin=kmin)
         sub, sel = self._subindex(mag_max)
@@ -221,7 +221,7 @@ class Region:
 
     def neighbors(self, pad: Padded, pfree: np.ndarray | None = None,
                   center_ids: np.ndarray | None = None, pfree_nb: np.ndarray | None = None) -> Neighbors:
-        """Device arrays for padded neighbour lists (model bands only).
+        """Return the device arrays for padded neighbour lists (model bands only).
 
         ``pfree`` is per galaxy of the table, ``pfree_nb`` per neighbour ([B, K]); default 1.
         """
@@ -250,7 +250,7 @@ class Region:
 
     # ------------------------------------------------------------------ completeness
     def mag_limit(self) -> float:
-        """Faint reference-magnitude limit of the members: the catalogue's (99: none), and with
+        """Return the faint reference-magnitude limit of the members: the catalogue's (99: none), and with
         the photo-z filter ``photoz.mag_max``."""
         lim = float(self.cfg.survey.mag_max) if self.cfg.survey.mag_max else 99.0
         if self.model.filter == "photoz" and self.cfg.photoz.mag_max is not None:
@@ -258,7 +258,7 @@ class Region:
         return lim
 
     def completeness(self, ra, dec, z, quad: RadialQuad):
-        """(frad, fgeo) [B, n_r]; without a footprint all ones, except for the fraction of the
+        """Return (frad, fgeo) [B, n_r]; without a footprint all ones, except for the fraction of the
         luminosity function below the magnitude limit when the photo-z filter sets one."""
         n = np.size(ra)
         mag_max = self.mag_limit()
@@ -283,7 +283,7 @@ class Region:
                                    n_mag=self.cfg.mask.n_mag)
 
     def correct_zlambda(self, z, z_e, lam):
-        """Calibrated z_lambda correction (identity without one); invalid entries (z <= 0) kept."""
+        """Apply the calibrated z_lambda correction (identity without one); invalid entries (z <= 0) are kept."""
         z, z_e, lam = (np.asarray(a, np.float64) for a in (z, z_e, lam))
         if self.zlcorr is None:
             return z, z_e
@@ -310,7 +310,7 @@ class Region:
         return np.interp(np.asarray(z, np.float64), zm, mm)
 
     def radius_deg(self, rmax_mpc, z):
-        """Angular radius of ``rmax_mpc`` h^-1 Mpc at redshift ``z``."""
+        """Return the angular radius of ``rmax_mpc`` h^-1 Mpc at redshift ``z``."""
         return np.asarray(rmax_mpc) / self.mpc_per_deg_np(z)
 
     def maxmag(self, z):
@@ -318,18 +318,18 @@ class Region:
 
     # ------------------------------------------------------------------ photo-z filter helpers
     def seed_z(self, idx) -> np.ndarray:
-        """Starting redshift of seed galaxies ``idx``: ZPHOT with the photo-z filter, else ZRED."""
+        """Return the starting redshift of seed galaxies ``idx``: ZPHOT with the photo-z filter, else ZRED."""
         col = "ZPHOT" if self.model.filter == "photoz" else "ZRED"
         return np.asarray(self.gal[col])[idx]
 
     def photoz_columns(self, rows) -> dict:
-        """ZPHOT, ZPHOT_STD (and ZPHOT_E with the photo-z filter) of galaxy-table rows, when
+        """Return ZPHOT, ZPHOT_STD (and ZPHOT_E with the photo-z filter) of galaxy-table rows, when
         the table has them."""
         return {c: np.asarray(self.gal[c])[rows] for c in ("ZPHOT", "ZPHOT_STD", "ZPHOT_E")
                 if c in self.gal}
 
     def rs_chisq(self, flux, ivar, z, chunk: int = 65536) -> np.ndarray:
-        """Red-sequence chi^2 of galaxies (fluxes in the table bands) at their own redshift z."""
+        """Return the red-sequence chi^2 of galaxies (fluxes in the table bands) at their own redshift z."""
         return red_sequence_chisq(self.rs, np.asarray(flux)[:, self.band_idx],
                                   np.asarray(ivar)[:, self.band_idx], z, self.model.chisq_mode,
                                   self.model.eps, chunk)
@@ -337,7 +337,7 @@ class Region:
 
 def _zred_columns(flux, ivar, rs: RSModel, cfg: RemaConfig, mstar: MStar, cosmo: CosmoTable,
                   zredcorr: ZredCorrection | None) -> dict:
-    """ZRED, ZRED_E, ZRED_CHISQ and the uncorrected zred of galaxies (model bands)."""
+    """Return ZRED, ZRED_E, ZRED_CHISQ and the uncorrected zred of galaxies (model bands)."""
     grid = ZredGrid.create(rs, mstar, cosmo, cfg.model.zrange, cfg.model.zbin_coarse)
     res = compute_zred(flux, ivar, grid, rs.iref, mode=cfg.model.chisq_mode,
                        eps=cfg.survey.flux_floor, alpha=cfg.model.alpha,
@@ -346,7 +346,7 @@ def _zred_columns(flux, ivar, rs: RSModel, cfg: RemaConfig, mstar: MStar, cosmo:
 
 
 def _area_function(gal, rs, cfg, footprint, area_deg2, sky=None):
-    """Effective area (deg^2) of the catalogue as a function of reference magnitude (over the
+    """Return the effective area (deg^2) of the catalogue as a function of reference magnitude (over the
     footprint's pixels in ``sky`` when given)."""
     if footprint is not None:
         def area_fn(m):
@@ -360,7 +360,7 @@ def _area_function(gal, rs, cfg, footprint, area_deg2, sky=None):
 
 
 def zred_background(gal: dict, cfg: RemaConfig, area_fn) -> ZredBkg:
-    """Zred background of a galaxy table (wcen centring), over the zred grid's range."""
+    """Return the zred background of a galaxy table (wcen centring), over the zred grid's range."""
     zr = cfg.model.zrange
     return build_zred_bkg(gal["ZRED"], gal["ZRED_CHISQ"], gal["REFMAG"], area_fn,
                           zred_range=(max(0.01, zr[0] - 0.05), zr[1] + 0.1),
@@ -372,7 +372,7 @@ def zred_background(gal: dict, cfg: RemaConfig, area_fn) -> ZredBkg:
 
 def red_sequence_chisq(rs: RSModel, flux, ivar, z, mode: str = "lupt", eps: float = 0.015,
                        chunk: int = 65536) -> np.ndarray:
-    """chi^2 against the red sequence of galaxies (fluxes in the model's bands) at their own z."""
+    """Return the chi^2 against the red sequence of galaxies (fluxes in the model's bands) at their own z."""
     flux = np.asarray(flux, np.float32)
     ivar = np.asarray(ivar, np.float32)
     z = np.asarray(z, np.float32)
@@ -386,7 +386,7 @@ def red_sequence_chisq(rs: RSModel, flux, ivar, z, mode: str = "lupt", eps: floa
 
 
 def photoz_background(gal: dict, cfg: RemaConfig, area_fn) -> ZredBkg:
-    """Stacked photo-z background Sigma_pz(z, m) of a galaxy table (needs ZPHOT_E)."""
+    """Return the stacked photo-z background Sigma_pz(z, m) of a galaxy table (needs ZPHOT_E)."""
     pc = cfg.photoz
     mag_max = float(np.max(gal["REFMAG"])) + 0.2 if np.size(gal["REFMAG"]) else 24.0
     return build_photoz_bkg(gal["ZPHOT"], gal["ZPHOT_E"], gal["REFMAG"], area_fn,
@@ -396,7 +396,7 @@ def photoz_background(gal: dict, cfg: RemaConfig, area_fn) -> ZredBkg:
 
 
 def snr(lnlamlike) -> np.ndarray:
-    """Detection significance sqrt(2 LNLAMLIKE) (0 for a failed or negative likelihood).
+    """Return the detection significance sqrt(2 LNLAMLIKE) (0 for a failed or negative likelihood).
 
     LNLAMLIKE is the log-likelihood ratio of the cluster against no cluster (lambda = 0) at the
     cluster's position and redshift, up to the pmem weighting; this is its local significance.
@@ -409,7 +409,7 @@ def snr(lnlamlike) -> np.ndarray:
 
 
 def _area_from_positions(ra, dec, nside: int = 1024) -> float:
-    """Rough area (deg^2) of the occupied HEALPix pixels, for runs without a footprint."""
+    """Return a rough area (deg^2) of the occupied HEALPix pixels, for runs without a footprint."""
     import healpy as hp
 
     from ..sky.healpix import pix_area_deg2

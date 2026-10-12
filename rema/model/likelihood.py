@@ -1,6 +1,7 @@
 """Photometric likelihood of a galaxy under the red-sequence model.
 
-Two chi^2 definitions, both with ncol = nband - 1 degrees of freedom:
+This module returns the chi^2 of the fluxes of a galaxy against the red-sequence model at one
+redshift. It offers two definitions, both with ncol = nband - 1 degrees of freedom:
 
 ``chisq_lupt`` (default)
     asinh magnitudes ("luptitudes", Lupton et al. 1999) of the non-reference bands are compared
@@ -38,11 +39,11 @@ HI = lax.Precision.HIGHEST
 
 
 def _mm(a, b):
-    """Small matrix product as broadcast-multiply-and-sum (no dot op).
+    """Return the product of two small matrices as a broadcast multiply-and-sum (no dot op).
 
-    The matrices here are at most 4x4. Written elementwise they fuse with the surrounding code,
-    stay exact in float32 (GPU dots default to TF32, ~1e-3 relative error, which moved chi^2 and
-    memberships), and avoid the per-shape GEMM autotuning that made GPU compiles very slow.
+    The matrices here are at most 4x4. Written elementwise, the product fuses with the surrounding
+    code, stays exact in float32 (GPU dots default to TF32, ~1e-3 relative error) and avoids the
+    per-shape GEMM autotuning of GPU compilation.
     """
     a = jnp.asarray(a)
     b = jnp.asarray(b)
@@ -57,7 +58,7 @@ BAD_CHISQ = 1e6
 
 
 def small_cholesky_solve(S, r):
-    """chi^2 = r^T S^{-1} r and ln det S for small SPD matrices ``S[..., n, n]`` (unrolled)."""
+    """Return chi^2 = r^T S^{-1} r and ln det S for small SPD matrices ``S[..., n, n]`` (unrolled)."""
     n = S.shape[-1]
     L = [[None] * n for _ in range(n)]
     for j in range(n):
@@ -82,7 +83,11 @@ def small_cholesky_solve(S, r):
 
 
 def chisq_lupt(flux, ivar, rs: RSAt, iref: int, eps: float = 0.015, zeropoint: float = 22.5):
-    """asinh-magnitude chi^2 (see module docstring). ``flux``, ``ivar``: [..., nband]."""
+    """Return (chi2, logdet) of the asinh-magnitude chi^2 of the module docstring.
+
+    ``flux`` and ``ivar`` have shape [..., nband]; ``iref`` is the reference band, ``eps`` the
+    fractional error floor and ``zeropoint`` the magnitude zero point of the fluxes.
+    """
     flux = jnp.asarray(flux)
     ivar = jnp.maximum(jnp.asarray(ivar), 1e-20)
     nband = flux.shape[-1]
@@ -111,7 +116,10 @@ def chisq_lupt(flux, ivar, rs: RSAt, iref: int, eps: float = 0.015, zeropoint: f
 
 
 def chisq_mag(flux, ivar, rs: RSAt, iref: int, eps: float = 0.015, zeropoint: float = 22.5):
-    """redMaPPer colour-space chi^2 (needs positive fluxes; others get BAD_CHISQ)."""
+    """Return (chi2, logdet) of the redMaPPer colour-space chi^2.
+
+    It needs positive fluxes in every band; other galaxies get chi2 = BAD_CHISQ and logdet = 0.
+    """
     flux = jnp.asarray(flux)
     ivar = jnp.maximum(jnp.asarray(ivar), 1e-20)
     nband = flux.shape[-1]
@@ -134,6 +142,7 @@ def chisq_mag(flux, ivar, rs: RSAt, iref: int, eps: float = 0.015, zeropoint: fl
 
 
 def chisq(flux, ivar, rs: RSAt, iref: int, mode: str = "lupt", eps: float = 0.015):
+    """Return (chi2, logdet) from :func:`chisq_lupt` (``mode="lupt"``) or :func:`chisq_mag` (``mode="mag"``)."""
     if mode == "lupt":
         return chisq_lupt(flux, ivar, rs, iref, eps)
     if mode == "mag":

@@ -1,4 +1,4 @@
-"""zred: photometric redshift of a galaxy assuming it is on the red sequence.
+"""Computes zred, the photometric redshift of a galaxy assuming it is on the red sequence.
 
 As in redMaPPer (``ZredColor``), on a regular grid z_k:
 
@@ -10,7 +10,7 @@ fainter than m* + 2.5) are excluded. Then:
 
 - zred_uncorr, zred_uncorr_e: mean and standard deviation of exp(ln D) over points with
   D > 1e-5 D_max (width floored at 0.005);
-- a parabola through the 5 grid points around the peak replaces the mean when its vertex lies
+- a parabola through the five grid points around the peak replaces the mean when its vertex lies
   within 2 sigma of it;
 - chisq is chi^2 at the grid point nearest to zred;
 - the calibrated corrections (:class:`rema.model.redsequence.ZredCorrection`) give zred, zred_e.
@@ -122,7 +122,7 @@ def compute_zred(flux: np.ndarray, ivar: np.ndarray, grid: ZredGrid, iref: int, 
                  use_lndet: bool = False, correction: ZredCorrection | None = None,
                  rs: RSModel | None = None, dmag_bright: float = 4.0, dmag_faint: float = 2.5,
                  zred_e_min: float = 0.005, chunk: int = 16384) -> ZredResult:
-    """zred for every galaxy (arrays ``flux``, ``ivar`` of shape [N, nband])."""
+    """Return zred for every galaxy (arrays ``flux``, ``ivar`` of shape [N, nband])."""
     flux = np.asarray(flux, np.float32)
     ivar = np.asarray(ivar, np.float32)
     n = flux.shape[0]

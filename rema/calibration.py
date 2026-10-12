@@ -1,4 +1,4 @@
-"""Reads and writes the calibration products, held in one FITS file.
+"""Calibration products of rema, read from and written to one FITS file.
 
 A :class:`Calibration` holds everything a run needs besides the galaxies and the footprint:
 
@@ -55,6 +55,7 @@ class ZlambdaCorrection:
     pivot: float = field(default=30.0, metadata=dict(static=True))
 
     def apply(self, zl, zl_e, lam):
+        """Return the corrected (z_lambda, z_lambda_e) of raw values at richness ``lam`` (floored at 1)."""
         lam = jnp.maximum(lam, 1.0)
         dz = jnp.interp(zl, self.z, self.offset) + jnp.interp(zl, self.z, self.slope) * jnp.log(lam / self.pivot)
         sc = jnp.interp(zl, self.z, self.scatter)
@@ -81,6 +82,8 @@ class ZlambdaCorrection:
 
 @dataclass
 class Calibration:
+    """Calibration products of a run: red-sequence model, corrections, backgrounds, wcen and provenance."""
+
     rs: RSModel
     zredcorr: ZredCorrection | None = None
     bkg: ChisqBkg | None = None
@@ -91,6 +94,7 @@ class Calibration:
     zbkg: ZredBkg | None = None
 
     def write(self, path: str | Path) -> Path:
+        """Write the calibration to ``path`` (HDUs of the module docstring) and return the path."""
         hdus = list(self.rs.to_hdus())
         if self.zredcorr is not None:
             zc = self.zredcorr
@@ -127,6 +131,7 @@ class Calibration:
 
     @classmethod
     def read(cls, path: str | Path) -> "Calibration":
+        """Return the calibration read from a file written by :meth:`write`; absent HDUs give None."""
         rs = RSModel.from_fits(path)
         with fits.open(path) as h:
             names = [x.name for x in h]

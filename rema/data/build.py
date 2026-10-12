@@ -46,6 +46,8 @@ _REDMAPPER = "https://raw.githubusercontent.com/erykoff/redmapper/601994a9296536
 
 @dataclass(frozen=True)
 class Input:
+    """URL of an input file at a fixed commit, and its SHA-256."""
+
     url: str
     sha256: str
 
@@ -103,8 +105,11 @@ OMEGA_M, H = 0.3, 0.7
 
 @dataclass(frozen=True)
 class FilterSet:
-    """Bands of the BC03 tables: ``colors_bc03_<name>_<bands joined>.fits`` (adjacent colours) and
-    ``mstar_<name>_<band>_ezgal.fits`` for each band of ``mstar_bands``."""
+    """Bands of the BC03 tables of one filter set.
+
+    The set gives ``colors_bc03_<name>_<bands joined>.fits`` (adjacent colours) and
+    ``mstar_<name>_<band>_ezgal.fits`` for each band of ``mstar_bands``.
+    """
 
     name: str
     bands: tuple[str, ...]
@@ -115,13 +120,16 @@ class FilterSet:
 
     @property
     def z_grid(self) -> np.ndarray:
+        """Redshift grid 0.01, 0.02, ..., zmax."""
         return np.round(np.arange(1, int(round(self.zmax / 0.01)) + 1) * 0.01, 10)
 
     @property
     def colors_file(self) -> str:
+        """File name of the adjacent-colour table."""
         return f"colors_bc03_{self.name}_{''.join(self.bands)}.fits"
 
     def mstar_file(self, band: str) -> str:
+        """Return the file name of the m*(z) table in ``band``."""
         return f"mstar_{self.name}_{band}_ezgal.fits"
 
 
@@ -145,11 +153,13 @@ Z_GRID = FILTER_SETS["legacy"].z_grid                  # 0.01, ..., 1.50
 
 
 def default_cache() -> Path:
+    """Return the download cache, ``$REMA_CACHE_DIR/inputs``, else ``~/.cache/rema/inputs``."""
     root = os.environ.get("REMA_CACHE_DIR")
     return (Path(root) if root else Path.home() / ".cache" / "rema") / "inputs"
 
 
 def sha256(path) -> str:
+    """Return the SHA-256 hex digest of a file."""
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -158,7 +168,7 @@ def sha256(path) -> str:
 
 
 def fetch(name: str, cache: str | Path | None = None) -> Path:
-    """Path of input ``name`` in the cache, downloaded first if needed; checks its SHA-256."""
+    """Return the path of input ``name`` in the cache, downloaded first if needed, after checking its SHA-256."""
     item = INPUTS[name]
     path = Path(cache or default_cache()) / name
     if not path.exists():
@@ -176,8 +186,10 @@ def fetch(name: str, cache: str | Path | None = None) -> Path:
 
 
 def build_mstar_redmapper(name: str = "des_z03", cache=None) -> tuple[dict, dict]:
-    """redMaPPer's m*(z) table ``mstar_<name>.fit`` on z = z0, 2 z0, ..., 151 z0 (linear,
-    extrapolated); z0 = 0.01."""
+    """Return (columns, header) of redMaPPer's m*(z) table ``mstar_<name>.fit`` resampled on z = z0, 2 z0, ..., 151 z0.
+
+    The table is interpolated linearly and extrapolated linearly beyond its ends; z0 = 0.01.
+    """
     from astropy.io import fits
 
     src = f"mstar_{name}.fit"
@@ -197,13 +209,15 @@ def build_mstar_redmapper(name: str = "des_z03", cache=None) -> tuple[dict, dict
 
 
 def build_mstar_des_z03(cache=None) -> tuple[dict, dict]:
-    """redMaPPer's m*(z) in DES z (see :func:`build_mstar_redmapper`)."""
+    """Return redMaPPer's m*(z) table in DES z (see :func:`build_mstar_redmapper`)."""
     return build_mstar_redmapper("des_z03", cache)
 
 
 def passive_population_mags(bands, z, cache=None) -> np.ndarray:
-    """AB magnitudes [len(z), len(bands)] of the passive population through speclite responses
-    ``bands`` = [(file, name), ...]."""
+    """Return the AB magnitudes [len(z), len(bands)] of the passive population.
+
+    ``bands`` lists the speclite responses as [(file, name), ...].
+    """
     import jax.numpy as jnp
     from ggah_mod.cosmology import Cosmology
 
@@ -223,7 +237,7 @@ def passive_population_mags(bands, z, cache=None) -> np.ndarray:
 
 
 def build_bc03_tables(fset: FilterSet | str, cache=None) -> dict[str, tuple[dict, dict]]:
-    """{file name: (columns, header)}: the m*(z) tables and the adjacent-colour table of a filter set."""
+    """Return {file name: (columns, header)} of the m*(z) tables and the adjacent-colour table of a filter set."""
     fset = FILTER_SETS[fset] if isinstance(fset, str) else fset
     z = fset.z_grid
     mags = passive_population_mags(list(zip(fset.files, fset.bands)), z, cache)
@@ -243,13 +257,13 @@ def build_bc03_tables(fset: FilterSet | str, cache=None) -> dict[str, tuple[dict
 
 
 def build_ezgal_tables(cache=None) -> tuple[tuple[dict, dict], tuple[dict, dict]]:
-    """(m*(z) in DECam z, adjacent colours g-r, r-i, i-z, z-W1) of the passive population."""
+    """Return the tables (m*(z) in DECam z, adjacent colours g-r, r-i, i-z, z-W1) of the passive population."""
     t = build_bc03_tables("legacy", cache)
     return t["mstar_legacy_z_ezgal.fits"], t["colors_bc03_legacy_grizw1.fits"]
 
 
 def build_all(cache=None) -> dict[str, tuple[dict, dict]]:
-    """{file name: (columns, header)} of every packaged model table."""
+    """Return {file name: (columns, header)} of every packaged model table."""
     out = {f"mstar_{n}.fits": build_mstar_redmapper(n, cache) for n in REDMAPPER_MSTAR}
     for fset in FILTER_SETS.values():
         out.update(build_bc03_tables(fset, cache))
@@ -257,7 +271,7 @@ def build_all(cache=None) -> dict[str, tuple[dict, dict]]:
 
 
 def compare(tables: dict, ref_dir) -> dict[str, float]:
-    """Largest absolute difference of each table from the one in ``ref_dir``."""
+    """Return the largest absolute difference of each table from the one in ``ref_dir``."""
     from ..io.tables import read_table
 
     out = {}
@@ -268,6 +282,7 @@ def compare(tables: dict, ref_dir) -> dict[str, float]:
 
 
 def main(argv=None) -> int:
+    """Run the command line; return 0, or 1 when ``--check`` finds a difference of 1e-8 or more."""
     from ..io.tables import write_table
 
     p = argparse.ArgumentParser(prog="python -m rema.data.build", description=__doc__.split("\n")[0])

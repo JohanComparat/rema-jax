@@ -1,4 +1,4 @@
-"""The finder's response to the cosmology, as a smooth function of (z, lambda).
+"""Response of the finder to the cosmology, as a smooth function of (z, lambda).
 
 From re-measurements at fixed centres (``rema remeasure``, :mod:`rema.modes.remeasure`), the
 response of a catalogue made in the fiducial cosmology is
@@ -29,7 +29,10 @@ from ..model.cosmo import PARAMS
 @jax.tree_util.register_dataclass
 @dataclass(frozen=True)
 class ResponseTable:
-    """d1, d2, dz [n_param, n_z, n_lambda] on nodes (z, ln lambda); ``params`` and their fiducial."""
+    """Response coefficients d1, d2, dz [n_param, n_z, n_lambda] on nodes (z, ln lambda).
+
+    ``params`` names the parameters and ``fiducial`` holds their fiducial values.
+    """
 
     z: jnp.ndarray
     lnlam: jnp.ndarray
@@ -40,13 +43,13 @@ class ResponseTable:
     fiducial: tuple = field(default=(), metadata=dict(static=True))
 
     def dtheta(self, theta: Mapping[str, float]) -> jnp.ndarray:
-        """theta - fiducial for the table's parameters (missing ones at the fiducial)."""
+        """Return theta - fiducial for the table's parameters (missing ones at the fiducial)."""
         return jnp.stack([jnp.asarray(theta.get(p, f), jnp.result_type(float)) - f
                           for p, f in zip(self.params, self.fiducial)]) if self.params else jnp.zeros(0)
 
     @classmethod
     def zero(cls, params: Sequence[str] = ("Omega_m",), fiducial: CosmologyConfig | None = None):
-        """No response (the catalogue does not depend on the cosmology)."""
+        """Return a table of zero response (the catalogue does not depend on the cosmology)."""
         fid = fiducial or CosmologyConfig()
         n = len(params)
         z = jnp.asarray([0.0, 2.0])
@@ -57,7 +60,7 @@ class ResponseTable:
     @classmethod
     def constant(cls, d1: Mapping[str, float], fiducial: CosmologyConfig | None = None,
                  dz: Mapping[str, float] | None = None):
-        """A response independent of (z, lambda), e.g. an analytic estimate."""
+        """Return a response independent of (z, lambda), e.g. an analytic estimate."""
         fid = fiducial or CosmologyConfig()
         params = tuple(d1)
         one = jnp.ones((len(params), 2, 2))
@@ -68,6 +71,7 @@ class ResponseTable:
 
     # ------------------------------------------------------------------ FITS
     def write(self, path, header: Mapping | None = None):
+        """Write the table: HDUs Z_NODES, LNLAMBDA_NODES and RESP_<PARAM>, with PARAMS and FID<i> in the primary header."""
         from ..io.tables import table_hdu, write_fits
 
         hdr = {"PARAMS": ",".join(self.params),
@@ -81,6 +85,7 @@ class ResponseTable:
 
     @classmethod
     def read(cls, path) -> "ResponseTable":
+        """Return the table read from a file written by :meth:`write`."""
         from astropy.io import fits
 
         with fits.open(path) as h:
@@ -96,7 +101,7 @@ class ResponseTable:
 
 
 def _bilinear(tab: jnp.ndarray, xn, yn, x, y):
-    """Bilinear interpolation of tab [nx, ny] on nodes (xn, yn), clamped at the edges."""
+    """Return the bilinear interpolation of tab [nx, ny] on nodes (xn, yn), clamped at the edges."""
     def frac(nodes, v):
         i = jnp.clip(jnp.searchsorted(nodes, v) - 1, 0, nodes.shape[0] - 2)
         t = jnp.clip((v - nodes[i]) / (nodes[i + 1] - nodes[i]), 0.0, 1.0)
@@ -109,7 +114,7 @@ def _bilinear(tab: jnp.ndarray, xn, yn, x, y):
 
 
 def delta_lnlam(tab: ResponseTable, lnlam, z, dtheta) -> jnp.ndarray:
-    """ln lambda_theta - ln lambda_fid at (lnlam, z) (broadcast) for ``dtheta`` = theta - fid [P]."""
+    """Return ln lambda_theta - ln lambda_fid at (lnlam, z) (broadcast) for ``dtheta`` = theta - fid [P]."""
     lnlam, z = jnp.broadcast_arrays(jnp.asarray(lnlam), jnp.asarray(z))
     out = jnp.zeros(lnlam.shape)
     for k in range(len(tab.params)):
@@ -120,7 +125,7 @@ def delta_lnlam(tab: ResponseTable, lnlam, z, dtheta) -> jnp.ndarray:
 
 
 def delta_z(tab: ResponseTable, lnlam, z, dtheta) -> jnp.ndarray:
-    """z_theta - z_fid at (lnlam, z) for ``dtheta`` [P]."""
+    """Return z_theta - z_fid at (lnlam, z) for ``dtheta`` [P]."""
     lnlam, z = jnp.broadcast_arrays(jnp.asarray(lnlam), jnp.asarray(z))
     out = jnp.zeros(lnlam.shape)
     for k in range(len(tab.params)):
@@ -132,7 +137,7 @@ def delta_z(tab: ResponseTable, lnlam, z, dtheta) -> jnp.ndarray:
 _KEYS = {"Omega_m": "OMEGAM", "h": "HUBBLE", "Omega_b": "OMEGAB", "sum_mnu": "MNU", "w0": "W0", "wa": "WA"}
 
 def _variations(labels: Sequence[str], cosmo: Mapping[str, np.ndarray]) -> dict[str, list[tuple[int, float]]]:
-    """{param: [(column, theta - fid), ...]} of the one-at-a-time variations (column 0 = fiducial)."""
+    """Return {param: [(column, theta - fid), ...]} of the one-at-a-time variations (column 0 = fiducial)."""
     keys = _KEYS
     out: dict[str, list[tuple[int, float]]] = {}
     for j in range(1, len(labels)):
@@ -144,8 +149,10 @@ def _variations(labels: Sequence[str], cosmo: Mapping[str, np.ndarray]) -> dict[
 
 
 def _read_many(paths) -> tuple[dict, list[str], dict]:
-    """Concatenated CLUSTERS of ``rema remeasure`` files, their labels and COSMOLOGIES columns
-    (the files must share the cosmology grid)."""
+    """Return the concatenated CLUSTERS of ``rema remeasure`` files, their labels and COSMOLOGIES columns.
+
+    The files must share the cosmology grid.
+    """
     from ..io.tables import read_table
 
     cats, labels, cosmo = [], None, None
@@ -163,7 +170,7 @@ def _read_many(paths) -> tuple[dict, list[str], dict]:
 
 
 def per_cluster_coefficients(lnlam: np.ndarray, z: np.ndarray, var: Sequence[tuple[int, float]]):
-    """(d1, d2, dz) per cluster from ln lambda [N, C] and z [N, C] at the variations ``var``.
+    """Return (d1, d2, dz) per cluster from ln lambda [N, C] and z [N, C] at the variations ``var``.
 
     One variation: d1 = Delta ln lambda / Delta theta, d2 = 0. Two or more: least squares of
     Delta ln lambda = d1 Delta theta + d2 Delta theta^2 / 2 (exact for a symmetric pair).
@@ -183,7 +190,7 @@ def per_cluster_coefficients(lnlam: np.ndarray, z: np.ndarray, var: Sequence[tup
 
 def from_remeasure(paths: Iterable, z_edges: Sequence[float], lam_edges: Sequence[float], *,
                    min_count: int = 10, degree: tuple[int, int] = (2, 1)) -> tuple[ResponseTable, dict]:
-    """Response table from ``rema remeasure`` files of the same cosmology grid.
+    """Return the response table of ``rema remeasure`` files of the same cosmology grid.
 
     Clusters are binned by their fiducial (z_lambda, lambda); per bin the median of the per-cluster
     coefficients (and their NMAD) is taken, and a polynomial of degree ``degree`` in

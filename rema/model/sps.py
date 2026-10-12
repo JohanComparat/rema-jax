@@ -1,5 +1,8 @@
-"""Photometry of passively evolving stellar populations: the m*(z) and colour tables of
-:mod:`rema.data` (built by :mod:`rema.data.build`).
+"""Apparent AB magnitudes of passively evolving stellar populations.
+
+This module takes a simple stellar population grid and bandpasses and returns the magnitudes of an
+exponentially declining population against redshift, from which :mod:`rema.data.build` builds the
+m*(z) and colour tables of :mod:`rema.data`.
 
 A simple stellar population (SSP) grid gives F_nu at 10 pc on a frequency grid and an age grid.
 A composite population with star formation rate psi(t) = exp(-t/tau) has, at age T,
@@ -58,7 +61,7 @@ class SSPGrid:
 
     @classmethod
     def from_ezgal(cls, path) -> "SSPGrid":
-        """Read an EzGal model file (F_nu on HDU 0, ``vs`` [Hz] on HDU 1, ``ages`` [yr] on HDU 2)."""
+        """Return the grid read from an EzGal model file (F_nu on HDU 0, ``vs`` [Hz] on HDU 1, ``ages`` [yr] on HDU 2)."""
         from astropy.io import fits
 
         with fits.open(path) as h:
@@ -80,6 +83,7 @@ class Bandpass:
 
     @classmethod
     def from_wavelength(cls, wavelength, response, unit: str = "angstrom", name: str = "") -> "Bandpass":
+        """Return the bandpass of a response tabulated on wavelengths in ``unit`` (angstrom, a, nm, micron or um)."""
         lam = np.asarray(wavelength, np.float64) * _LENGTH_TO_ANGSTROM[unit.lower()]
         nu = C_ANGSTROM / lam
         o = np.argsort(nu)
@@ -88,7 +92,7 @@ class Bandpass:
 
     @classmethod
     def from_ecsv(cls, path, name: str = "") -> "Bandpass":
-        """speclite filter file (columns ``wavelength``, with its unit, and ``response``)."""
+        """Return the bandpass of a speclite filter file (columns ``wavelength``, with its unit, and ``response``)."""
         from astropy.table import Table
 
         t = Table.read(str(path), format="ascii.ecsv")
@@ -98,13 +102,13 @@ class Bandpass:
 
     @classmethod
     def from_ascii(cls, path, unit: str = "angstrom", name: str = "") -> "Bandpass":
-        """Two columns, wavelength and response (EzGal filter files)."""
+        """Return the bandpass of a two-column file of wavelength and response (EzGal filter files)."""
         a = np.loadtxt(str(path), usecols=(0, 1))
         return cls.from_wavelength(a[:, 0], a[:, 1], unit, name)
 
 
 def exponential_weights(T, age, tau):
-    """Weights w [len(age)] with int_0^T exp(-(T - t)/tau) F(t) dt = sum_j w_j F(age_j).
+    """Return the weights w [len(age)] with int_0^T exp(-(T - t)/tau) F(t) dt = sum_j w_j F(age_j).
 
     F is linear between the ages; ages above T do not contribute. T, age and tau in the same
     units.
@@ -121,13 +125,13 @@ def exponential_weights(T, age, tau):
 
 
 def csp_fnu(ssp: SSPGrid, T, tau):
-    """F_nu at 10 pc [len(nu), len(T)] of the exponential population at ages T [Gyr]."""
+    """Return F_nu at 10 pc [len(nu), len(T)] of the exponential population at ages T [Gyr]."""
     w = jax.vmap(exponential_weights, in_axes=(0, None, None))(jnp.atleast_1d(T), ssp.age, tau)
     return ssp.fnu @ w.T
 
 
 def ab_mag_10pc(nu, fnu, z, band: Bandpass):
-    """Observed-frame AB magnitude at 10 pc of a rest-frame F_nu (on ``nu``) seen at redshift z."""
+    """Return the observed-frame AB magnitude at 10 pc of a rest-frame F_nu (on ``nu``) seen at redshift z."""
     f = jnp.interp(band.nu * (1.0 + z), nu, fnu)
     flux = (1.0 + z) * jnp.trapezoid(f * band.response / band.nu, band.nu)
     ref = AB_FNU * jnp.trapezoid(band.response / band.nu, band.nu)
@@ -135,7 +139,7 @@ def ab_mag_10pc(nu, fnu, z, band: Bandpass):
 
 
 def lookback_time(z, cosmo, zmax: float = 10.0, n: int = 20001):
-    """Lookback time [Gyr] of a ggah_mod cosmology (trapezoid rule on n points up to zmax)."""
+    """Return the lookback time [Gyr] of a ggah_mod cosmology (trapezoid rule on n points up to zmax)."""
     from ggah_mod.cosmology import hubble_e
 
     zg = jnp.linspace(0.0, zmax, n)
@@ -145,7 +149,7 @@ def lookback_time(z, cosmo, zmax: float = 10.0, n: int = 20001):
 
 
 def passive_mags(ssp: SSPGrid, bands, z, zf: float, tau: float, cosmo, norm=None):
-    """Apparent AB magnitudes [len(z), len(bands)] of an exponential population formed at zf.
+    """Return the apparent AB magnitudes [len(z), len(bands)] of an exponential population formed at zf.
 
     ``norm = (band, z0, m0)`` shifts all magnitudes so that the galaxy has magnitude m0 through
     ``band`` at z0. ``cosmo`` is a ggah_mod cosmology.

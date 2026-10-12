@@ -24,7 +24,7 @@ from .likelihood import Likelihood
 
 
 def jacobians(lik: Likelihood, x) -> dict:
-    """dN/dx [n_bins, n_free], the weak-lensing residual's Jacobian, and dsigma8/dx."""
+    """Return dN/dx [n_bins, n_free], the weak-lensing residual's Jacobian, dsigma8/dx and sigma8 at ``x``."""
     model = lik.model
 
     def counts(xx):
@@ -48,7 +48,7 @@ def jacobians(lik: Likelihood, x) -> dict:
 
 
 def prior_fisher(lik: Likelihood, x) -> np.ndarray:
-    """Gaussian priors of the free parameters (flat priors add nothing)."""
+    """Return the Fisher matrix of the Gaussian priors of the free parameters (flat priors add nothing)."""
     F = np.zeros((len(lik.free),) * 2)
     th = lik.theta(np.asarray(x, np.float64))
     for k, p in enumerate(lik.free):
@@ -61,8 +61,11 @@ def prior_fisher(lik: Likelihood, x) -> np.ndarray:
 
 
 def fisher(lik: Likelihood, x, jac: Mapping | None = None, counts_cov: np.ndarray | None = None) -> np.ndarray:
-    """Fisher matrix of the free parameters at ``x``: counts (Gaussian with the likelihood's or
-    ``counts_cov`` covariance, Poisson otherwise), weak lensing and priors."""
+    """Return the Fisher matrix of the free parameters at ``x``.
+
+    It sums the counts (Gaussian with the ``counts_cov`` or the likelihood's covariance, Poisson
+    otherwise), the weak lensing and the priors.
+    """
     jac = jac or jacobians(lik, x)
     J = jac["N"]
     if counts_cov is not None:
@@ -78,7 +81,10 @@ def fisher(lik: Likelihood, x, jac: Mapping | None = None, counts_cov: np.ndarra
 
 
 def constraints(F: np.ndarray, names, floor: float = 1e-12) -> dict:
-    """1 sigma marginal errors (eigenvalues of F floored at ``floor`` times the largest)."""
+    """Return the 1 sigma marginal errors by name, and the covariance under ``_cov``.
+
+    The eigenvalues of F are floored at ``floor`` times the largest before inversion.
+    """
     w, v = np.linalg.eigh(F)
     w = np.maximum(w, floor * w.max())
     cov = (v / w) @ v.T
@@ -86,13 +92,17 @@ def constraints(F: np.ndarray, names, floor: float = 1e-12) -> dict:
 
 
 def sigma8_error(jac: Mapping, cov: np.ndarray) -> float:
+    """Return the 1 sigma error of sigma8 propagated from the parameter covariance ``cov``."""
     g = np.asarray(jac["sigma8"])
     return float(np.sqrt(g @ cov @ g))
 
 
 def shift(lik: Likelihood, F: np.ndarray, jac: Mapping, delta_counts: np.ndarray,
           delta_wl: np.ndarray | None = None) -> np.ndarray:
-    """Shift of the best-fit parameters for a change ``delta_counts`` of the data (flattened)."""
+    """Return the shift of the best-fit parameters for a change ``delta_counts`` of the data (flattened).
+
+    ``delta_wl`` adds the change of the weak-lensing data.
+    """
     d = np.asarray(delta_counts, np.float64).ravel()
     if lik.kind == "gaussian":
         b = jac["N"].T @ lik._icov @ d

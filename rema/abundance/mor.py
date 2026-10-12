@@ -1,11 +1,11 @@
-"""Mass-richness relation: P(ln lambda | M, z), and the DES Y1 weak-lensing calibration.
+"""Mass-richness relation P(ln lambda | M, z) and the DES Y1 weak-lensing calibration.
 
 The richness of a halo of mass M (M200m, h^-1 Msun) at redshift z is log-normal::
 
     <ln lambda_DES | M, z> = a + b ln(M / M_piv) + c ln((1 + z) / (1 + z_piv))
     Var(ln lambda | M, z) = sigma_int^2 + (e^mu - 1) / e^(2 mu)
 
-(intrinsic and Poisson scatter, Costanzi et al. 2019), in the units of the DES Y1 redMaPPer
+(intrinsic and Poisson scatter, Costanzi et al. 2019, MNRAS 488, 4779, Sect. 6.2), in the units of the DES Y1 redMaPPer
 catalogue, and rema's richness is ln lambda_rema = ln lambda_DES + ln_s0 + s1 (z - z_norm) (the
 normalisation measured on clusters common to the two catalogues).
 
@@ -13,10 +13,10 @@ McClintock et al. (2019, Table 4) calibrated <M200m | lambda, z> = M0 (lambda/40
 ((1+z)/1.35)^G with weak lensing on DES Y1 redMaPPer (lambda >= 20, 0.2 <= z <= 0.65):
 log10 M0 = 14.489 +- 0.011 (stat) +- 0.019 (sys) in Msun for h = 0.7 (their flat LCDM with
 Omega_m = 0.3, H0 = 70), F = 1.356 +- 0.051 +- 0.008, G = -0.30 +- 0.30 +- 0.06. Its inverse
-gives the default (a, b, c) = (ln 40, 1/F, -G/F) at M_piv = M0, but the relation is a mean mass
-at fixed richness, not a mean richness at fixed mass: :func:`mcclintock_lnm` is used as a
-weak-lensing measurement of <M | lambda> in the likelihood instead
-(:mod:`rema.abundance.likelihood`).
+gives the default (a, b, c) = (ln 40, 1/F, -G/F) at M_piv = M0. The relation is a mean mass at
+fixed richness rather than a mean richness at fixed mass, so the likelihood
+(:mod:`rema.abundance.likelihood`) uses :func:`mcclintock_lnm` as a weak-lensing measurement of
+<M | lambda>.
 """
 
 from __future__ import annotations
@@ -57,20 +57,20 @@ class MassRichness:
 
 
 def mean_lnlam(mor: MassRichness, lnm, z):
-    """<ln lambda_rema | M, z>."""
+    """Return <ln lambda_rema | M, z> for ln M200m ``lnm`` [h^-1 Msun]."""
     mu_des = (mor.a + mor.b * (lnm - jnp.log(mor.m_piv))
               + mor.c * jnp.log((1.0 + z) / (1.0 + mor.z_piv)))
     return mu_des + mor.ln_s0 + mor.s1 * (z - mor.z_norm)
 
 
 def var_lnlam(mor: MassRichness, mu):
-    """Var(ln lambda | M, z): intrinsic plus Poisson."""
+    """Return Var(ln lambda | M, z), intrinsic plus Poisson, at mean ln lambda ``mu``."""
     lam = jnp.exp(mu)
     return mor.sigma_int**2 + jnp.maximum(lam - 1.0, 0.0) / lam**2
 
 
 def p_bins(mu, var, ln_edges):
-    """Probabilities [..., n_bins] that ln lambda ~ N(mu, var) falls in each bin of ``ln_edges``.
+    """Return the probabilities [..., n_bins] that ln lambda ~ N(mu, var) falls in each bin of ``ln_edges``.
 
     >>> import numpy as np
     >>> p = p_bins(np.log(30.0), 0.04, np.log([1e-3, 20, 40, 1e6]))
@@ -85,14 +85,17 @@ def p_bins(mu, var, ln_edges):
 
 def mcclintock_lnm(lam_des, z, log10_m0: float = LOG10_M0, f: float = MCCLINTOCK19["f"],
                    g: float = MCCLINTOCK19["g"]):
-    """ln <M200m | lambda_DES, z> [h^-1 Msun] of McClintock et al. (2019)."""
+    """Return ln <M200m | lambda_DES, z> [h^-1 Msun] of McClintock et al. (2019)."""
     return (jnp.log(10.0) * log10_m0 + f * jnp.log(lam_des / MCCLINTOCK19["lam_piv"])
             + g * jnp.log((1.0 + z) / (1.0 + MCCLINTOCK19["z_piv"])))
 
 
 def mcclintock_cov(lam_des, z) -> np.ndarray:
-    """Covariance of :func:`mcclintock_lnm` at points (lam_des, z), from the stat + sys errors of
-    (log10 M0, F, G), which are common to all points."""
+    """Return the covariance of :func:`mcclintock_lnm` at points (lam_des, z).
+
+    It comes from the statistical and systematic errors of (log10 M0, F, G), added in quadrature
+    and common to all points.
+    """
     lam_des, z = np.asarray(lam_des, np.float64), np.asarray(z, np.float64)
     J = np.stack([np.full(lam_des.shape, np.log(10.0)), np.log(lam_des / MCCLINTOCK19["lam_piv"]),
                   np.log((1.0 + z) / (1.0 + MCCLINTOCK19["z_piv"]))], axis=-1)

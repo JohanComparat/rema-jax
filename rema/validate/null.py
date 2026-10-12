@@ -1,5 +1,8 @@
 """Null tests: galaxy tables whose real structures have lost their signature.
 
+This module takes a galaxy table and returns a copy with photo-z or colours permuted among
+galaxies of similar reference magnitude.
+
 Positions and reference magnitudes are kept, so the angular clustering, the depth and the
 magnitude distribution are those of the data:
 
@@ -9,7 +12,7 @@ magnitude distribution are those of the data:
   (chance alignments and projections of the angular clustering).
 - ``"colour"`` permutes the fluxes in the same way, each row rescaled to the reference flux of the
   galaxy that receives it (the inverse variances by the square of the factor). The red sequence of
-  real clusters is lost: the same test for the red-sequence filter.
+  real clusters is lost, which gives the same test for the red-sequence filter.
 
 The permutations are seeded (:class:`rema.config.NullConfig`), so a null run is reproducible.
 """
@@ -24,7 +27,7 @@ MODES = ("none", "photoz", "colour")
 
 
 def _permutation(refmag, magbin: float, rng) -> np.ndarray:
-    """A permutation of the rows that only exchanges galaxies of the same magnitude bin."""
+    """Return a permutation of the rows that only exchanges galaxies of the same magnitude bin."""
     m = np.asarray(refmag, np.float64)
     key = np.floor(np.where(np.isfinite(m), m, 0.0) / magbin).astype(np.int64)
     order = np.argsort(key, kind="stable")
@@ -39,7 +42,7 @@ def _permutation(refmag, magbin: float, rng) -> np.ndarray:
 
 
 def null_shuffle(gal: dict, ncfg: NullConfig, iref: int) -> dict:
-    """A copy of ``gal`` shuffled as ``ncfg.shuffle`` says (``gal`` itself for "none").
+    """Return a copy of ``gal`` shuffled as ``ncfg.shuffle`` says (``gal`` itself for "none").
 
     ``iref``: the column of the reference band in FLUX and FLUX_IVAR.
     """

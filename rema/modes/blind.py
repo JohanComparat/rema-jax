@@ -1,6 +1,6 @@
-"""Blind cluster finding: seeds -> first pass -> likelihood -> percolation -> catalogue.
+"""Finds clusters blindly in a region: seeds, first pass, likelihood pass, percolation, catalogue.
 
-Follows redMaPPer's run mode:
+The steps follow redMaPPer's run mode:
 
 1. **Seeds**: galaxies with zred in ``model.zrange``, zred chi^2 < ``seeds.chisq_max`` and
    m < m*(zred) + ``seeds.dmag_max``.
@@ -13,7 +13,7 @@ Follows redMaPPer's run mode:
    a candidate whose seed galaxy has pfree < ``centering.pbcg_cut`` is skipped. Otherwise, as in
    redMaPPer's RunPercolation, lambda is computed at the seed with the current pfree (dropped if
    lambda/S < ``minlambda``), then z_lambda at the seed, the central galaxy is chosen
-   (CenteringBCG), and z_lambda and lambda are recomputed at the new centre. The candidate is
+   (CenteringBCG, or CenteringWcenZred with a calibrated wcen model; ``centering.method``), and z_lambda and lambda are recomputed at the new centre. The candidate is
    dropped if no central is found, if the central's pfree < ``pbcg_cut`` or if lambda/S <
    ``minlambda``. For an accepted cluster, every galaxy within
    R_MASK = max(r_lambda, rmask_0 (lambda/100)^rmask_beta ((1+z)/(1+zpivot))^rmask_gamma) and
@@ -48,7 +48,7 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- seeds
 def select_seeds(region: Region) -> np.ndarray:
-    """Seed galaxies: zred in the redshift range with a red-sequence chi^2 below
+    """Return the seed galaxies: zred in the redshift range with a red-sequence chi^2 below
     ``seeds.chisq_max``, or, with the photo-z filter, ZPHOT in the range with a calibrated width
     s / (1 + ZPHOT) below ``seeds.zphot_err_max`` (any colour); brighter than m*(z) + dmag_max."""
     cfg = region.cfg
@@ -66,7 +66,7 @@ def select_seeds(region: Region) -> np.ndarray:
 
 # --------------------------------------------------------------------------- batched stages
 def _bucket(n: int, k0: int, base: int) -> int:
-    """Smallest k0 * base**i >= n: arrays come in a few sizes, each compiled once."""
+    """Return the smallest k0 * base**i >= n, so that arrays come in a few sizes, each compiled once."""
     k = k0
     while k < n:
         k *= base
@@ -74,7 +74,7 @@ def _bucket(n: int, k0: int, base: int) -> int:
 
 
 def _shape_bases() -> tuple[int, int]:
-    """(neighbour-count base, batch-size base) for padding array shapes.
+    """Return (neighbour-count base, batch-size base) for padding array shapes.
 
     Powers of 4 and 8 on GPUs, where padded entries are almost free and every extra shape costs
     a compilation; powers of 2 on CPUs, where padded entries cost as much as real ones.
@@ -109,7 +109,7 @@ class _Batch:
 
 def _iter_batches(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, quad: RadialQuad,
                   kind: str, batch: int = 1024, budget: int | None = None, pfree_nb=None):
-    """Padded neighbours and aperture completeness of seeds ``gi`` centred on themselves.
+    """Yield the padded neighbours and aperture completeness of seeds ``gi`` centred on themselves.
 
     Seeds are processed in redshift order; each query of ``batch`` seeds is split into
     sub-batches of B seeds with B x K <= ``budget`` (B a power of two), so device memory stays
@@ -157,7 +157,7 @@ def _iter_batches(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, 
 def _run_batched(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, quad: RadialQuad,
                  kind: str, batch: int = 1024, log_every: int = 20, budget: int | None = None,
                  calc_err: bool = True, pfree_nb=None):
-    """Per-seed stage over galaxies ``gi`` centred on themselves, starting at ``z0``.
+    """Run a per-seed stage over galaxies ``gi`` centred on themselves, starting at ``z0``.
 
     kind = "zlambda" (first pass; Z_LAMBDA_E only with ``calc_err``) or "richness" (likelihood
     pass). Batching and ``pfree_nb``: see :func:`_iter_batches`.
@@ -204,7 +204,7 @@ def _run_batched(region: Region, gi: np.ndarray, z0: np.ndarray, stage: Stage, q
 # --------------------------------------------------------------------------- percolation step
 @jax.jit
 def _with_center(nb, gxyz, cxyz, ic):
-    """Neighbours re-centred on cxyz [B, 3] (theta from unit vectors; is_center = index ic)."""
+    """Return the neighbours re-centred on cxyz [B, 3] (theta from unit vectors; is_center = index ic)."""
     d = jnp.linalg.norm(gxyz - cxyz[:, None, :], axis=-1)
     th = jnp.rad2deg(2.0 * jnp.arcsin(jnp.clip(d / 2.0, 0.0, 1.0)))
     isc = jnp.arange(gxyz.shape[1])[None, :] == ic[:, None]
@@ -219,7 +219,7 @@ def _fixed_z(nb, z0, frad, fgeo, quad, model, stage, npz):
 
 
 def _seed_frame(nb, gxyz, cxyz):
-    """Neighbours relative to the seed position cxyz [B, 3], keeping the seed flag."""
+    """Return the neighbours relative to the seed position cxyz [B, 3], keeping the seed flag."""
     B = gxyz.shape[0]
     nb0 = _with_center(nb, gxyz, cxyz, jnp.full((B,), -1, jnp.int32))
     return dataclasses.replace(nb0, is_center=nb.is_center)
@@ -227,7 +227,7 @@ def _seed_frame(nb, gxyz, cxyz):
 
 @jax.jit
 def _random_point(cxyz, r_lambda, mpc_per_deg, u):
-    """Points uniform in area within r_lambda [h^-1 Mpc] of cxyz [B, 3] (redMaPPer
+    """Return points uniform in area within r_lambda [h^-1 Mpc] of cxyz [B, 3] (redMaPPer
     CenteringRandom: r = r_lambda sqrt(u0), position angle 2 pi u1)."""
     ang = jnp.deg2rad(r_lambda * jnp.sqrt(u[:, 0]) / mpc_per_deg)
     phi = 2.0 * jnp.pi * u[:, 1]
@@ -241,7 +241,7 @@ def _random_point(cxyz, r_lambda, mpc_per_deg, u):
 
 @jax.jit
 def _draw_member(pmem, u):
-    """Neighbour index drawn with probability proportional to pmem [B, K] (redMaPPer
+    """Return a neighbour index drawn with probability proportional to pmem [B, K] (redMaPPer
     CenteringRandomSatellite); -1 when no neighbour has pmem > 0."""
     cdf = jnp.cumsum(pmem, axis=1)
     tot = cdf[:, -1]
@@ -253,7 +253,7 @@ def _perc_batch(nb0, gxyz, cxyz, z0, frad, fgeo, quad, model, stage, centering: 
                 wc=None, zchi=None, urand=None, stage_seed=None, maxcen: int = 5, maxiter: int = 5,
                 tol: float = 2e-4, ngrid: int = 21, half_width: float = 0.03, npz: int = 21,
                 topfrac: float = 0.7, soft: float = 0.04, keepz: bool = False):
-    """One percolation step for a batch of candidates (neighbours ``nb0`` in the seed frame).
+    """Run one percolation step for a batch of candidates (neighbours ``nb0`` in the seed frame).
 
     z_lambda (or lambda at fixed z with ``keepz``) at the seed without errors, centring, then
     z_lambda with errors and p(z) at the new centre, as in redMaPPer. ``centering``:
@@ -305,7 +305,7 @@ def _perc_batch(nb0, gxyz, cxyz, z0, frad, fgeo, quad, model, stage, centering: 
 
 
 def _dependencies(xyz, rank, rad_read, rad_reach, factor: float = 1.5):
-    """Pairs (i, j) such that candidate j must wait for candidate i.
+    """Return the pairs (i, j) such that candidate j must wait for candidate i.
 
     rank[i] < rank[j] and the seed separation is below rad_read[j] + rad_reach[i] (degrees).
     Candidates are binned by read radius (as j) and by reach (as i) in bins a factor ``factor``
@@ -347,7 +347,7 @@ def _dependencies(xyz, rank, rad_read, rad_reach, factor: float = 1.5):
 def percolate(region: Region, cand: dict, stage: Stage, quad: RadialQuad, batch: int = 64,
               kmin: int = 512, log_every: int = 50, keepz: bool = False,
               centering: str | None = None, seed: int = 12345, info: dict | None = None):
-    """Percolation of candidates (dict with seed galaxy index GI, Z_LAMBDA, LAMBDA, LNLIKE).
+    """Percolate the candidates (a dict with seed galaxy index GI, Z_LAMBDA, LAMBDA, LNLIKE); return (catalogue, members).
 
     Exact sequential semantics (rank by decreasing LNLIKE, ties by seed ID), computed on the
     dependency graph of the candidates: candidate j depends on every higher-ranked candidate i
@@ -426,7 +426,7 @@ def percolate(region: Region, cand: dict, stage: Stage, quad: RadialQuad, batch:
     kbase, bbase = _shape_bases()
 
     def batches(counts):
-        """(K, rows) sub-batches, K from a few sizes (see _shape_bases)."""
+        """Yield (K, rows) sub-batches, K from a few sizes (see _shape_bases)."""
         bk = np.array([_bucket(int(c), kmin, kbase) for c in counts], np.int64)
         for K in np.unique(bk):
             sel = np.flatnonzero(bk == K)
@@ -437,7 +437,7 @@ def percolate(region: Region, cand: dict, stage: Stage, quad: RadialQuad, batch:
         return min(_bucket(n, 1, bbase), batch) if n <= batch else n
 
     def prepare(pad, ks, ss, K):
-        """Device inputs for rows ``ss`` of a round, padded to one of a few batch sizes."""
+        """Return the device inputs for rows ``ss`` of a round, padded to one of a few batch sizes."""
         n = ss.size
         Bc = padded(n)
         sub_idx, sub_valid, sub_theta = _crop(pad.idx[ss], pad.valid[ss], K)
@@ -574,7 +574,7 @@ def percolate(region: Region, cand: dict, stage: Stage, quad: RadialQuad, batch:
 
 
 def _theta_for(region: Region, ra, dec, idx, valid):
-    """Angular separations [deg] between centres (ra, dec) and neighbours idx (0 where invalid)."""
+    """Return the angular separations [deg] between centres (ra, dec) and neighbours idx (0 where invalid)."""
     xc = unit_vectors(ra, dec)
     xg = unit_vectors(region.gal["RA"][idx], region.gal["DEC"][idx])
     d = np.linalg.norm(xg - xc[:, None, :], axis=-1)
@@ -714,7 +714,7 @@ class _Checkpoint:
 
 def run_blind(region: Region, own: Box | None = None, region_id: int = 0, batch: int = 1024,
               checkpoint=None, info: dict | None = None):
-    """Blind run over the region; returns (catalogue, members) dicts.
+    """Run the blind mode over the region and return the (catalogue, members) dicts.
 
     ``checkpoint``: directory for the first-pass and likelihood results; a rerun with the same
     inputs resumes from them. ``info``: a dict that receives the run statistics (galaxies,

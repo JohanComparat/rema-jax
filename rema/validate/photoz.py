@@ -1,7 +1,10 @@
 """Calibration of the galaxy photo-z widths against spectroscopic redshifts.
 
-For the galaxies with both a photo-z and a spectroscopic redshift, x = (ZPHOT - ZSPEC)/ZPHOT_STD
-should be a unit Gaussian if ZPHOT_STD were the photo-z scatter. In magnitude bins, the robust
+This module takes the galaxies with both a photo-z and a spectroscopic redshift and returns the
+factor ``err_scale`` per magnitude bin, as a configuration overlay.
+
+For these galaxies, x = (ZPHOT - ZSPEC)/ZPHOT_STD would be a unit Gaussian if ZPHOT_STD were the
+photo-z scatter. In magnitude bins, the robust
 width of x (1.4826 times its median absolute deviation, which ignores the outliers) is the factor
 ``err_scale`` of :class:`rema.config.PhotozConfig`; the outlier fraction and the median offset are
 reported alongside. The DR11 photo-z are cross-validated (each galaxy's photo-z comes from a
@@ -17,7 +20,7 @@ from ..model.photoz import photoz_valid
 
 
 def nmad(x) -> float:
-    """1.4826 median |x - median(x)| (nan for an empty array)."""
+    """Return the normalised median absolute deviation, 1.4826 median |x - median(x)| (nan for an empty array)."""
     x = np.asarray(x, np.float64)
     if x.size == 0:
         return float("nan")
@@ -26,9 +29,10 @@ def nmad(x) -> float:
 
 def fit_err_scale(zphot, zphot_std, zspec, refmag, edges=(14.0, 19.0, 20.0, 21.0, 22.0, 24.0),
                   outlier: float = 0.15, min_count: int = 30) -> dict:
-    """Per magnitude bin: the node (median magnitude), the scale (NMAD of x), the NMAD of
-    dz/(1+z), the outlier fraction (|dz|/(1+z) > ``outlier``), the median dz/(1+z) and the count.
+    """Return the photo-z width calibration per magnitude bin.
 
+    Each bin gives the node (median magnitude), the scale (NMAD of x), the NMAD of dz/(1+z), the
+    outlier fraction (|dz|/(1+z) > ``outlier``), the median dz/(1+z) and the count.
     Bins with fewer than ``min_count`` galaxies are dropped. The returned ``err_scale`` and
     ``err_scale_mag`` are the PhotozConfig values.
 
@@ -57,7 +61,7 @@ def fit_err_scale(zphot, zphot_std, zspec, refmag, edges=(14.0, 19.0, 20.0, 21.0
 
 
 def yaml_overlay(fit: dict, digits: int = 3) -> str:
-    """The ``photoz`` section of a configuration overlay for ``rema ... --set @FILE``.
+    """Return the ``photoz`` section of a configuration overlay for ``rema ... --set @FILE``.
 
     >>> print(yaml_overlay({"err_scale": [0.85, 0.6], "err_scale_mag": [18.3, 21.4]}), end="")
     photoz:

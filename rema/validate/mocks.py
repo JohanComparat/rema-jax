@@ -1,5 +1,8 @@
 """Synthetic galaxies and clusters for testing richness and redshift recovery.
 
+This module returns galaxy tables of mock clusters and of a uniform field, in the columns of the
+ingested galaxy tables plus the true values.
+
 A mock cluster of richness lambda at redshift z has, on average, lambda members brighter than
 L_min = 0.2 L* inside r_lambda = r0 (lambda/100)^beta, distributed with the projected NFW profile
 (with core) of the filter, Schechter magnitudes (alpha = -1) and red-sequence colours with the
@@ -22,7 +25,7 @@ from ..model.redsequence import RSModel, band_offsets_matrix
 
 
 def _draw_radii(rng, n, r_lambda, rs=0.15, rcore=0.1):
-    """Inverse-CDF draw of projected radii from 2 pi r Sigma_NFW(r) on [0, r_lambda]."""
+    """Return an inverse-CDF draw of projected radii [h^-1 Mpc] from 2 pi r Sigma_NFW(r) on [0, r_lambda]."""
     rr = np.linspace(0.0, r_lambda, 2001)
     cdf = np.asarray(prof.nfw_enclosed(rr, rs, rcore), np.float64)
     cdf /= cdf[-1]
@@ -30,6 +33,7 @@ def _draw_radii(rng, n, r_lambda, rs=0.15, rcore=0.1):
 
 
 def _draw_mags(rng, n, mstar, mfaint, alpha=-1.0, mbright_off=6.0):
+    """Return ``n`` Schechter magnitudes drawn between m* - ``mbright_off`` and ``mfaint``."""
     m = np.linspace(mstar - mbright_off, mfaint, 4001)
     pdf = np.asarray(prof.schechter(m, mstar, alpha), np.float64)
     cdf = np.cumsum(pdf)
@@ -38,14 +42,14 @@ def _draw_mags(rng, n, mstar, mfaint, alpha=-1.0, mbright_off=6.0):
 
 
 def noisy_fluxes(rng, mags: np.ndarray, depth5: np.ndarray, zeropoint: float = 22.5):
-    """Fluxes and inverse variances for true magnitudes [N, nb] and 5-sigma depths [nb]."""
+    """Return noisy fluxes and their inverse variances for true magnitudes [N, nb] and 5-sigma depths [nb]."""
     f = 10.0 ** (-0.4 * (mags - zeropoint))
     sig = np.broadcast_to(10.0 ** (-0.4 * (np.asarray(depth5) - zeropoint)) / 5.0, f.shape)
     return (f + rng.normal(size=f.shape) * sig).astype(np.float32), (1.0 / sig**2).astype(np.float32)
 
 
 def red_sequence_mags(rng, rs: RSModel, z, refmag: np.ndarray, scatter: bool = True):
-    """True magnitudes [N, nb] of red-sequence galaxies at z (scalar or [N]) with magnitudes refmag."""
+    """Return the true magnitudes [N, nb] of red-sequence galaxies at z (scalar or [N]) with magnitudes refmag."""
     import jax.numpy as jnp
 
     at = rs.at(jnp.broadcast_to(jnp.asarray(z, jnp.float32), (refmag.size,)))
@@ -77,11 +81,13 @@ class GaussianPhotoz:
         self.std_factor, self.outlier_frac, self.outlier_range = std_factor, outlier_frac, outlier_range
 
     def sigma(self, z, refmag):
+        """Return the photo-z scatter sigma at redshift ``z`` and reference magnitude ``refmag``."""
         frac = np.clip(self.sigma0 * 10.0 ** (self.slope * (np.asarray(refmag) - self.m0)),
                        self.sigma_min, self.sigma_max)
         return frac * (1.0 + np.asarray(z))
 
     def __call__(self, rng, z, refmag) -> dict:
+        """Return ZPHOT (floored at 0) and ZPHOT_STD for true redshifts ``z``."""
         z = np.asarray(z, np.float64)
         s = self.sigma(z, refmag)
         zp = z + s * rng.normal(size=z.size)
@@ -93,7 +99,11 @@ class GaussianPhotoz:
 
 
 def _bluer(rs: RSModel, mags, off):
-    """Shift every non-reference band towards the reference band by ``off`` (mag) [N]."""
+    """Return ``mags`` with every non-reference band shifted towards the reference band by up to ``off`` (mag) [N].
+
+    The shift is scaled by the number of colours between the band and the reference band,
+    relative to the farthest band; ``mags`` is modified in place.
+    """
     T, others = band_offsets_matrix(rs.nband, rs.iref)
     w = np.abs(T).sum(axis=1)
     mags[:, others] -= off[:, None] * w[None, :] / w.max()
@@ -104,8 +114,10 @@ def mock_cluster(rng, rs: RSModel, mstar_fn, mpc_per_deg_fn, ra0: float, dec0: f
                  lam: float, depth5, r0: float = 1.0, beta: float = 0.2, lval: float = 0.2,
                  dmag_faint: float = 2.5, poisson: bool = True, central_dmag: float | None = None,
                  extent: float = 1.0, blue_fraction: float = 0.0, photoz: GaussianPhotoz | None = None):
-    """Members of a mock cluster: dict with RA, DEC, FLUX, FLUX_IVAR, REFMAG, REFMAG_ERR, TRUE_MAG,
-    SNR, IS_CENTRAL, ZTRUE and IS_BLUE (and ZPHOT, ZPHOT_STD with ``photoz``).
+    """Return the members of a mock cluster.
+
+    The dict holds RA, DEC, FLUX, FLUX_IVAR, REFMAG, REFMAG_ERR, TRUE_MAG, SNR, IS_CENTRAL, ZTRUE
+    and IS_BLUE (and ZPHOT, ZPHOT_STD with ``photoz``).
 
     ``central_dmag``: if given, a central galaxy of magnitude m*(z) + central_dmag is added at
     (ra0, dec0) (the first row), on the red sequence. ``extent``: members follow the NFW profile
@@ -154,9 +166,13 @@ def mock_cluster(rng, rs: RSModel, mstar_fn, mpc_per_deg_fn, ra0: float, dec0: f
 def mock_field(rng, rs: RSModel, box, density: float, depth5, mag_range=(12.0, 23.5),
                slope: float = 0.4, red_fraction: float = 0.15, zrange=(0.05, 1.2),
                photoz: GaussianPhotoz | None = None):
-    """Uniform background galaxies: number counts N(<m) ~ 10^(slope m); a fraction on the red
-    sequence at random redshifts, the rest with colours offset to the blue by 0.2-1 mag.
-    Their redshifts are in ZTRUE (and photo-z in ZPHOT, ZPHOT_STD with ``photoz``)."""
+    """Return uniform background galaxies over ``box`` at ``density`` per deg^2.
+
+    Number counts follow N(<m) ~ 10^(slope m); a fraction ``red_fraction`` lies on the red
+    sequence at random redshifts, the rest have colours offset to the blue by 0.2-1 mag. Only
+    galaxies with reference S/N >= 5 are kept. Their redshifts are in ZTRUE (and photo-z in ZPHOT,
+    ZPHOT_STD with ``photoz``).
+    """
     area = box.area_deg2()
     n = rng.poisson(density * area)
     ra = rng.uniform(box.ra_min, box.ra_max, n)
@@ -185,12 +201,13 @@ def mock_field(rng, rs: RSModel, box, density: float, depth5, mag_range=(12.0, 2
 
 
 def concat(*tables):
+    """Return the row-wise concatenation of the tables, on the columns they all have."""
     keys = set.intersection(*(set(t) for t in tables))
     return {k: np.concatenate([t[k] for t in tables]) for k in keys}
 
 
 def solve_lambda_numpy(u, b, w, r, r0=1.0, beta=0.2, rsig=0.05, K=1.0):
-    """Reference lambda (brentq) for tests: sum p w theta_r = lambda K."""
+    """Return the reference lambda (brentq) for tests, the root of sum p w theta_r = lambda K."""
     from scipy.special import erf
 
     def g(lam):
@@ -206,10 +223,12 @@ def solve_lambda_numpy(u, b, w, r, r0=1.0, beta=0.2, rsig=0.05, K=1.0):
 def mock_template_cluster(rng, rs: RSModel, tpl, ra0: float, dec0: float, z: float, A: float, depth5,
                           mag_max: float, photoz: GaussianPhotoz, blue_fraction: float = 0.5,
                           poisson: bool = True):
-    """A cluster drawn from the PSCD template (:class:`rema.pscd.model.Template`) with amplitude A:
-    A times the template's galaxies within its truncation radius and brighter than ``mag_max``
-    (true magnitudes), with photo-z and a fraction of blue members. Same columns as
-    :func:`mock_cluster`."""
+    """Return a cluster drawn from the PSCD template (:class:`rema.pscd.model.Template`) with amplitude A.
+
+    The cluster has, on average, A times the template's galaxies within its truncation radius and
+    brighter than ``mag_max`` (true magnitudes), with photo-z and a fraction of blue members. It
+    has the columns of :func:`mock_cluster`; only members with reference S/N >= 5 are kept.
+    """
     zz = float(z)
     rmax = float(tpl.rmax_deg(zz))
     th = np.linspace(0.0, rmax, 4001)

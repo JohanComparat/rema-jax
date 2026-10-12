@@ -406,3 +406,15 @@ def test_build_sample_with_a_stricter_map_and_domain():
     idx, w, d = build_sample(src, rand, np.array([10, 11]), lam_det, NoSelection(), 0.2, domain=dom)
     assert w["Q"].tolist() == [1, 1, 0, 0, 1, 0, 0, 0]
     assert d["NPASS"].tolist() == [2, 1]
+
+
+def test_spt_fields_from_centres():
+    from pathlib import Path
+
+    csv = Path(__file__).resolve().parents[1] / "scripts" / "randoms" / "spt_sz_2500d_fields.csv"
+    sel = get_selection({"name": "spt", "fields": str(csv)})
+    assert sel.name_f.size == 19 and sel.gamma[0] == pytest.approx(1.3267815)
+    ra, dec = np.array([82.7, 352.0, 15.0, 150.0, 82.7]), np.array([-55.0, -55.5, -42.0, -50.0, -30.0])
+    f = sel.field_of(ra, dec)
+    assert sel.name_f[f[:3]].tolist() == ["ra5h30dec-55", "ra23h30dec-55", "ra1hdec-42.5"]
+    assert f[3:].tolist() == [-1, -1]                       # outside R.A. 20h-7h, and north of -40

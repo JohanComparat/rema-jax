@@ -96,6 +96,8 @@ python -m rema.cli cluster-randoms qa --sample $P/$n.fits --zvlim $P/zvlim_dr11.
     # erass1_model.yaml, the exposure and HI maps) and $P/<cat>_joined.fits the joined catalogues
     # (cluster-randoms external-join, erass1-model).
     [[ -f $P/zvlim_dr11.fits ]] || { echo "run submit first"; exit 1; }
+    mkdir -p "$P/selfn"
+    cp "$CODE/scripts/randoms/spt_sz_2500d_fields.csv" "$P/selfn/"
     cmds=""
     for c in ${EXTERNAL:-act_dr6 spt_2500d psz2 erass1}; do
       spec=$P/selfn/$c.yaml

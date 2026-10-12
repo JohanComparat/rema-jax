@@ -138,10 +138,16 @@ We ran the chain on the laptop with one DR11 randoms file (2 500 points per deg�
 The domain covers 18 491 deg²; at 0.2 :math:`L_*` and 5σ the catalogue is volume limited over 99% of it at :math:`z = 0.7` and 96% at :math:`z = 0.8` (at 10σ: 95% at 0.6, 55% at 0.7).
 The parent sample (:math:`\lambda \geq 10`, :math:`0.05 \leq z_\lambda < 0.85`, below :math:`z_{\rm vlim}`) has 488 416 clusters; ``place`` took 7.7 min for its 4.9 M copies on ten CPU cores, and 92.5% of the copies have MASKFRAC < 0.2.
 
-We compare the ``lambda_vlim`` sample (371 587 clusters) with its randoms in six bins of the z-band depth, smoothed to NSIDE 64.
+We compare the ``lambda_vlim`` sample (371 587 clusters) with its randoms in six bins of the z-band depth, averaged over NSIDE-64 pixels (``qa`` does the same: a template measured per NSIDE-1024 pixel from a few random points is noisy, and the noise makes a trend of its own).
 At :math:`0.1 < z < 0.3` the ratio of data to randoms is flat (:math:`\chi^2` = 16 and 19 for 6 bins).
 Above, the shallow sky holds more clusters than the deep sky: at :math:`0.45 < z < 0.6` the ratio goes from 1.26 in the shallowest sixth to 0.73 in the deepest, the same in every richness bin, with the 10σ volume limit as with the 5σ one, and within the DECaLS area alone (Dec > −20°: 1.14 to 0.73).
 The randoms model the mask and the volume limit; this trend comes from the catalogue, at fixed :math:`\lambda`, and most likely from the :math:`\chi^2` background of the membership filter, which is one for the whole survey while the photometric errors change with the depth.
 Until the finder models it, clustering measurements above :math:`z = 0.3` need weights against the depth (e.g. ``sys_mapping``) or a sample of homogeneous depth.
+
+The external selection is not optional for an X-ray sample.
+The eRASS1 sample (EXT_LIKE ≥ 6, confirmed by rema on DR11, volume limited, in the Western Galactic hemisphere: 4 723 clusters, 500 copies each) has the same density as its randoms in six bins of the eROSITA exposure to within 0.88-1.11 (:math:`\chi^2` = 35 for 6 bins) with the approximate detection probability; without it, that is with the DR11 selection alone, the ratio goes from 0.49 at the lowest exposure to 2.29 at the highest (:math:`\chi^2` = 1 440).
+Against :math:`n_{\rm H}` the :math:`\chi^2` falls from 142 to 22.
+``qa --template NAME=FILE:COLUMN`` adds any HEALPix map (exposure, noise) to the checks and reports both.
+For the SPT-SZ sample (238 clusters with :math:`\xi \geq 5` and :math:`z_\lambda \geq 0.25`) the field depths change the randoms little: the depth-template :math:`\chi^2` are 1-13 for 4 bins with and without them.
 
 Copies made once serve any stricter sample: ``sample`` with a :math:`z_{\rm vlim}` map or a domain that differ from those of ``copies`` (a higher depth significance, a seam buffer) drops the copies outside them, and the remaining copies are uniform in the smaller area.

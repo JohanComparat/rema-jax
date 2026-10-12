@@ -291,22 +291,40 @@ def cmd_qa(args):
     from .domain import RunDomain
     from .qa import sample_qa
 
+    from .qa import ratio_vs, smoothed_templates
+    from .selection.erass1 import HealpixColumn
+    from .weigh import copy_weights
+
     data, rand = read_table(args.sample, hdu="CLUSTERS"), read_table(args.sample, hdu="RANDOMS")
     zmap = ZvlimMap.read(args.zvlim)
-    q = {"ZVLIM": lambda ra, dec: zmap.value_at(ra, dec)}
-    for c in zmap.extra:
-        if c.startswith("DEPTH_") or c == "FRACGOOD":
-            q[c] = (lambda col: lambda ra, dec: zmap.value_at(ra, dec, col))(c)
+    q = smoothed_templates(zmap, args.nside)
     q["ABS_GLAT"] = lambda ra, dec: np.abs(galactic_latitude(ra, dec))
     if args.domain:
         dom = RunDomain.read(args.domain)
         if dom.seams:
             q["SEAM_DIST"] = dom.seam_distance
+    for t in args.template or []:
+        name, _, spec = t.partition("=")
+        path, _, col = spec.partition(":")
+        q[name.upper()] = HealpixColumn(path, col or None)
     out = sample_qa(data, rand, q, nbins=args.nbins)
+    external = "P_EXT" in rand and np.any(np.asarray(rand["P_EXT"]) < 1)
+    if external:
+        # The same randoms without the external detection probability, for comparison.
+        src = read_table(args.sample, hdu="SOURCES")
+        w0, _ = copy_weights(np.searchsorted(src["ROW"], rand["ROW"]), rand["Q"], src["N_SAMP"])
+        for name, fn in q.items():
+            vd, vr = fn(data["RA"], data["DEC"]), fn(rand["RA"], rand["DEC"])
+            out[name]["all_without_external"] = ratio_vs(vd, data["WEIGHT"], vr, w0,
+                                                         edges=out[name]["all"]["EDGES"])
     for name, res in out.items():
         a = res["all"]
-        log.info("%-10s chi2 %.1f / %d; ratio %s", name, a["CHI2"], a["NDOF"],
-                 " ".join(f"{r:.3f}" for r in a["RATIO"]))
+        extra = ""
+        if external:
+            b = res["all_without_external"]
+            extra = f"; without the external selection chi2 {b['CHI2']:.1f}"
+        log.info("%-10s chi2 %.1f / %d; ratio %s%s", name, a["CHI2"], a["NDOF"],
+                 " ".join(f"{r:.3f}" for r in a["RATIO"]), extra)
     plain = {n: {k: {c: (v.tolist() if isinstance(v, np.ndarray) else v) for c, v in t.items()}
                  for k, t in res.items()} for n, res in out.items()}
     Path(args.out).write_text(json.dumps(plain, indent=1))
@@ -408,6 +426,9 @@ def add_parser(sub):
     s.add_argument("--zvlim", required=True)
     s.add_argument("--domain")
     s.add_argument("--nbins", type=int, default=8)
+    s.add_argument("--nside", type=int, default=64, help="NSIDE of the smoothed depth and area templates")
+    s.add_argument("--template", action="append", metavar="NAME=FILE[:COLUMN]",
+                   help="any HEALPix map as a template (e.g. an exposure or noise map); repeat")
     s.add_argument("--out", required=True, help="JSON table of the ratios")
     s.set_defaults(func=cmd_qa)
     return p

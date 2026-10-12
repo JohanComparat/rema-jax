@@ -55,3 +55,31 @@ def sample_qa(data: dict, rand: dict, quantities: dict, z_bins=None, nbins: int 
             md, mr = data["BIN_Z"] == k, rand["BIN_Z"] == k
             out[name][f"z{k}"] = ratio_vs(vd[md], data["WEIGHT"][md], vr[mr], rand["WEIGHT"][mr], edges=edges)
     return out
+
+
+def smoothed_templates(zmap, nside: int = 64) -> dict:
+    """Functions (ra, dec) -> value of the z_vlim map's columns averaged over NESTED pixels of
+    ``nside`` (weighted by area), and AREA_FRAC, the unmasked fraction of each pixel. Per-pixel
+    values of a fine map estimated from a few random points are noisy, and a noisy template
+    makes a trend of its own (the data do not follow the noise of the randoms that measure it)."""
+    import healpy as hp
+
+    shift = 2 * int(round(np.log2(zmap.nside // nside)))
+    par = np.asarray(zmap.pix, np.int64) >> shift
+    npix = 12 * nside**2
+    area = np.bincount(par, weights=zmap.area, minlength=npix)
+    cols = {"ZVLIM": zmap.zvlim, **{c: v for c, v in zmap.extra.items() if c.startswith("DEPTH_")}}
+    maps = {}
+    for name, v in cols.items():
+        v = np.asarray(v, np.float64)
+        ok = np.isfinite(v)
+        num = np.bincount(par[ok], weights=(zmap.area * v)[ok], minlength=npix)
+        den = np.bincount(par[ok], weights=zmap.area[ok], minlength=npix)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            maps[name] = np.where(den > 0, num / den, np.nan)
+    maps["AREA_FRAC"] = area / hp.nside2pixarea(nside, degrees=True)
+
+    def lookup(m):
+        return lambda ra, dec: m[hp.ang2pix(nside, np.asarray(ra), np.asarray(dec), nest=True, lonlat=True)]
+
+    return {k: lookup(m) for k, m in maps.items()}

@@ -5,5 +5,5 @@ observable: EXT_XI
 z_edges: [0.25, 0.50, 0.75]
 obs_edges: [5.0, 7.0, 1000.0]
 cuts: ["SCANNED == 1", "LAMBDA > 0"]
-selection: {name: spt, fields: SELFN_DIR/spt_2500d_fields.fits, xi_cut: 5.0}
+selection: {name: spt, fields: SELFN_DIR/spt_sz_2500d_fields.csv, xi_cut: 5.0}
 n_samp: 500

@@ -272,9 +272,9 @@ def test_qa(products, tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "_setup_jax", lambda: None)
     tmp = products["tmp"]
     run("cluster-randoms", "qa", "--sample", tmp / "sample.fits", "--zvlim", tmp / "zvlim.fits",
-        "--domain", tmp / "domain.fits", "--nbins", 4, "--out", tmp_path / "qa.json")
+        "--domain", tmp / "domain.fits", "--nbins", 4, "--nside", 32, "--out", tmp_path / "qa.json")
     q = json.loads((tmp_path / "qa.json").read_text())
-    assert {"ZVLIM", "DEPTH_Z", "FRACGOOD", "ABS_GLAT", "SEAM_DIST"} <= set(q)
+    assert {"ZVLIM", "DEPTH_Z", "AREA_FRAC", "ABS_GLAT", "SEAM_DIST"} <= set(q)
     for name in ("DEPTH_Z", "SEAM_DIST"):
         a = q[name]["all"]
         assert a["CHI2"] < 3 * a["NDOF"] + 10, (name, a)

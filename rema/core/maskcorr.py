@@ -81,6 +81,27 @@ def radial_completeness(ra, dec, z, fmap: DeviceMap, quad: RadialQuad, model: Fi
     return jnp.mean(good * S, axis=-1), jnp.mean(good, axis=-1)
 
 
+def member_mag_limit(cfg) -> float:
+    """Faint reference-magnitude limit of the members: the catalogue's (99: none), and with the
+    photo-z filter ``photoz.mag_max``."""
+    lim = float(cfg.survey.mag_max) if cfg.survey.mag_max else 99.0
+    if cfg.model.filter == "photoz" and cfg.photoz.mag_max is not None:
+        lim = min(lim, float(cfg.photoz.mag_max))
+    return lim
+
+
+def footprint_completeness(ra, dec, z, fmap: DeviceMap, quad: RadialQuad, model: FilterModel, cfg,
+                           ref_band: str):
+    """:func:`radial_completeness` with the selection of the configuration ``cfg`` (reference-band
+    S/N cut, member magnitude limit, azimuth and magnitude nodes): the call shared by the cluster
+    finders (:meth:`rema.modes.common.Region.completeness`) and the cluster randoms
+    (:mod:`rema.randoms.aperture`)."""
+    return radial_completeness(jnp.asarray(ra, jnp.float32), jnp.asarray(dec, jnp.float32),
+                               jnp.asarray(z, jnp.float32), fmap, quad, model, ref_band=ref_band,
+                               snr_min=cfg.survey.ref_snr_min, mag_max=member_mag_limit(cfg),
+                               n_phi=cfg.mask.n_phi, n_mag=cfg.mask.n_mag)
+
+
 def no_footprint(nclusters: int, quad: RadialQuad):
     """Completeness arrays for runs without a footprint (everything observed)."""
     ones = jnp.ones((nclusters, quad.r.shape[0]))

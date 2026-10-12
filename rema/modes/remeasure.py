@@ -38,7 +38,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from ..config import CosmologyConfig
-from ..core.richness import RadialQuad, Stage, richness
+from ..core.richness import RadialQuad, Stage, percolation_quad, richness
 from ..model.cosmo import PARAMS, CosmoTable
 from .blind import _iter_batches, _run_batched
 from .common import Region
@@ -84,8 +84,7 @@ def stage_and_quad(cfg) -> tuple[Stage, RadialQuad]:
     """The percolation aperture and its radial quadrature (as the blind mode's final step)."""
     rc = cfg.richness
     st = Stage.make(rc.percolation.r0, rc.percolation.beta, rc.maxrad_factor)
-    q = RadialQuad.make(rmax=rc.percolation.r0 * 20.0 ** rc.percolation.beta + 5 * cfg.model.rsig)
-    return st, q
+    return st, percolation_quad(cfg)
 
 
 class MemberPfree:

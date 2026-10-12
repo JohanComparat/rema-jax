@@ -89,6 +89,13 @@ class RadialQuad:
         return cls(jnp.asarray(r), jnp.asarray(w))
 
 
+def percolation_quad(cfg) -> RadialQuad:
+    """Radial nodes of the percolation aperture: r_lambda up to lambda = 2000 plus 5 sigma of
+    the soft edge theta_r (catalogue LAMBDA, SCALEVAL and MASKFRAC are computed on these)."""
+    pc = cfg.richness.percolation
+    return RadialQuad.make(rmax=float(pc.r0) * 20.0 ** float(pc.beta) + 5 * cfg.model.rsig)
+
+
 @lru_cache(maxsize=16)
 def _gl_split(rmax, rcore, n_core, n_outer):
     xc, wc = np.polynomial.legendre.leggauss(n_core)
@@ -183,6 +190,13 @@ def _completeness(rl, frad, quad: RadialQuad, model: FilterModel):
     prof_w = quad.w * 2.0 * jnp.pi * quad.r * prof.nfw_sigma(quad.r, model.nfw_rs, model.nfw_rcore)
     thr = prof.theta_r(quad.r, rl, model.rsig)
     return jnp.sum(prof_w * thr * frad) / jnp.sum(prof_w * thr)
+
+
+def aperture_k(rl, frad, fgeo, quad: RadialQuad, model: FilterModel):
+    """(K, K_geo) of one cluster at r_lambda ``rl``: the completeness of the membership solve
+    and its geometric part (``frad``, ``fgeo`` [n] on the ``quad`` nodes). At the richness
+    solution SCALEVAL = 1/K and MASKFRAC = 1 - K_geo."""
+    return _completeness(rl, frad, quad, model), _completeness(rl, fgeo, quad, model)
 
 
 def grid_chunk(n: int, k: int, budget: int, cmax: int | None = None) -> int:

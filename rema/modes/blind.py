@@ -37,7 +37,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from ..core.centering import as_centering, center_bcg, center_wcen, lncglike, w_column
-from ..core.richness import Neighbors, RadialQuad, Stage, richness
+from ..core.richness import Neighbors, RadialQuad, Stage, percolation_quad, richness
 from ..core.zlambda import ZLambda, zlambda
 from ..sky.neighbors import radec_from_unit, unit_vectors
 from ..sky.regions import Box
@@ -736,7 +736,7 @@ def run_blind(region: Region, own: Box | None = None, region_id: int = 0, batch:
     st_lk = Stage.make(rc.likelihoods.r0, rc.likelihoods.beta, rc.maxrad_factor)
     st_pc = Stage.make(rc.percolation.r0, rc.percolation.beta, rc.maxrad_factor)
     q_fp = RadialQuad.make(rmax=float(st_fp.maxrad) + 5 * cfg.model.rsig)
-    q_pc = RadialQuad.make(rmax=float(rc.percolation.r0) * 20.0 ** rc.percolation.beta + 5 * cfg.model.rsig)
+    q_pc = percolation_quad(cfg)
 
     cand = ck.load("likelihood") if ck else None
     if cand is None:

@@ -24,7 +24,7 @@ import numpy as np
 
 from ..config import CosmologyConfig, RemaConfig
 from ..core.context import FilterModel
-from ..core.maskcorr import no_footprint, radial_completeness
+from ..core.maskcorr import footprint_completeness, member_mag_limit, no_footprint
 from ..core.richness import Neighbors, RadialQuad
 from ..core.zred import ZredGrid, compute_zred
 from ..model.background import ChisqBkg, ZredBkg, build_chisq_bkg, build_photoz_bkg, build_zred_bkg
@@ -252,10 +252,7 @@ class Region:
     def mag_limit(self) -> float:
         """Faint reference-magnitude limit of the members: the catalogue's (99: none), and with
         the photo-z filter ``photoz.mag_max``."""
-        lim = float(self.cfg.survey.mag_max) if self.cfg.survey.mag_max else 99.0
-        if self.model.filter == "photoz" and self.cfg.photoz.mag_max is not None:
-            lim = min(lim, float(self.cfg.photoz.mag_max))
-        return lim
+        return member_mag_limit(self.cfg)
 
     def completeness(self, ra, dec, z, quad: RadialQuad):
         """(frad, fgeo) [B, n_r]; without a footprint all ones, except for the fraction of the
@@ -276,11 +273,8 @@ class Region:
         if self._fmap is None:
             ref = self.rs.ref_band.upper()
             self._fmap = self.footprint.fine.device(("FRACGOOD", f"SIGF_{ref}"))
-        return radial_completeness(jnp.asarray(ra, jnp.float32), jnp.asarray(dec, jnp.float32),
-                                   jnp.asarray(z, jnp.float32), self._fmap, quad, self.model,
-                                   ref_band=self.rs.ref_band, snr_min=self.cfg.survey.ref_snr_min,
-                                   mag_max=mag_max, n_phi=self.cfg.mask.n_phi,
-                                   n_mag=self.cfg.mask.n_mag)
+        return footprint_completeness(ra, dec, z, self._fmap, quad, self.model, self.cfg,
+                                      self.rs.ref_band)
 
     def correct_zlambda(self, z, z_e, lam):
         """Calibrated z_lambda correction (identity without one); invalid entries (z <= 0) kept."""

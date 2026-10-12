@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Scan mode + spectroscopic post-processing for a table of positions, on the DR11 south data at
-# CC-IN2P3, as one SLURM job (rema scan-positions; docs/dr11.rst "Scan a list of positions").
+# CC-IN2P3, as one SLURM job (rema scan-positions; docs/dr11.rst "A list of positions anywhere in DR11 south").
 #
 #   rema-env                                          # the rema Python environment
 #   $HOME/software/rema-jax/scripts/scan/scan_positions.sh INPUT OUTPUT [rema scan-positions options]

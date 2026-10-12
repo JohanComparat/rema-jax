@@ -14,9 +14,9 @@ The products are described in `Catalogue products`_, their use in `Reading the c
 Catalogue products
 ------------------
 
-- **3 481 608 clusters** with λ ≥ 3, over 18 500 deg²: 585 991 with λ ≥ 10, 145 133 with λ ≥ 20,
+- 3 481 608 clusters with λ ≥ 3, over 18 500 deg²: 585 991 with λ ≥ 10, 145 133 with λ ≥ 20,
   11 763 with λ ≥ 50 and 899 with λ ≥ 100.
-  **87.7 M members** (P ≥ 0.01).
+  87.7 M members (P ≥ 0.01).
 - **Footprint:** E(B−V) < 0.2 (cut on the galaxies and the randoms alike) and \|b\| ≥ 15°.
   Near the Galactic plane, stellar contamination makes most seeds survive the first pass and the
   percolation runs out of memory.
@@ -33,7 +33,7 @@ Catalogue products
    * - Directory
      - Content
    * - ``rema_dr11_v0.2.0/``
-     - **The catalogue**: ``clusters_dr11.fits`` (2.7 GB), ``clusters_dr11_members.fits``
+     - The catalogue: ``clusters_dr11.fits`` (2.7 GB), ``clusters_dr11_members.fits``
        (12 GB) and ``clusters_dr11_qa.json``.
        The two parts below, combined, with ``PART``, ``GLON``, ``GLAT``, ``SEAM_DIST`` and
        ``FLAG_SEAM``; ``MEM_MATCH_ID = PART << 40 | region << 32 | rank`` is unique, in the
@@ -88,16 +88,17 @@ The notebooks run at CC-IN2P3 on the Jupyter platform: :ref:`cc-notebooks`.
 Scan mode at given positions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``rema scan-positions`` takes a table with RA and DEC (X-ray or Sunyaev–Zel'dovich candidates,
-say) and returns it with the scan-mode richness, redshift, centre and spectroscopic redshift at
-each position.
+``rema scan-positions`` takes a table with RA and DEC (for example X-ray or Sunyaev–Zel'dovich
+candidates) and returns it with the scan-mode richness, redshift, centre and spectroscopic
+redshift at each position.
 It ingests the sweeps around the positions and builds their footprint from the randoms
-(:doc:`dr11`, "Scan a list of positions").
+(:doc:`dr11`, "A list of positions anywhere in DR11 south").
 
-Keep the tables on /sps, which the compute nodes read and where there is room (not in
-``$HOME``), in ``/sps/lsst/users/$USER/rema_scan``:
+Keep the tables in ``/sps/lsst/users/$USER/rema_scan``: the compute nodes read ``/sps``, which
+has room, unlike ``$HOME``.
+The directory holds:
 
-- ``targets/``: your input tables (FITS, CSV, ...);
+- ``targets/``: the input tables (FITS, CSV, ...);
 - ``results/``: the outputs, ``<input stem>_rema.fits``;
 - ``logs/``: the job logs;
 - ``galaxies/``: the ingested sweeps, about 49 MB each, kept and reused by later jobs; delete
@@ -137,8 +138,8 @@ arrays of CPU jobs, then point the scans at that index:
 
    W=/sps/lsst/users/$USER/rema_scan
    OUTDIR=$W NRAND=4 $HOME/software/rema-jax/scripts/slurm/rema_dr11_blind.sh prepare  # ~80 GB + 12 GB
-   python $HOME/software/rema-jax/scripts/scan/public_catalogues.py $W/inputs/all   # ACT, SPT, PSZ2, MCXC, eRASS1, ...
-   $HOME/software/rema-jax/scripts/scan/scan_positions.sh $W/inputs/all/act_dr6.fits $W/out/act_dr6.fits \
+   python $HOME/software/rema-jax/scripts/scan/public_catalogues.py $W/inputs/full   # ACT, SPT, PSZ2, MCXC, eRASS1, ...
+   $HOME/software/rema-jax/scripts/scan/scan_positions.sh $W/inputs/full/act_dr6.fits $W/out/full/act_dr6.fits \
        --index $W/randoms_index
 
 ``scripts/scan/public_catalogues.py`` writes the public cluster catalogues kept in
@@ -147,7 +148,9 @@ the DR11 south sweeps).
 A catalogue of more than 200 000 rows, such as that of :cite:t:`WenHan2024`, is written as
 slices of 15° in RA, ``<name>_ra<RA0>.fits``, one job each; ``scripts/scan/merge_parts.py OUT
 PART...`` joins their outputs, sorted by the row in the original table.
-``scripts/scan/finalize_scan.sh WORK DEST``, submitted after the scans, joins the slices, checks
+``scripts/scan/finalize_scan.sh WORK DEST``, submitted after the scans, expects the inputs in
+``WORK/inputs/full`` and the outputs in ``WORK/out/full`` (slices in ``WORK/out/full/parts``).
+It joins the slices, checks
 every output against its input, copies outputs, inputs and logs to ``DEST``
 (``dr11/south/rema/rema_dr11_v0.2.0_scan_public`` for the run of 2026-10-11 and 12) and deletes
 ``WORK``.
@@ -177,9 +180,9 @@ We ran the production from 2026-10-05 to 2026-10-07 with ``scripts/slurm/rema_dr
 A region took a median of 4 h and 18 GB of memory (90% of them below 37 GB); the 270 regions
 took 990 task-hours.
 The region tasks batched under the queue limit (``MAX_ARRAY``) ran JAX on the CPU of their node,
-because of a bug of the ``batch`` stage (fixed in rema 0.3.1); the regions run on the GPU took
+because of a bug in the ``batch`` stage (fixed in rema 0.3.1); the regions run on the GPU took
 about 1 h.
-The catalogue does not depend on the device: CPU and GPU agree to 8·10⁻⁴ in λ (:doc:`install`).
+The catalogue does not depend on the device: CPU and GPU agree to 8 × 10⁻⁴ in λ (:doc:`install`).
 
 Rerunning the pipeline
 ----------------------
@@ -252,7 +255,7 @@ task with 5 CPUs and 45 GB, ``--licenses=sps`` on every job, ``MAX_ARRAY=90``, t
    * - GPU partitions: at most 100 queued jobs per user
      - ``MAX_ARRAY=90``: each array task runs several regions in turn (``$OUTDIR/jobs/batches``)
 
-**Disk space.** ``spsquotalist /sps/lsst/users/$USER`` prints the use of your directory.
+**Disk space.** ``spsquotalist /sps/lsst/users/$USER`` prints the disk use of the user's directory.
 A full run needs about 80 GB of galaxy tables, 8 GB of randoms index and 1.4 GB of JAX cache,
 all deleted by ``clean``; each region keeps 53 MB (``footprint.fits`` and ``clusters.fits``),
 and the merged catalogues take 14 GB.
@@ -264,10 +267,11 @@ Validation at CC-IN2P3
 
 - On 2026-10-05, the three-sweep development area (RA 0–5°, Dec −15° to 0°) run at CC-IN2P3 on a
   V100 matched the laptop: identical galaxies and footprint, 448 against 449 clusters with
-  λ ≥ 20 (median \|Δλ/λ\| 2×10⁻⁶), the same centres at the 25 Atacama Cosmology Telescope (ACT)
+  λ ≥ 20 (median \|Δλ/λ\| 2 × 10⁻⁶), the same centres at the 25 Atacama Cosmology Telescope (ACT)
   clusters, and 12 859 against 12 857 clusters in the three-region run.
-  The test suite passes on a CPU node, and the GPU test on a V100.
-- On 2026-10-07, the notebooks executed at CC-IN2P3 with the calibration of the production run.
+  The test suite passed on a CPU node, and the GPU test on a V100.
+- On 2026-10-07, we executed the notebooks at CC-IN2P3 with the calibration of the production
+  run.
   Inside their three sweeps the blind catalogue matches the production one (all 369 clusters
-  with λ ≥ 20 have the same centre, median \|Δλ/λ\| 3×10⁻⁶), and the three-region run matches
+  with λ ≥ 20 have the same centre, median \|Δλ/λ\| 3 × 10⁻⁶), and the three-region run matches
   the one-region run exactly.

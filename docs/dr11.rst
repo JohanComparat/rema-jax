@@ -1,9 +1,9 @@
-DR11 end to end
-===============
+DR11 chain on three sweeps
+==========================
 
 These commands take three sweeps of the Legacy Surveys Data Release 11 (DR11) south, with their
 photo-z files and one randoms file, and produce a cluster catalogue with its members.
-They are the commands we used on the 75 deg² development area: RA 0–5°, Dec −15–0°.
+They are the commands we used on the 75 deg² development area: RA 0–5°, Dec −15° to 0°.
 Steps 1–3 prepare the data, the galaxies and the footprint, step 4 calibrates the red sequence,
 steps 5 and 6 find clusters blindly or at given positions, step 7 adds the spectroscopic
 redshifts and step 8 reads the catalogue.
@@ -11,8 +11,8 @@ Each step writes a FITS file that the next one reads, so a step can be rerun on 
 The :ref:`notebooks <notebooks>` run the same chain through the Python API, on one sweep and on
 one cluster.
 
-1. Data
--------
+1. Sweeps, photo-z files and randoms
+------------------------------------
 
 .. code-block:: bash
 
@@ -40,8 +40,8 @@ one cluster.
   ``$LEGACYSURVEY_DIR/dr11/south/randoms`` when ``LEGACYSURVEY_DIR`` is set, else to the current
   directory.
 
-2. Galaxies
------------
+2. Galaxy table
+---------------
 
 .. code-block:: bash
 
@@ -74,8 +74,8 @@ For large areas, ``rema ingest SWEEPS --outdir galaxies/`` writes one table per 
 Every command that takes ``--galaxies`` also accepts that directory, together with ``--box``
 (repeatable, for a union of boxes) or ``--regions PLAN --region-id I`` (:doc:`hpc`).
 
-3. Footprint
-------------
+3. Footprint and depth map
+--------------------------
 
 .. code-block:: bash
 
@@ -94,8 +94,8 @@ and ``SIGF_<band>``.
   depths of g 24.65, r 24.29, i 23.83 and z 23.40.
   It takes about 1 min to build, reading the 23 GB file in chunks.
 
-4. Calibration
---------------
+4. Red-sequence calibration
+---------------------------
 
 .. code-block:: bash
 
@@ -167,8 +167,9 @@ With the redMaPPer DR10 grz calibration, set ``model.chisq_mode: mag`` to reprod
     Keep the clusters centred in this box: the region without its buffer (:doc:`hpc`).
 ``--checkpoint DIR``
     Store the first-pass and likelihood results.
-    A rerun with the same seeds, model, backgrounds, wcen model and configuration resumes after
-    them; with other inputs, rema recomputes them.
+    A rerun with the same galaxies (IDs, zred), seeds, red-sequence model, backgrounds, wcen model,
+    footprint, configuration and rema version resumes after them; with other inputs, rema
+    recomputes them.
     Percolation always runs again.
 ``--centering {auto,bcg,wcen}``
     ``auto``, the default, uses wcen when the calibration has a wcen model.
@@ -178,7 +179,7 @@ With the redMaPPer DR10 grz calibration, set ``model.chisq_mode: mag`` to reprod
 
 The log reports the stages and, at the end of the percolation, why candidates were dropped
 (``seed``, ``zlambda``, ``centre``, ``centre_pfree``, ``lambda``, as in redMaPPer's
-``RunPercolation``):
+``RunPercolation``, and ``w`` when the connectivity W of the cluster is not finite):
 
 .. code-block:: text
 
@@ -249,7 +250,8 @@ runs the scan and the spectroscopic post-processing:
 - **Data:** each position gets ``--buffer`` = 1.2° of data, enough for the scan aperture, the
   centre search and the completeness integral at z = 0.05.
   Positions are processed in sky cells of ``--cell`` = 10°.
-- **Work directory** (``--work``, default ``/sps/lsst/users/$USER/rema_scan`` at CC):
+- **Work directory** (``--work``, default ``/sps/lsst/users/$USER/rema_scan`` when it exists, else
+  ``./rema_scan_work``):
 
   - ``galaxies/`` holds the ingested sweeps (about 49 MB each), kept and reused by later runs;
   - ``randoms_index/`` holds one index of the ``--nrand`` = 4 randoms files per set of
@@ -277,13 +279,13 @@ It works on the members with ``ZSPEC > 0`` and follows the velocity clipping of
   :cite:p:`Beers1990`;
 - 64 bootstrap resamples with a fixed seed.
 
-``BEST_Z`` takes ``SPEC_Z_BOOT`` when at least 3 members survive the clipping and σ_v is not
+``BEST_Z`` takes ``SPEC_Z_BOOT`` when at least three members survive the clipping and σ_v is not
 flagged.
 Otherwise it falls back to the spectroscopic redshift of the central galaxy (``CG_SPEC_Z``),
 then to ``Z_LAMBDA``; ``BEST_Z_TYPE`` says which one was used.
 
-8. A first look at the catalogue
---------------------------------
+8. Reading the catalogue
+------------------------
 
 .. code-block:: python
 

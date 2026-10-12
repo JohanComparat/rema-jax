@@ -10,7 +10,7 @@
 # (set OUT=... to change it). The other arguments go to rema scan-positions (e.g. --ra-col ra
 # --dec-col dec, --no-specpost, --set ...). SCAN = /sps/lsst/users/$USER/rema_scan; its galaxies/
 # (the ingested sweeps, ~49 MB each) are kept and reused by later jobs. For more than a few thousand
-# positions spread over the sky, raise --mem to 90G and --time (docs: ccin2p3, "Your own positions").
+# positions spread over the sky, raise --mem to 90G and --time (docs: ccin2p3, "Scan mode at given positions").
 #SBATCH --job-name=scan-positions
 #SBATCH --partition=gpu_v100
 #SBATCH --gpus=1

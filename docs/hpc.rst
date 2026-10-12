@@ -69,10 +69,10 @@ Quick start
    scripts/slurm/rema_dr11_blind.sh run              # plan, priming region, region array, merge
    scripts/slurm/rema_dr11_blind.sh status
 
-The calibration box above is an example; use one of the boxes that ``--calib-suggest`` proposes.
-
-- ``prepare`` and ``run`` submit only what is missing or stale, that is, made with another plan,
-  calibration or rema version (``rema status``); after failures or timeouts, call them again.
+- The calibration box above is an example: use one of the boxes that ``--calib-suggest``
+  proposes.
+- ``prepare`` and ``run`` submit only what is missing or stale, that is, made with another plan or
+  calibration (``rema status``); after failures or timeouts, call them again.
   They refuse to submit while jobs they submitted before are still queued or running.
 - To rerun particular regions, for example with more memory:
   ``ARRAY=17,42 REGION_MEM=192G scripts/slurm/rema_dr11_blind.sh run``.
@@ -86,8 +86,8 @@ The calibration box above is an example; use one of the boxes that ``--calib-sug
 
   ``run`` checks that both directories are writable before it submits anything.
 
-CC-IN2P3
---------
+Settings at CC-IN2P3
+--------------------
 
 ``scripts/slurm/ccin2p3.env`` holds the settings for the `CC-IN2P3 <https://doc.cc.in2p3.fr>`_
 cluster.
@@ -137,8 +137,8 @@ Parallel jobs and disk space
   the merge.
   Rerunning a region afterwards needs ``prepare`` again.
 
-The configuration
------------------
+Production configuration
+------------------------
 
 ``scripts/slurm/dr11_south.yaml`` holds the defaults plus ``survey.ebv_max: 0.2``.
 Galaxies and randoms with E(B−V) ≥ 0.2 are cut alike, so the masked area and MASKFRAC stay
@@ -178,19 +178,19 @@ Regions and boundaries
 - Members are concatenated as they are.
   A galaxy can be a member of clusters owned by two regions, as in a run over the whole sky.
 
-**What the buffer covers.** A cluster changes directly through its aperture, and through the
+**Reach of the buffer.** A cluster changes directly through its aperture, and through the
 claims of higher-ranked neighbours: their mask radius plus their seed offset.
 At z = 0.05 that reach is 1.4°, 1.6° and 1.9° for λ = 30, 100 and 300, so the 2° buffer covers
 it (:func:`rema.pipeline.required_buffer`).
 
-**What it does not cover.** Percolation's full dependency radius is 1.9°, 2.3° and 2.9°.
+**Beyond the buffer.** Percolation's full dependency radius is 1.9°, 2.3° and 2.9°.
 Chains of claims that start beyond the buffer can still change a cluster near a boundary, at
 second order, as in redMaPPer's tiling.
 ``rema merge`` reports the cluster density against the distance to internal edges, and the
 cross-region close pairs.
 
-**Measured.** We ran the 74 deg² strip at RA 0–5°, Dec −15–0° as three regions of 25 deg² and as
-one region (pipeline notebook):
+**Test on the development strip.** We ran the 74 deg² strip at RA 0–5°, Dec −15° to 0° as
+three regions of 25 deg² and as one region (pipeline notebook):
 
 - The merged catalogue holds the same 12 857 clusters as the one-region catalogue.
 - Every cluster with λ ≥ 5 has the same central galaxy at every distance from the two internal
@@ -204,11 +204,11 @@ one region (pipeline notebook):
   - they lie up to 4.8° from any boundary, beyond the buffer's reach, so they are not a
     boundary effect.
 
-With own boxes of 25 deg², the blind runs of the regions took twice the one-region time;
-production regions of 100 deg² read relatively less buffer.
+- With own boxes of 25 deg², the blind runs of the regions took twice the one-region time;
+  production regions of 100 deg² read relatively less buffer.
 
-The randoms
------------
+Randoms files
+-------------
 
 ``NRAND`` (default 20) is the number of randoms files whose index the footprints use.
 The CC-IN2P3 copy (``/sps/lsst/datasets/desi/legacysurveys``) holds files 0 to 3 only: set
@@ -232,11 +232,10 @@ Devices and resources
     Region tasks use ``PART_CPU``, with 16 CPUs, 64 GB and 24 h.
 
 ``REGION_CPUS``, ``REGION_MEM`` and ``REGION_TIME`` override these values.
-
 In the DR11 south production (:doc:`ccin2p3`), the peak memory of a region had a median of 18 GB
 (90% below 37 GB, 2.4–3 kB per galaxy of its data box), and a region at the edge of the
 Galactic bulge, with 1.06 M candidates, reached 84 GB.
-Rerun such regions with ``REGION_MEM``.
+Rerun such regions with a larger ``REGION_MEM``.
 A region took about 1 h on a V100 and 4 h on its 5 CPU cores.
 
 - **Other stages:** ingest, randoms, calib and merge always run on CPUs.

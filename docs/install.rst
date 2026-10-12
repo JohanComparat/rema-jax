@@ -84,7 +84,7 @@ libraries) and pip's temporary files all go to ``/sps``:
 
 ``[cuda]`` installs the CUDA 12 JAX wheels, because CUDA 13 does not support the V100 GPUs;
 keep it, although the platform documentation installs ``jax[cuda13]``.
-``dev`` and ``docs`` add pytest and nbclient, to run the tests and execute the notebooks.
+``dev`` adds pytest, to run the tests, and ``docs`` adds nbclient (through myst-nb), to execute the notebooks.
 
 A login shell at CC-IN2P3 (``ssh``) reads ``~/.profile``, not ``~/.bashrc``, so a ``conda init`` in
 ``~/.bashrc`` does not define ``conda`` there.

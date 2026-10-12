@@ -1,21 +1,21 @@
 redMaPPer blind mode on DR11
 ============================
 
-This page shows the DR11 south production catalogue of rema (blind mode, version 0.2.0) in the
-figures of the redMaPPer papers.
+We draw the DR11 south production catalogue of rema (blind mode, version 0.2.0) in the figures
+of the redMaPPer papers.
 These are the Sloan Digital Sky Survey (SDSS) DR8 catalogue of :cite:t:`Rykoff2014` (R14
 hereafter), the Dark Energy Survey (DES) Science Verification (SV) catalogue of
 :cite:t:`Rykoff2016` (R16 hereafter), the Legacy Surveys DR10 runs of :cite:t:`Kluge2024` (K24
 hereafter), and later papers that validated redMaPPer catalogues against spectroscopy, X-ray,
 Sunyaev–Zel'dovich (SZ) and other optical catalogues (`Papers and figures reproduced`_).
 Each caption names the figure it reproduces.
-The scripts that make the figures, and a notebook built from them, are described under
-`Reproducing the figures`_.
+The scripts that make the figures, and the notebook built from them, are in
+`Figure scripts, notebook and inputs`_.
 
 Catalogue and footprint
 -----------------------
 
-- **Catalogue.** The two parts of the production run (:doc:`ccin2p3`), read with their
+- **Catalogue.** The two parts of the production run (:doc:`ccin2p3`), told apart by the column
   ``PART``: 3 481 608 clusters with λ ≥ 3 and MASKFRAC ≤ 0.2 over 18 491 deg², and 69.6 M
   members with P ≥ 0.05 or a spectroscopic redshift.
   We ran the blind mode with one red-sequence calibration in g, r, i, z (z-band reference).
@@ -28,8 +28,8 @@ Catalogue and footprint
   The figures keep these clusters.
 - **Calibration area.** We trained the red-sequence model and the z_λ correction on the
   spectroscopic redshifts of RA 160–180° and 190–210°, Dec −10° to 10°.
-  So the redshift statistics are given outside this area ("independent") and inside it
-  separately.
+  So the redshift statistics are given separately outside this area ("independent") and inside
+  it.
 - **Spectroscopic redshifts.** They come with the DR11 photo-z sweeps (``Z_SPEC``: SDSS, BOSS,
   eBOSS, DESI, GAMA and others; COSMOS2015 photo-z excluded).
   The spectroscopic post-processing (the clipping of :cite:t:`Clerc2016`) gives each cluster
@@ -63,13 +63,13 @@ Red-sequence calibration
    :alt: Red-sequence mean colour, slope, intrinsic scatter and pivot magnitude against redshift
 
    Red-sequence parameters against redshift (R14 Fig. 5): mean colour at the pivot, slope,
-   intrinsic scatter and pivot magnitude.
-   The mean g − r and r − z agree with K24 within 0.04 mag below z ≈ 0.6; the g − r of
-   :cite:t:`Comparat2025`, from cluster–galaxy cross-correlations, is 0.02–0.10 mag redder, the
-   difference growing with redshift.
-   The intrinsic scatter of g − r (0.06–0.08 at z < 0.35) is larger than that of K24 and of
-   Comparat et al. (0.042–0.059 in their Table 2), while r − i and i − z are much tighter
-   (0.01–0.03) where they carry the break.
+   intrinsic scatter and pivot magnitude, compared with the grz model of K24 and with the g − r
+   red sequence that :cite:t:`Comparat2025` measured from cluster–galaxy cross-correlations.
+   The mean g − r and r − z agree with K24 within 0.04 mag below z ≈ 0.6 and the g − r of
+   Comparat et al. is 0.02–0.10 mag redder, the difference growing with redshift; the intrinsic
+   scatter of g − r (0.06–0.08 at z < 0.35) is larger than that of K24 and of Comparat et al.
+   (0.042–0.059 in their Table 2), while that of r − i and i − z is 0.01–0.03 where these colours
+   carry the break.
 
 .. figure:: figures/redmapper_dr11/rs_cmd.png
    :alt: Colour-magnitude diagrams of members in four redshift slices
@@ -92,15 +92,14 @@ Cluster redshifts
    Bottom: median Δz/(1+z), NMAD and mean formal error σ_zλ/(1+z), outside the calibration area
    (solid) and inside (dashed), with σ_z/(1+z) = 0.01 (dotted).
    The scatter is 0.005–0.008 below z = 0.6 and rises to ≈ 0.015 at z ≈ 0.7, where the break
-   leaves the r band, and the formal errors follow it; most outliers have a foreground or
-   background galaxy as central (mis-centring or projection) and mostly disappear in the clean
-   sample, and the calibration area and the rest of the sky have the same statistics.
+   leaves the r band, with the formal errors following it; most outliers have a foreground or
+   background galaxy as central galaxy (mis-centring or projection).
 
 .. figure:: figures/redmapper_dr11/zl_outliers.png
    :alt: Fraction of 3, 4 and 5 sigma redshift outliers against z_lambda
 
-   Fraction of 3σ, 4σ and 5σ outliers against z_λ (R14 Fig. 11) outside the calibration area, for
-   λ ≥ 20 (solid) and the clean sample (dashed).
+   Fraction of 3σ, 4σ and 5σ redshift outliers against z_λ outside the calibration area (R14
+   Fig. 11), for λ ≥ 20 (solid) and the clean sample (dashed).
    The 4σ fraction is 1–4%, about twice that of SDSS DR8 (R14, R16), and peaks near z ≈ 0.3 and
    0.45; in the clean sample it is below 1%, less than half that of the full sample.
 
@@ -110,8 +109,8 @@ Cluster redshifts
    Redshift distribution of the clusters with λ ≥ 20 and a central spectroscopic redshift (R14
    Fig. 12): z_spec (black), z_λ (blue) and the sum of the P(z) (yellow, with the Poisson band).
    The summed P(z) follows the z_spec histogram more closely than z_λ, whose histogram has spikes
-   (e.g. at 0.38) and an excess at 0.8–0.87; the χ² of the comparison (table) is still about 3 per
-   bin, so the P(z) are somewhat too narrow or slightly biased at some redshifts.
+   (e.g. at 0.38) and an excess at 0.8–0.87; the χ² of the comparison is 239 for 85 bins, about 3
+   per bin, so the P(z) are somewhat too narrow or slightly biased at some redshifts.
 
 .. figure:: figures/redmapper_dr11/zl_bias_error.png
    :alt: Running bias and scatter of z_lambda against member spectroscopic redshifts, and formal errors
@@ -123,18 +122,18 @@ Cluster redshifts
    four redshift ranges (orange boxes).
    Right: mean formal error, empirical uncertainty and absolute bias.
    Below z = 0.6 the bias is < 0.005 and the uncertainty 0.005–0.01, as in K24; at 0.6–0.8 both
-   grow (uncertainty ≈ 0.025, bias ≈ +0.01), and the formal errors match the empirical ones at all
-   redshifts (ratio in the table).
+   grow (uncertainty ≈ 0.025, bias ≈ +0.01), and the formal errors follow the empirical ones at
+   all redshifts (empirical over formal 0.93 overall).
 
 .. figure:: figures/redmapper_dr11/zred_members.png
    :alt: zred of members against the cluster spectroscopic redshift, with offset and scatter
 
-   zred of the members with P > 0.9 against the spectroscopic redshift of the central, outside
-   the calibration area (R14 Fig. 7, after the zred correction).
+   zred of the members with P > 0.9 against the spectroscopic redshift of the central galaxy,
+   outside the calibration area (R14 Fig. 7, after the zred correction).
    Bottom: mean offset, rms, mean zred error and 4σ outlier fraction.
    The offset stays within ±0.01 and the rms is 0.02–0.03 below z = 0.6 and 0.04–0.05 above,
-   slightly larger than the quoted errors; the flare-up at z ≈ 0.35–0.4 (break between g and r)
-   is the same as in R14.
+   slightly larger than the quoted errors, with a flare-up at z ≈ 0.35–0.4 (break between g and
+   r) as in R14.
 
 Richness
 --------
@@ -144,9 +143,9 @@ Richness
 
    Richness, SCALEVAL and MASKFRAC of the clusters.
    Left: λ against z_λ (R14 Fig. 19).
-   Middle: SCALEVAL against z_λ − z_vlim (R14 Fig. 27); below z_vlim it is set by the masked part
-   of the aperture (up to 1/(1 − 0.2) = 1.25), above it rises as the depth cuts into the
-   luminosity function.
+   Middle: SCALEVAL against z_λ − z_vlim (R14 Fig. 27); below z_vlim the masked part of the
+   aperture sets it (up to 1/(1 − 0.2) = 1.25), and above z_vlim it rises as the depth cuts into
+   the luminosity function.
    Right: MASKFRAC (K24 Fig. B.2).
    Poor clusters pile up at z_λ ≈ 0.85–0.9, close to the upper end of the calibration (z = 0.9).
 
@@ -165,12 +164,11 @@ Richness
    first eROSITA All-Sky Survey (eRASS1), as in K24 Fig. 11 and :cite:t:`DES2025{Fig. 3}`, for
    one-to-one matches within 1.5′ and \|Δz\|/(1+z) < 0.02 (MASKFRAC < 0.1), coloured by z_λ.
    Bottom: the ratio against z_λ.
-   rema λ is 0.89 times DES Y1 in the median (K24 found 0.79 for their DR10 λ_norm), from ≈ 1.05
-   at z = 0.2 to ≈ 0.85 at z = 0.6.
-   Against SDSS the ratio drops above z = 0.3, where SDSS becomes too shallow, and follows the
-   relation of :cite:t:`IderChitham2020{Eq. 1}`.
-   Against the eRASS1 λ_norm (K24 run at the eRASS1 positions on DR10), rema λ is 13% higher, 17%
-   more than their griz λ (λ_norm = 1.039 λ_griz).
+   In the median, rema λ is 0.89 times the DES Y1 λ (K24 found 0.79 for their DR10 λ_norm), from
+   ≈ 1.05 at z = 0.2 to ≈ 0.85 at z = 0.6; against SDSS the ratio drops above z = 0.3, where SDSS
+   becomes too shallow, along the relation of :cite:t:`IderChitham2020{Eq. 1}`; against the eRASS1
+   λ_norm (K24 run at the eRASS1 positions on DR10), rema λ is 13% higher, and 17% higher than
+   their griz λ.
 
 .. figure:: figures/redmapper_dr11/richness_vdisp.png
    :alt: lambda against velocity dispersion for clusters with at least fifteen spectroscopic members
@@ -178,9 +176,9 @@ Richness
    λ against the velocity dispersion of clusters with at least fifteen spectroscopic members,
    coloured by z_λ, with an orthogonal fit and the K24 relation, as in K24 Fig. 18 and
    :cite:t:`Wetzell2022{Fig. 3}`.
-   The slope is steeper than that of K24 (table) and the scatter larger (≈ 0.4 dex in λ), as the
-   blind catalogue includes projected systems and the dispersions of poor clusters rest on few
-   members.
+   The slope is steeper than that of K24 (2.62 against 2.40) and the scatter larger (≈ 0.4 dex
+   in λ), as the blind catalogue includes projected systems and the dispersions of poor clusters
+   rest on few members.
 
 Depth, volume limit and abundance
 ---------------------------------
@@ -202,8 +200,8 @@ Depth, volume limit and abundance
    DES at ≈ 0.85).
    Right: z_vlim of this map at the eRASS1 cluster positions against the ZVLIM_02 of K24 from the
    DR10 depth.
-   The two agree on average (median difference in the table), with a scatter from the different
-   depth estimates (randoms per pixel here, local depth at each cluster in K24).
+   The median difference is +0.006, with a scatter from the different depth estimates (randoms
+   per pixel here, local depth at each cluster in K24).
 
 .. figure:: figures/redmapper_dr11/area_zvlim.png
    :alt: Area of the run with z_vlim above a given redshift
@@ -230,13 +228,12 @@ Depth, volume limit and abundance
    :alt: Cluster density relative to the volume-limited density in the plane of z_vlim and lambda
 
    Cluster density in the plane of z_vlim and λ, relative to the density in the volume-limited sky
-   at the same λ, in five bins of z_λ (K24 Fig. 13); the vertical line is z_vlim = z_λ.
-   The ratio is close to 1 below z ≈ 0.45.
-   At 0.5–0.6 the shallower sky (DECaLS, z_vlim ≈ 0.65) has ≈ 20% more clusters at fixed λ than
-   the deeper DES area, although both are volume limited there: λ is not yet independent of the
-   photometric depth at these redshifts.
-   Left of the line (z_λ above z_vlim) the density rises sharply, as λ is extrapolated with
-   SCALEVAL.
+   at the same λ, in five bins of z_λ (K24 Fig. 13); the vertical line is z_vlim = z_λ, left of
+   which λ is extrapolated with SCALEVAL.
+   The ratio is close to 1 below z ≈ 0.45 and rises sharply left of the line; at 0.5–0.6 the
+   shallower sky (DECaLS, z_vlim ≈ 0.65) has ≈ 20% more clusters at fixed λ than the deeper DES
+   area, although both are volume limited there, so λ still depends on the photometric depth at
+   these redshifts.
 
 .. figure:: figures/redmapper_dr11/density_maps.png
    :alt: Density-contrast maps of clusters in three redshift bins
@@ -252,14 +249,14 @@ Depth, volume limit and abundance
    Density of λ ≥ 20 clusters at 0.1 < z_λ < 0.5, in pixels with z_vlim > 0.5, against the z-band
    depth, E(B−V), z-band point spread function (PSF) size and masked fraction of the pixel
    :cite:p:`Baxter2016{Fig. 2}`, and against the distance to the edge of the region that found the
-   cluster (quality assurance of the merge).
-   The density decreases by ≈ 12% from the shallowest to the deepest pixels (the DES area), the
-   effect of the previous figures; the pixels of lowest extinction, mostly in the deep DES area,
-   are 10% below the mean, the trend with seeing stays within ±5%, and the most masked pixels are
-   8% low.
-   The edge profile, relative to points spread uniformly over the own boxes (which ignore the
-   mask), rises by 8% (part 0) to 13% (part 1) towards the internal edges; part of the rise can
-   come from the footprint geometry, as the outer edges of the survey count as region interiors.
+   cluster (quality assurance of the merge), relative to points spread uniformly over the own
+   boxes (which ignore the mask).
+   The density decreases by ≈ 12% from the shallowest to the deepest pixels (the DES area, as in
+   the previous figures), the pixels of lowest extinction, mostly in the DES area, are 10% below
+   the mean, the trend with seeing stays within ±5% and the most masked pixels are 8% low; the
+   edge profile rises by 8% (part 0) to 13% (part 1) towards the internal edges, a rise that can
+   come in part from the footprint geometry, as the outer edges of the survey count as region
+   interiors.
 
 Centring
 --------
@@ -270,19 +267,20 @@ Centring
    Centring probability P_cen of the most likely central galaxy (R14 Sect. 8): distribution for
    5 ≤ λ < 20 and λ ≥ 20, mean against λ in four redshift bins, and mean against z_λ for λ ≥ 20
    with the fraction of clusters with P_cen > 0.9.
-   ⟨P_cen⟩ = 0.82 for λ ≥ 20, as predicted for DES SV (R16); it rises with λ and decreases above
+   ⟨P_cen⟩ = 0.81 for λ ≥ 20, close to the 0.82 predicted for DES SV (R16); it rises with λ and decreases above
    z ≈ 0.6.
 
 .. figure:: figures/redmapper_dr11/centering_offsets.png
    :alt: Offsets between rema centres and X-ray or SZ centres, with two-component fits
 
    Offsets between the rema centre and the eRASS1 X-ray, Atacama Cosmology Telescope (ACT) DR6 SZ
-   and South Pole Telescope (SPT-SZ) centres, in units of R_λ, with the two-component model of R16
-   Figs. 11–12 and :cite:t:`Zhang2019{Fig. 3}`: a fraction ρ0 well centred (width σ0, the
-   positional errors) and the rest mis-centred (width σ1).
-   With ACT and SPT, ρ0 = 0.79 and 0.83, within the 0.78 ± 0.11 of R16, and σ1 ≈ 0.4 R_λ; the
-   eRASS1 fit gives a lower ρ0 (0.63), as its positional errors are tens of arcseconds, not a
-   fixed fraction of R_λ, and spread the well-centred peak into the mis-centred component.
+   and South Pole Telescope SZ survey (SPT-SZ) centres, in units of R_λ, with the two-component
+   model of R16 Figs. 11–12 and :cite:t:`Zhang2019{Fig. 3}`: a fraction ρ0 well centred (width
+   σ0, the positional errors) and the rest mis-centred (width σ1).
+   With ACT and SPT, ρ0 = 0.79 and 0.83, compatible with the 0.78 ± 0.11 of R16, and
+   σ1 ≈ 0.4 R_λ; the eRASS1 fit gives a lower ρ0 (0.63), as its positional errors, tens of
+   arcseconds rather than a fixed fraction of R_λ, spread the well-centred peak into the
+   mis-centred component.
 
 .. figure:: figures/redmapper_dr11/centering_optical.png
    :alt: Offsets between rema centres and DES Y1 or SDSS DR8 redMaPPer centres
@@ -305,8 +303,8 @@ Comparison with SZ, X-ray and optical catalogues
    Bottom: recovered fraction against redshift and mass.
    ACT and SPT clusters are recovered at 93–95% at all redshifts; the second Planck catalogue of
    SZ sources (PSZ2), the Meta-Catalogue of X-ray detected Clusters (MCXC) and eRASS1 reach
-   87–89%, and the eRASS1 recovery drops below z = 0.1 and above z = 0.7.
-   K24 found > 95% in scan mode, where the external position and redshift are given.
+   87–89% (K24 found > 95% in scan mode, where the external position and redshift are given),
+   and the eRASS1 recovery drops below z = 0.1 and above z = 0.7.
 
 .. figure:: figures/redmapper_dr11/external_zconsistency.png
    :alt: Fraction of matched external clusters with consistent redshift against lambda
@@ -328,16 +326,16 @@ Comparison with SZ, X-ray and optical catalogues
 .. figure:: figures/redmapper_dr11/external_wenhan.png
    :alt: Fraction of rema clusters with a Wen and Han counterpart and the reverse
 
-   Cross-identification with the 1.58 million clusters found by :cite:t:`WenHan2024` in the Legacy
-   Surveys, as in their Fig. 10 and :cite:t:`Zou2021{Fig. 9}`.
+   Cross-identification of rema with the 1.58 million clusters found by :cite:t:`WenHan2024` in
+   the Legacy Surveys, as in their Fig. 10 and :cite:t:`Zou2021{Fig. 9}`.
    Left: fraction of rema clusters with a Wen & Han counterpart against λ.
    Right: fraction of Wen & Han clusters with a rema counterpart against their mass.
-   93–97% of the Wen & Han clusters with M500 ≳ 2 × 10¹⁴ M☉ have a rema counterpart at every
-   redshift; 85–90% of the rema clusters with λ ≳ 30 have a Wen & Han counterpart below z = 0.5,
-   80% at 0.5–0.7 and 50–60% at 0.7–0.9.
+   At every redshift, 93–97% of the Wen & Han clusters with M500 ≳ 2 × 10¹⁴ M☉ have a rema
+   counterpart; 85–90% of the rema clusters with λ ≳ 30 have a Wen & Han counterpart below
+   z = 0.5, 80% at 0.5–0.7 and 50–60% at 0.7–0.9.
 
-Members
--------
+Cluster members
+---------------
 
 .. figure:: figures/redmapper_dr11/member_example.png
    :alt: Example cluster with members, P(z), membership histogram, cumulative profile and velocities
@@ -345,7 +343,7 @@ Members
    The cluster with the most spectroscopic members among λ ≥ 80 at 0.1 < z < 0.3 (R14 Fig. 16; K24
    Fig. 4).
    (a) Members coloured by P, with R_λ and the centre candidates (P_cen); (b) P(z) with z_λ and
-   the spectroscopic redshifts of the members and of the central; (c) distribution of P;
+   the spectroscopic redshifts of the members and of the central galaxy; (c) distribution of P;
    (d) Σ P within R against the Navarro–Frenk–White (NFW) filter of the richness, normalised to λ;
    (e) rest-frame velocities of the spectroscopic members, the members kept by the 3σ clipping and
    a Gaussian of the measured σ_v.
@@ -364,7 +362,7 @@ Members
    :alt: Stacked velocity distributions in four richness bins and the projected fraction
 
    P-weighted velocities of the spectroscopic members in units of the σ_v of each cluster, stacked
-   in bins of λ, and the fraction in a flat (projected) component fitted with a Gaussian
+   in bins of λ, and the fraction in a flat (projected) component fitted together with a Gaussian
    :cite:p:`Myles2021{Fig. 3},Myles2025{Fig. 4}`.
    The projected fraction is 4–8%, decreasing with λ; it is a lower limit, since Myles et al. also
    model the interlopers that fall inside the cluster Gaussian, which this simple fit does not
@@ -373,23 +371,23 @@ Members
 .. figure:: figures/redmapper_dr11/member_profiles.png
    :alt: Stacked membership surface density and spectroscopic member fraction against radius
 
-   Radial profiles of the members.
+   Radial profiles of the cluster members.
    Left: stacked surface density of membership probability, Σ P per unit area divided by λ,
    against R/R_λ in four λ bins, with the NFW filter of the richness (dashed; R14 Fig. 16); the
-   profiles are self-similar in R/R_λ, the first bin holds the central galaxy, and the drop beyond
-   R_λ is the radial cut.
+   first bin holds the central galaxy, and the drop beyond R_λ is the radial cut.
    Right: fraction of spectroscopic members kept by the clipping against R/R_λ
-   :cite:p:`Tomooka2020{Fig. 2}`, from 95% at the centre to 55–75% at R_λ, higher for richer
-   clusters.
+   :cite:p:`Tomooka2020{Fig. 2}`.
+   The profiles are self-similar in R/R_λ, and the kept fraction falls from 95% at the centre to
+   55–75% at R_λ, higher for richer clusters.
 
-Reproducing the figures
------------------------
+Figure scripts, notebook and inputs
+-----------------------------------
 
 The scripts of ``docs/figures/redmapper_dr11`` make the figures from the production catalogues,
 one DR11 randoms file and public cluster catalogues.
-They need no GPU, only ``colossus`` :cite:p:`Diemer2018` for the halo mass function and
-``pandas`` for the tables of the Strasbourg astronomical Data Centre (CDS), besides rema and
-matplotlib:
+They run on a CPU and need, besides rema and matplotlib, ``colossus`` :cite:p:`Diemer2018` for
+the halo mass function and ``pandas`` for the tables of the Strasbourg astronomical Data Centre
+(CDS):
 
 .. code-block:: bash
 
@@ -418,15 +416,16 @@ variables (defaults in ``common.py``):
      - The DR11 south directory, shared and read only: the production runs
        ``rema/rema_dr11_v0.2.0_ra0-240`` and ``rema/rema_dr11_v0.2.0_ra240-360``, the randoms file
        ``randoms/randoms-south-1-0.fits`` and the public catalogues below in ``rema/external``
-       (a missing one is skipped). Default: the DR11 data system at CC-IN2P3 when ``/sps`` is
-       mounted, else ``~/data/legacysurvey/dr11/south``
+       (a missing one is skipped).
+       Default: the DR11 data system at CC-IN2P3 when ``/sps`` is mounted, else
+       ``~/data/legacysurvey/dr11/south``
    * - ``REMA_WORK``
      - Yours, writable (default ``/sps/lsst/users/$USER/rema_work`` when that user space
        exists, else ``~/rema_work``): the reduced tables, maps and ``values.json`` (about 7.5 GB)
        go to ``$REMA_WORK/redmapper`` (at CC-IN2P3: :ref:`cc-notebooks`)
 
-External catalogues, as downloaded on 2026-10-07 (all in one directory, with a ``README.txt`` of
-their sources; at CC-IN2P3 in ``/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/external``):
+We downloaded the external catalogues on 2026-10-07 into one directory, with a ``README.txt`` of
+their sources (at CC-IN2P3: ``/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/external``):
 
 .. list-table::
    :header-rows: 1
@@ -460,6 +459,10 @@ Papers and figures reproduced
 
 The table lists the papers whose figures are reproduced or used as references on this page, and
 what is taken from each.
+We did not reproduce the figures of :cite:t:`Costanzi2019a` (injections), :cite:t:`Lee2025`,
+:cite:t:`Kelly2023` (preprint), :cite:t:`Hikage2018`, :cite:t:`Oguri2018` (CAMIRA) and
+:cite:t:`EuclidMelin2025` (XCI, preprint), as they need injections, shear catalogues or
+simulations.
 
 .. list-table::
    :header-rows: 1
@@ -530,8 +533,3 @@ what is taken from each.
      - Halo mass function
    * - :cite:t:`Diemer2018`, COLOSSUS
      - Halo mass function code
-
-Further papers have figures in the same spirit that we did not reproduce, as they need
-injections, shear catalogues or simulations: :cite:t:`Costanzi2019a` (injections),
-:cite:t:`Lee2025`, :cite:t:`Kelly2023` (preprint), :cite:t:`Hikage2018`, :cite:t:`Oguri2018`
-(CAMIRA) and :cite:t:`EuclidMelin2025` (XCI, preprint).

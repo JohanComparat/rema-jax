@@ -23,13 +23,14 @@ The pipeline notebook (:doc:`notebooks/pipeline_dr11`) runs the same stages on a
    * - ingest
      - about 80
      - ``rema ingest SWEEPS --outdir galaxies/ --require-pz``: one compact table per sweep, so
-       the 1.8 TB of sweeps are read once. Each table header records NGAL, NZSPEC, the mean
-       E(B−V) and SURVHASH, the hash of the selection.
+       the 1.8 TB of sweeps are read once.
+       Each table header records NGAL, NZSPEC, the mean E(B−V) and SURVHASH, the hash of the
+       selection.
    * - randoms
      - 20
      - ``rema randoms-index``: each 23 GB randoms file is read once, and the needed columns are
-       written sorted by HEALPix pixel. A region's footprint then reads only the rows of its
-       data box.
+       written sorted by HEALPix pixel.
+       A region's footprint then reads only the rows of its data box.
    * - calib
      - 1 (CPU)
      - ``rema maps --index`` and ``rema calibrate`` on 300–500 deg² rich in spectroscopy
@@ -43,8 +44,8 @@ The pipeline notebook (:doc:`notebooks/pipeline_dr11`) runs the same stages on a
    * - region
      - 1 + about 300
      - ``rema maps --index --regions … --region-id i`` builds the region's footprint, then
-       ``rema blind --galaxies galaxies/ --regions … --region-id i --specpost``. One region runs
-       first to fill the shared JAX compilation cache.
+       ``rema blind --galaxies galaxies/ --regions … --region-id i --specpost``.
+       One region runs first to fill the shared JAX compilation cache.
    * - merge
      - 1
      - ``rema merge``: one catalogue, members in a separate file, and the quality assurance (QA).
@@ -107,13 +108,13 @@ It sets:
   ``sweep/11.0-rm/`` and members in ``sweep/11.0-rm-mem/``;
 - ``htc`` for the CPU stages and ``gpu_v100`` for the regions, one GPU per task requested with
   ``--gpus`` (``GPUS=1``; the cluster rejects ``--gres``), with 5 CPUs and 45 GB (``REGION_CPUS``,
-  ``REGION_MEM``), so that four tasks share a node of 4 GPUs, 24 CPUs and 191 GB. The cluster
-  allows at most 5 CPUs per V100 and 12 per H100: ``PART_GPU=gpu_h100 REGION_CPUS=12
+  ``REGION_MEM``), so that four tasks share a node of 4 GPUs, 24 CPUs and 191 GB.
+  The cluster allows at most 5 CPUs per V100 and 12 per H100: ``PART_GPU=gpu_h100 REGION_CPUS=12
   REGION_MEM=96G`` for the H100 nodes;
 - ``--licenses=sps`` on every job, which the cluster requires for jobs that use ``/sps``.
 
-Variables exported before sourcing the file are kept, and ``ACCOUNT`` defaults to your main
-group.
+Variables exported before sourcing the file are kept, and ``ACCOUNT`` defaults to the user's
+main group.
 The file also moves the pip and matplotlib caches out of ``$HOME``, which is small.
 :doc:`ccin2p3` gives the installation on ``/sps``, the data download and the commands of a run,
 step by step.

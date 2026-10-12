@@ -1,24 +1,27 @@
 Model tables
 ============
 
-rema ships small tables of m*(z) and of red-sequence colours, in ``rema/data``. They exist for
-three filter sets: DECam griz with WISE W1 (the DR11 default), LSST ugrizy, and Euclid VIS, Y,
-J, H. Any of them can drive a calibration through two configuration keys:
+rema ships small tables of m*(z) and of red-sequence colours in ``rema/data``, for three filter
+sets: DECam griz with WISE W1 (the DR11 default), LSST ugrizy, and Euclid VIS, Y, J, H.
+Any of them can drive a calibration through two configuration keys:
 
 ``model.mstar``
-    m*(z) in the reference band (``survey.ref_band``). It sets the luminosity cut of λ
-    (m < m* + 1.75), the spectroscopic seeds of the calibration (m < m* + 1), the faint limit of
-    the background and the pivot magnitude of the red sequence.
+    m*(z) in the reference band (``survey.ref_band``).
+    It sets the luminosity cut of λ (m < m* + 1.75), the spectroscopic seeds of the calibration
+    (m < m* + 1), the faint limit of the background and the pivot magnitude of the red sequence.
 ``model.template``
-    Adjacent colours of a passive population. They seed the calibration's initial red sequence,
-    and their absolute level is refitted on the data. ``survey.bands`` must be among the
-    template's bands, in the same order.
+    Adjacent colours of a passive population.
+    They seed the calibration's initial red sequence, and their absolute level is refitted on the
+    data.
+    ``survey.bands`` must be among the template's bands, in the same order.
 
 Available tables
 ----------------
 
-The name in the first column is what ``model.mstar`` or ``model.template`` takes; the file is
+The name in the first column is the value of ``model.mstar`` or ``model.template``; the file is
 ``mstar_<name>.fits`` or ``colors_<name>.fits`` in ``rema/data``.
+BC03 stands for the population synthesis of :cite:t:`BruzualCharlot2003`, described under
+`Passive population and inputs`_.
 
 .. list-table::
    :header-rows: 1
@@ -70,27 +73,29 @@ The name in the first column is what ``model.mstar`` or ``model.template`` takes
      - 0.01–2.50
      - BC03 passive population
 
-m*(z) tables are interpolated with a natural cubic spline; beyond their range m* is held at the
-last value, so keep ``model.zrange`` (and ``scan.zrange``) inside it.
+The m*(z) tables are interpolated with a natural cubic spline.
+Beyond their range m* is held at the last value, so keep ``model.zrange`` (and ``scan.zrange``)
+inside it.
 
 .. figure:: figures/model_tables_mstar.png
    :alt: m*(z) against redshift for the DECam, LSST and Euclid bands
 
    m*(z) of the passive population in each band (solid) and redMaPPer's empirical tables where
-   they are tabulated (dashed, z ≤ 1.2). The shaded range is z > 2, where the population, formed
-   at z_f = 3, is younger than about 1 Gyr.
+   they are tabulated (dashed, z ≤ 1.2).
+   The shaded range is z > 2, where the population, formed at z_f = 3, is younger than about
+   1 Gyr.
 
 .. figure:: figures/model_tables_colors.png
    :alt: Adjacent colours against redshift for the DECam, LSST and Euclid bands
 
-   Adjacent colours of the same population. The colour tables seed the calibration; the
-   calibrated red sequence replaces them.
+   Adjacent colours of the same population.
+   The colour tables seed the calibration; the calibrated red sequence replaces them.
 
-Calibrating with LSST or Euclid photometry
+Calibration with LSST or Euclid photometry
 ------------------------------------------
 
-The bands, the reference band, the m*(z) table and the template go in the configuration. For
-LSST griz y with z as the reference band:
+The bands, the reference band, the m*(z) table and the template go in the configuration.
+For LSST griz y with z as the reference band:
 
 .. code-block:: yaml
 
@@ -114,8 +119,8 @@ For Euclid, with H as the reference band:
      template: bc03_euclid_visyjh
      zrange: [0.1, 1.8]
 
-The calibration builds its initial red sequence from these keys. The same call in Python shows
-the starting colours and m* before running anything:
+The calibration builds its initial red sequence from these keys.
+The same call in Python shows the starting colours and m* before running anything:
 
 .. code-block:: python
 
@@ -142,21 +147,22 @@ Then calibrate as for DR11 (:doc:`dr11`, step 4), with the configuration written
    rema calibrate --galaxies galaxies.fits --footprint footprint.fits --config lsst.yaml \
                   --out calib.fits --plots calib_plots
 
-- ``rema ingest`` reads Legacy Surveys sweeps only. For LSST or Euclid catalogues, write the
-  galaxy table yourself with the columns of the ``GALAXIES`` product (:doc:`reference`):
-  ``FLUX`` and ``FLUX_IVAR`` with one column per band of ``survey.bands``, in that order, as
-  dereddened nanomaggies (AB zero point 22.5), ``REFMAG`` and ``REFMAG_ERR`` in the reference
-  band, and ``ZSPEC`` (−1 when there is none) for the spectroscopic seeds.
-- The calibration stores its configuration, so blind and scan runs made with the calibration
-  file use the same bands and tables.
+- ``rema ingest`` reads Legacy Surveys sweeps only.
+  For LSST or Euclid catalogues, write the galaxy table yourself with the columns of the
+  ``GALAXIES`` product (:doc:`reference`): ``FLUX`` and ``FLUX_IVAR`` with one column per band of
+  ``survey.bands``, in that order, as dereddened nanomaggies (AB zero point 22.5), ``REFMAG`` and
+  ``REFMAG_ERR`` in the reference band, and ``ZSPEC`` (−1 when there is none) for the
+  spectroscopic seeds.
+- The calibration stores its configuration, so blind and scan runs made with the calibration file
+  use the same bands and tables.
 - Above z ≈ 2 the BC03 tables describe a young population; do not calibrate there with them.
 
 Other band combinations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-A template for another combination, for example LSST griz y with Euclid J and H, is built
-with the same code as the packaged tables. Every response file listed in
-``rema.data.build.INPUTS`` can be used:
+A template for another combination, for example LSST griz y with Euclid J and H, is built with the
+same code as the packaged tables.
+Every response file listed in ``rema.data.build.INPUTS`` can be used:
 
 .. code-block:: python
 
@@ -177,27 +183,27 @@ with the same code as the packaged tables. Every response file listed in
    mstar_lsst_euclid_hE_ezgal.fits
    colors_bc03_lsst_euclid_grizyjEhE.fits
 
-Then set ``model.template`` to the path of the colours file and ``model.mstar`` to the path of
-the m* file of the reference band. The band names (``jE``, ``hE`` here) are those of
-``survey.bands``.
+Then set ``model.template`` to the path of the colours file and ``model.mstar`` to the path of the
+m* file of the reference band.
+The band names (``jE``, ``hE`` here) are those of ``survey.bands``.
 
-Values
-------
+Tabulated values
+----------------
 
-The figures' data at a few redshifts (m* in AB magnitudes, colours in magnitudes):
+The data of the figures at a few redshifts (m* in AB magnitudes, colours in magnitudes):
 
 .. include:: figures/model_tables_values.rst
 
-The passive population and the inputs
--------------------------------------
+Passive population and inputs
+-----------------------------
 
-The BC03 tables follow one population:
-`Bruzual & Charlot (2003) <https://doi.org/10.1046/j.1365-8711.2003.06897.x>`__, Salpeter IMF
-(`Salpeter 1955 <https://doi.org/10.1086/145971>`__), metallicity Z = 0.02 (the SSP grid
-distributed with EzGal, `Mancone & Gonzalez 2012 <https://doi.org/10.1086/666502>`__), exponential star
-formation with τ = 0.1 Gyr from z_f = 3, normalised to SDSS i = 17.85 (AB) at z = 0.2, in a flat
-cosmology with Ω_m = 0.3 and h = 0.7. :mod:`rema.model.sps` integrates the exponential history
-exactly over the SSP ages and evaluates every redshift directly.
+The BC03 tables follow one population: the :cite:t:`BruzualCharlot2003` simple stellar
+populations (SSPs), with a Salpeter initial mass function :cite:p:`Salpeter1955` and metallicity
+Z = 0.02 (the SSP grid distributed with EzGal, :cite:t:`ManconeGonzalez2012`).
+The star formation is exponential with τ = 0.1 Gyr from z_f = 3, normalised to SDSS i = 17.85 (AB)
+at z = 0.2, in a flat cosmology with Ω_m = 0.3 and h = 0.7.
+:mod:`rema.model.sps` integrates the exponential history exactly over the SSP ages and evaluates
+every redshift directly.
 
 .. list-table::
    :header-rows: 1
@@ -215,9 +221,10 @@ exactly over the SSP ages and evaluates every redshift directly.
        NISP-PHOTO-PASSBANDS-V1)
 
 The SSP grid comes from EzGal (commit ``de4a588``) and redMaPPer's m* tables from redMaPPer
-(commit ``601994a``). All inputs are downloaded once (14 MB), checked against their SHA-256 and
-cached in ``$REMA_CACHE_DIR/inputs`` (else ``~/.cache/rema/inputs``). To rebuild or check the
-tables, and to redraw this page's figures:
+(commit ``601994a``).
+All inputs are downloaded once (14 MB), checked against their SHA-256 and cached in
+``$REMA_CACHE_DIR/inputs`` (else ``~/.cache/rema/inputs``).
+To rebuild or check the tables, and to redraw the figures of this page:
 
 .. code-block:: bash
 

@@ -1,0 +1,9 @@
+# Planck PSZ2 union clusters confirmed by rema on DR11, S/N >= 6 inside the PSZ2 survey mask
+# (completeness averaged over the sky: the mask only).
+name: psz2
+observable: EXT_SNR
+z_edges: [0.05, 0.25, 0.50]
+obs_edges: [6.0, 1000.0]
+cuts: ["SCANNED == 1", "LAMBDA > 0"]
+selection: {name: psz2, mask: SELFN_DIR/HFI_PCCS_SZ-selfunc-union-survey_R2.08.fits, snr_min: 6.0}
+n_samp: 500

@@ -20,7 +20,8 @@ than that.
 
 from __future__ import annotations
 
-from functools import partial
+import logging
+import time
 
 import jax
 import jax.numpy as jnp
@@ -30,6 +31,8 @@ from ..core.context import FilterModel
 from ..core.maskcorr import footprint_completeness
 from ..core.richness import RadialQuad, aperture_k, percolation_quad
 from ..sky.maps import DeviceMap, Footprint
+
+log = logging.getLogger(__name__)
 
 
 def aperture_model(cfg, cosmo=None) -> FilterModel:
@@ -79,7 +82,10 @@ def aperture_values(ra, dec, z, lam, fmap: DeviceMap, cfg, *, model: FilterModel
     pc = cfg.richness.percolation
     r0, beta = jnp.float32(pc.r0), jnp.float32(pc.beta)
     out = {k: np.empty(n, np.float64) for k in ("R_LAMBDA", "SCALEVAL", "MASKFRAC")}
-    for s0 in range(0, n, batch):
+    t0, every = time.time(), max(1, (n // batch) // 20)
+    for ib, s0 in enumerate(range(0, n, batch)):
+        if ib and ib % every == 0:
+            log.info("aperture: %d/%d (%.0fs)", s0, n, time.time() - t0)
         idx = np.arange(s0, s0 + batch).clip(max=n - 1)       # pad with the last row
         frad, fgeo = footprint_completeness(ra[idx], dec[idx], z[idx], fmap, quad, model, cfg, ref_band)
         rl, k, kg = (np.asarray(a, np.float64) for a in

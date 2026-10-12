@@ -1,0 +1,12 @@
+# eRASS1 clusters confirmed by rema on DR11 (no PCONT or IN_ZVLIM cut: those use DR10):
+# EXT_LIKE >= 6 with the approximate detection model (erass1-model), binned in L500.
+name: erass1
+ra_column: RA
+dec_column: DEC
+observable: EXT_L500
+z_edges: [0.10, 0.30, 0.50, 0.80]
+obs_edges: [0.0, 1.0e43, 1.0e44, 1.0e47]
+cuts: ["SCANNED == 1", "LAMBDA > 0"]
+selection: {name: erass1_approx, model: SELFN_DIR/erass1_model.yaml, expmap: SELFN_DIR/erass4_expmap_nside2048.fits,
+            exp_column: TEXP, nhmap: SELFN_DIR/NHI_HPX.fits, ext_like_cut: 6.0}
+n_samp: 500

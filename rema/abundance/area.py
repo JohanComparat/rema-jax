@@ -35,6 +35,10 @@ def zvlim_of(depth10, mstar, lval: float = 0.2):
     return np.interp(np.asarray(depth10, np.float64), mlim, z, left=np.nan, right=z[-1])
 
 
+# Header keywords of a map made by :func:`rema.randoms.vlim.zvlim_map_from_footprint`.
+META_KEYS = ("LSTAR", "NSIGMA", "BAND", "MSTAR", "FOOTDIG", "DOMDIG", "DENSITY", "GLATMIN")
+
+
 @dataclass
 class ZvlimMap:
     """Sparse HEALPix (NESTED) map: ``pix``, ``area`` [deg2], ``zvlim`` and ``extra`` columns."""
@@ -44,6 +48,7 @@ class ZvlimMap:
     area: np.ndarray
     zvlim: np.ndarray
     extra: dict = field(default_factory=dict)
+    meta: dict = field(default_factory=dict)        # header keywords (how the map was made)
 
     @classmethod
     def from_columns(cls, directory, nside: int | None = None) -> "ZvlimMap":
@@ -64,20 +69,23 @@ class ZvlimMap:
         from ..io.tables import read_table
 
         t = read_table(path)
-        return cls(int(fits.getheader(path, 1)["NSIDE"]), t.pop("PIX").astype(np.int64),
-                   t.pop("AREA").astype(np.float64), t.pop("ZVLIM").astype(np.float64), t)
+        hdr = fits.getheader(path, 1)
+        meta = {k: hdr[k] for k in META_KEYS if k in hdr}
+        return cls(int(hdr["NSIDE"]), t.pop("PIX").astype(np.int64),
+                   t.pop("AREA").astype(np.float64), t.pop("ZVLIM").astype(np.float64), t, meta)
 
     def write(self, path):
         from ..io.tables import write_table
 
         return write_table(path, {"PIX": self.pix, "AREA": self.area, "ZVLIM": self.zvlim, **self.extra},
-                           header={"NSIDE": self.nside, "ORDERING": "NESTED"}, extname="ZVLIM_MAP")
+                           header={"NSIDE": self.nside, "ORDERING": "NESTED", **self.meta},
+                           extname="ZVLIM_MAP")
 
     def select(self, keep) -> "ZvlimMap":
         """The pixels where ``keep`` (a boolean array over the pixels) is true."""
         keep = np.asarray(keep, bool)
         return ZvlimMap(self.nside, self.pix[keep], self.area[keep], self.zvlim[keep],
-                        {k: np.asarray(v)[keep] for k, v in self.extra.items()})
+                        {k: np.asarray(v)[keep] for k, v in self.extra.items()}, dict(self.meta))
 
     def area_above(self, z, mask=None):
         """Area [deg2] where z_vlim >= z (scalar or array), within the pixels ``mask``."""

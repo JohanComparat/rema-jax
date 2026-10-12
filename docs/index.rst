@@ -72,6 +72,7 @@ What differs from redMaPPer
    photoz_finders
    photoz_study_findings
    public_catalogues_scan
+   cluster_randoms
 
 .. toctree::
    :maxdepth: 2

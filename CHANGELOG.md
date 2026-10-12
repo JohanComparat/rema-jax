@@ -2,6 +2,19 @@
 
 All notable changes to `rema` are documented here.
 
+## [Unreleased]
+
+### Added
+
+- `rema cluster-randoms` (`rema.randoms`, documentation page "Cluster randoms"): volume-limited
+  cluster samples and their random catalogues, as redMaPPer's GenerateRandoms and RandomWeigher,
+  with the weights of an external (X-ray, SZ) selection function. Steps `domain`, `vlim-map`,
+  `copies`, `place`, `sample`, `qa`.
+- `rema.core.richness.aperture_k` and `percolation_quad`, `rema.core.maskcorr.footprint_completeness`
+  and `member_mag_limit`: the aperture completeness shared by the finders and the randoms.
+- `ZvlimMap.meta`: the header keywords of a z_vlim map (luminosity limit, depth significance, band,
+  footprint and domain digests).
+
 ## [0.5.0] - 2026-10-12
 
 ### Added

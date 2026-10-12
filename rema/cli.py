@@ -19,6 +19,8 @@ Commands (each reads and writes FITS files, so stages can be resumed and run per
   regions    per-sweep galaxy tables -> region plan of a large run
   status     done / missing / stale regions of a run
   merge      region catalogues -> one catalogue, with boundary QA
+  cluster-randoms  domain | vlim-map | copies | place | sample: volume-limited cluster samples and
+             their randoms (rema.randoms)
 
 Boxes: ``--box RA0 RA1 DEC0 DEC1`` (repeatable: a union of boxes) gives the data box, and
 ``--regions PLAN --region-id I`` takes the own and data boxes of a planned region. ``--galaxies``
@@ -959,6 +961,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--allow-missing", action="store_true")
     s.add_argument("--glat-min", type=float, help="keep the clusters (and members) at |b| >= this [deg]")
     s.set_defaults(func=cmd_merge)
+
+    from .randoms.cli import add_parser as cluster_randoms_parser
+
+    cluster_randoms_parser(sub)
     return p
 
 

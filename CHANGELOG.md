@@ -177,8 +177,8 @@
 
 ### Documentation
 
-- The CC-IN2P3 page describes the finished DR11 south catalogue (3{NNB}481{NNB}608 clusters,
-  18{NNB}500 deg²), how it was made and how to run the pipeline again.
+- The CC-IN2P3 page describes the finished DR11 south catalogue (3 481 608 clusters,
+  18 500 deg²), how it was made and how to run the pipeline again.
   The high-performance computing (HPC) page and the design notes give the measured production
   costs, and the README and the front page lead with the catalogue.
 - The setup of the notebooks on the CC-IN2P3 Jupyter platform (https://notebook.cc.in2p3.fr) is a

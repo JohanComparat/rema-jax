@@ -1,11 +1,16 @@
-Reference
-=========
+Configuration and products
+==========================
 
-Configuration
--------------
+``rema`` reads every setting from one YAML file and writes its products as FITS files.
+The configuration keys are listed under `Configuration file`_, the files and their columns under
+`Output files`_.
 
-Every setting lives in one YAML file. The defaults follow the redMaPPer v0.7.7 configuration of
-the DR10 run (``run_zred_iter1.yml``). Write them out, edit the file, and pass it with ``--config``:
+Configuration file
+------------------
+
+The defaults follow the redMaPPer v0.7.7 configuration of the DR10 run
+(``run_zred_iter1.yml``).
+Write them out, edit the file, and pass it with ``--config``:
 
 .. code-block:: bash
 
@@ -24,18 +29,20 @@ Each command chooses its configuration in this order:
 then applies the overrides of the command line: ``--cosmology KEY=VALUE`` and
 ``--set SECTION.KEY=VALUE`` (any key, VALUE in YAML, e.g. ``--set model.filter=photoz
 --set richness.firstpass.r0=0.4``), or ``--set @overlay.yaml`` (a partial configuration, merged
-section by section; ``scripts/photoz/*.yaml`` are examples). The log lists the keys that change.
+section by section; ``scripts/photoz/*.yaml`` are examples).
+The log lists the keys that change.
 
-``rema calibrate`` stores its configuration in the calibration, so the runs inherit it
-without a flag. When ``--config`` differs from the stored configuration, the log lists the
-keys that differ. ``ingest``, ``maps`` and ``calibrate`` have no stored configuration to fall
-back on, so give them ``--config`` whenever you change the defaults.
+``rema calibrate`` stores its configuration in the calibration, so the runs inherit it without
+a flag.
+When ``--config`` differs from the stored configuration, the log lists the keys that differ.
+``ingest``, ``maps`` and ``calibrate`` have no stored configuration to fall back on, so they need
+``--config`` whenever the defaults change.
 
 In Python, use ``RemaConfig.from_yaml(path)``, ``cfg.to_yaml(path)``,
-``cfg.replace(model={"chisq_mode": "mag"})`` and ``Calibration.read(path).config``. Unknown
-keys raise an error, so a typo cannot pass silently.
+``cfg.replace(model={"chisq_mode": "mag"})`` and ``Calibration.read(path).config``.
+Unknown keys raise an error, so a typo cannot pass silently.
 
-The keys that are most often changed:
+The keys most often changed:
 
 .. list-table::
    :header-rows: 1
@@ -52,7 +59,8 @@ The keys that are most often changed:
      - Selection: S/N in the reference band
    * - ``survey.mag_max``
      - null
-     - Faint limit of the table. null means m*(1.0) + 2.5, the faint end of the background.
+     - Faint limit of the table.
+       null means m*(1.0) + 2.5, the faint end of the background.
    * - ``survey.reject_psf``
      - true
      - Drop ``TYPE == PSF``
@@ -61,8 +69,8 @@ The keys that are most often changed:
      - Fractional flux error added in quadrature
    * - ``survey.ebv_max``
      - null
-     - E(B−V) cut on the galaxies and the randoms alike. The DR11 production uses 0.2
-       (``scripts/slurm/dr11_south.yaml``).
+     - E(B−V) cut on the galaxies and the randoms alike.
+       The DR11 production uses 0.2 (``scripts/slurm/dr11_south.yaml``).
    * - ``model.filter``
      - redsequence
      - ``photoz``: members from their photo-z instead of their colours (:doc:`photoz_finders`);
@@ -90,7 +98,8 @@ The keys that are most often changed:
      - Redshift range of blind mode and of the calibration
    * - ``model.chisq_mode``
      - lupt
-     - ``lupt``: asinh-magnitude χ². ``mag``: redMaPPer's colour χ².
+     - ``lupt``: asinh-magnitude χ².
+       ``mag``: redMaPPer's colour χ².
    * - ``model.mstar``
      - des_z03
      - m*(z) table: ``des_z03``, ``legacy_z_ezgal``, ``lsst_{i,r,z}03``,
@@ -100,7 +109,8 @@ The keys that are most often changed:
      - bc03_legacy_grizw1
      - Adjacent colours that seed the calibration: ``bc03_legacy_grizw1`` (DECam griz, WISE W1),
        ``bc03_lsst_ugrizy``, ``bc03_euclid_visyjh``, or a FITS file with Z, COLOR and a BANDS
-       header. ``survey.bands`` must be among its bands, in order (:doc:`tables`).
+       header.
+       ``survey.bands`` must be among its bands, in order (:doc:`tables`).
    * - ``model.lval_reference``
      - 0.2
      - Luminosity cut of λ in L*, so m < m* + 1.75 (``lval_reference``)
@@ -147,18 +157,21 @@ The keys that are most often changed:
      - EM iterations of the calibration
    * - ``calib.wcen``, ``calib.wcen_niter``
      - true, 1
-     - Whether to fit wcen. With ``wcen_niter`` 2, wcen is refitted on wcen-centred clusters.
+     - Whether to fit wcen.
+       With ``wcen_niter`` 2, wcen is refitted on wcen-centred clusters.
 
-Products
---------
+Output files
+------------
 
-All products are FITS files with upper-case column names. Positions are in degrees, distances
-in h⁻¹Mpc (Ω_m = 0.3, flat, from ggah_mod), and fluxes in dereddened nanomaggies.
+All products are FITS files with upper-case column names.
+Positions are in degrees, distances in h⁻¹Mpc (Ω_m = 0.3, flat, from ggah_mod), and fluxes in
+dereddened nanomaggies.
 
 ``rema ingest`` → ``GALAXIES``
     ``ID`` (LS_ID_DR11), ``RA``, ``DEC``, ``FLUX[4]`` and ``FLUX_IVAR[4]`` (griz), ``REFMAG``,
     ``REFMAG_ERR``, ``EBV``, ``TYPE``, ``MASKBITS``, ``ZSPEC`` (−1: none), ``ZSPEC_SRC``,
-    ``ZPHOT``, ``ZPHOT_STD``. The header records the bands, ``MAGMAX``, ``SNRMIN`` and the box.
+    ``ZPHOT``, ``ZPHOT_STD``.
+    The header records the bands, ``MAGMAX``, ``SNRMIN`` and the box.
 
 ``rema maps`` → ``FINE``
     ``PIXEL`` (NESTED, nside 1024), ``NRAND``, ``COVER``, ``FRACGOOD``, ``SIGF_G`` … ``SIGF_Z``.
@@ -189,9 +202,9 @@ Large runs (:doc:`hpc`):
     The header records ``SWEEP``, ``NGAL``, ``NZSPEC``, ``EBVMEAN``, ``SURVHASH``, ``MAGMAX``
     and the sweep's box.
 ``rema randoms-index`` → ``<stem>.npy``, ``<stem>.offsets.npy``, ``<stem>.json``
-    The first file holds the randoms columns sorted by NESTED pixel at nside 1024. The second
-    gives the first row of each nside-64 pixel. The third, written last, holds the source,
-    the settings and the number of rows.
+    The first file holds the randoms columns sorted by NESTED pixel at nside 1024.
+    The second gives the first row of each nside-64 pixel.
+    The third, written last, holds the source, the settings and the number of rows.
 ``rema regions`` → ``REGIONS``
     - Columns: ``REGION_ID``, ``OWN_RA0``…, ``DATA_RA0``…, ``AREA_OWN``, ``AREA_COVERED``,
       ``NGAL_OWN``, ``NGAL_DATA`` and ``PAIRS_EST``.
@@ -200,9 +213,10 @@ Large runs (:doc:`hpc`):
     The merged clusters, the members, the per-region statistics and the QA.
 
 ``rema scan-positions`` → ``CLUSTERS``, ``MEMBERS``, ``CONFIG``
-    - Clusters: one row per input row. The input columns come first, as ``INPUT_<NAME>``, then
-      the ``rema scan`` columns (below) and, without ``--no-specpost``, the spectroscopic ones,
-      then ``SCANNED``. Unscanned rows hold −1, empty strings or False.
+    - Clusters: one row per input row.
+      The input columns come first, as ``INPUT_<NAME>``, then the ``rema scan`` columns (below)
+      and, without ``--no-specpost``, the spectroscopic ones, then ``SCANNED``.
+      Unscanned rows hold −1, empty strings or False.
     - Members: as ``rema scan``, with ``MEM_MATCH_ID`` = the input row (0-based).
     - The primary header holds ``MODE = scan-positions``, ``CALSHA1``, ``INPUT``, ``NPOS``,
       ``NSCANNED``, ``NFOUND`` (λ > 0) and ``TTOTAL``.
@@ -227,16 +241,19 @@ Large runs (:doc:`hpc`):
    * - Columns
      - Meaning
    * - ``MEM_MATCH_ID``
-     - Blind: (region << 32) | rank in decreasing λ. Scan: the ``--id-col`` value.
+     - Blind: (region << 32) | rank in decreasing λ.
+       Scan: the ``--id-col`` value.
    * - ``RA``, ``DEC``
-     - Centre: the most probable central galaxy, ``ID_CENT[0]``. Scan: the input position.
+     - Centre: the most probable central galaxy, ``ID_CENT[0]``.
+       Scan: the input position.
    * - ``SEED_ID``, ``RA_SEED``, ``DEC_SEED``, ``Z_INIT``
      - Blind: the seed galaxy and its zred
    * - ``LAMBDA``, ``LAMBDA_E``, ``R_LAMBDA``, ``SCALEVAL``, ``MASKFRAC``
      - Richness, its error, its radius, the completeness correction 1/K(r_λ), and the masked
        fraction of the aperture
    * - ``Z_LAMBDA``, ``Z_LAMBDA_E``
-     - z_λ and its error, after the calibrated correction. ``…_RAW``: before it.
+     - z_λ and its error, after the calibrated correction.
+       ``…_RAW``: before it.
    * - ``PZBINS[21]``, ``PZ[21]``, ``Z_LAMBDA_NITER``
      - p(z), and the number of z_λ iterations
    * - ``LNLAMLIKE``, ``LNCGLIKE``, ``LNLIKE``, ``SNR``
@@ -245,9 +262,11 @@ Large runs (:doc:`hpc`):
    * - ``R_MASK``
      - Radius within which the cluster claims galaxies in percolation
    * - ``ID_CENT[5]``, ``RA_CENT[5]``, ``DEC_CENT[5]``
-     - Centre candidates, best first. Unused slots hold −1 and −400.
+     - Centre candidates, best first.
+       Unused slots hold −1 and −400.
    * - ``P_CEN[5]``, ``Q_CEN[5]``, ``P_SAT[5]``, ``P_FG[5]``, ``P_C[5]``
-     - Centring probabilities, as in redMaPPer. BCG gives ``P_CEN[0] = 1``.
+     - Centring probabilities, as in redMaPPer.
+       BCG centring gives ``P_CEN[0] = 1``.
    * - ``NCENT_GOOD``, ``Q_MISS``, ``W``
      - Number of candidates with P_C > 0, the probability that the centre is missed, and the
        connectivity of the centre
@@ -257,8 +276,8 @@ Large runs (:doc:`hpc`):
        with the photo-z filter)
    * - ``Z_STEPS[191]``, ``LAMBDA_STEPS``, ``LIKELIHOOD_STEPS``, ``ZMAX``, ``LMAX``, ``MAX_IND``,
        ``ZMAX_EDGE``
-     - Scan: λ(z) and the likelihood on the grid, and its peak. ``ZMAX_EDGE`` flags a peak at
-       the grid edge.
+     - Scan: λ(z) and the likelihood on the grid, and its peak.
+       ``ZMAX_EDGE`` flags a peak at the grid edge.
    * - ``RA_OPT``, ``DEC_OPT``, ``LAMBDA_OPT(_E)``, ``Z_LAMBDA_OPT(_E)``, ``Z_LAMBDA_OPT_RAW``,
        ``IN_CALIB_ZRANGE``
      - Scan: optical centre, λ and z_λ there, and whether z_λ is inside ``model.zrange``
@@ -280,7 +299,7 @@ candidates:
 - ``MEM_MATCH_ID``, ``ID``, ``RA``, ``DEC``; ``Z`` is the cluster's z_λ before the
   correction;
 - ``R``: the projected distance to the centre;
-- ``P``, ``PFREE``, ``THETA_I``, ``THETA_R`` and ``PMEM`` = P · PFREE · THETA_I · THETA_R.
+- ``P``, ``PFREE``, ``THETA_I``, ``THETA_R`` and ``PMEM`` = P · PFREE · THETA_I · THETA_R;
   ``PCOL`` is redMaPPer's colour-only probability within r_λ;
 - ``CHISQ`` at the cluster redshift (with the photo-z filter: ((ZPHOT − z)/s)², and the
   red-sequence χ² is ``CHISQ_RS``); ``REFMAG``, ``REFMAG_ERR``, ``ZRED``, ``ZRED_E``,

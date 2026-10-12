@@ -1,9 +1,9 @@
 Python API
 ==========
 
-The modules most used in scripts. Every function works on plain dicts of numpy arrays (tables)
-or on JAX pytrees (models), and the command-line interface (``rema.cli``) is a thin layer over
-them.
+The modules below are those most used in scripts, grouped by stage.
+Their functions work on plain dicts of numpy arrays (tables) or on JAX pytrees (models).
+The command-line interface (``rema.cli``) is a thin layer over them.
 
 Run modes
 ---------
@@ -86,7 +86,8 @@ Kernels
 Photo-z cluster finding
 -----------------------
 
-See :doc:`photoz_finders`.
+The photo-z filter and photo-z space cluster detection (PSCD) are described in
+:doc:`photoz_finders`.
 
 .. automodule:: rema.model.photoz
    :members: photoz_sigma, err_scale, photoz_valid
@@ -120,7 +121,8 @@ See :doc:`photoz_finders`.
 Cluster abundance and cosmology
 -------------------------------
 
-See :doc:`cosmology_sensitivity`.
+The response of the counts to cosmology and their likelihood are described in
+:doc:`cosmology_sensitivity`.
 
 .. automodule:: rema.abundance.response
    :members: ResponseTable, delta_lnlam, delta_z, from_remeasure

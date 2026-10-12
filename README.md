@@ -78,7 +78,7 @@ pip install "rema-jax[cuda]"        # NVIDIA GPU, CUDA 12 JAX wheels ([cuda13] f
 
 The package is imported as `rema` and installs the `rema` command.
 With the CUDA wheels installed, JAX uses the GPU unless `JAX_PLATFORMS=cpu` is set;
-`JAX_PLATFORMS=cuda` requires it.
+`JAX_PLATFORMS=cuda` requires the GPU.
 
 For development, from a clone:
 
@@ -134,7 +134,7 @@ rema pscd --galaxies galaxies.fits --calib calib.fits --footprint footprint.fits
 The outputs are FITS files with `CLUSTERS` and `MEMBERS` header-data units (HDUs), plus the
 configuration (`CONFIG`).
 Column names follow redMaPPer (`LAMBDA`, `Z_LAMBDA`, `SCALEVAL`, `MASKFRAC`, ...); the
-spectroscopic post-processing adds `SPEC_Z_BOOT`, `VDISP`, `BEST_Z`, ....
+spectroscopic post-processing adds `SPEC_Z_BOOT`, `VDISP`, `BEST_Z` and others.
 All settings live in a YAML configuration (`rema.config.RemaConfig`); write the defaults with
 `python -c "from rema.config import RemaConfig; print(RemaConfig().to_yaml())"`.
 
@@ -152,13 +152,12 @@ All settings live in a YAML configuration (`rema.config.RemaConfig`); write the 
   The commands are on the CC-IN2P3 page, and the
   [HPC page](https://rema-jax.readthedocs.io/en/latest/hpc.html) describes the driver.
 
-## Credits
+## Credits and licence
 
-The algorithms follow redMaPPer
+The algorithms, scan mode (redMaPPer's zscan) included, follow redMaPPer
 ([Rykoff et al. 2014, ApJ 785, 104](https://doi.org/10.1088/0004-637X/785/2/104);
-[Rykoff et al. 2016, ApJS 224, 1](https://doi.org/10.3847/0067-0049/224/1/1)), scan mode
-(redMaPPer's zscan) included.
-The spectroscopic post-processing follows
+[Rykoff et al. 2016, ApJS 224, 1](https://doi.org/10.3847/0067-0049/224/1/1)), and the
+spectroscopic post-processing follows
 [Clerc et al. (2016, MNRAS 463, 4490)](https://doi.org/10.1093/mnras/stw2214).
 Distances come from [ggah_mod](https://pypi.org/project/ggah_mod/).
 `python -m rema.data.build` builds the m*(z) and colour tables in `rema/data` from redMaPPer's
@@ -166,5 +165,4 @@ m*(z), the [Bruzual & Charlot (2003)](https://doi.org/10.1046/j.1365-8711.2003.0
 stellar population (SSP) grid distributed with EzGal
 ([Mancone & Gonzalez 2012](https://doi.org/10.1086/666502)) and the speclite filter curves; see
 [rema/data/README.md](https://github.com/JohanComparat/rema-jax/blob/main/rema/data/README.md).
-
-MIT licence.
+The package is distributed under the MIT licence.

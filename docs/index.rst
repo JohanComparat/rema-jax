@@ -12,14 +12,15 @@ It adds the velocity clipping of :cite:t:`Clerc2016`.
 The kernels are batched JAX functions that run on a CPU or a GPU, λ has exact derivatives, and the
 package installs with ``pip``.
 
-We ran ``rema`` on the south part of the Legacy Surveys data release 11 (DR11 south).
+We ran ``rema`` on the south part of the Legacy Surveys Data Release 11 (DR11 south).
 The catalogue holds 3 481 608 clusters with λ ≥ 3 (145 133 with λ ≥ 20) over 18 500 deg² and is
 on the data system of the IN2P3 computing centre (CC-IN2P3, :doc:`ccin2p3`).
 We validated it against the figures of the redMaPPer papers (:doc:`redmapper_dr11`).
 At the 1.64 M clusters of nine public Sunyaev–Zel'dovich, X-ray and optical catalogues, we
 measured λ, z_λ and the spectroscopic redshift (:doc:`public_catalogues_scan`).
 
-The pages are for readers who know redMaPPer, and we ran every command and code block in them:
+The pages assume that the reader knows redMaPPer, and we ran every command and code block in them.
+They cover:
 
 - :doc:`install`, including :ref:`the notebooks at CC-IN2P3 <cc-notebooks>` on the Jupyter
   platform https://notebook.cc.in2p3.fr;

@@ -13,8 +13,6 @@ Installation
 ``rema`` needs Python ≥ 3.11.
 The SLURM scripts of :doc:`hpc` and the notebooks are in the repository, not in the package.
 
-For development, install from the repository:
-
 .. note::
 
    **Maintainer setup.** On the development laptop, use the shared ``dev`` environment defined in
@@ -22,6 +20,8 @@ For development, install from the repository:
    editable mode.
    Do not create a separate environment for it: add missing dependencies to ``~/software/dev_env``
    and rebuild.
+
+For development, install from the repository:
 
 .. code-block:: bash
 
@@ -56,7 +56,9 @@ Log in with your CC-IN2P3 account or eduGAIN.
 A session sees ``$HOME``, ``/pbs/throng``, ``/pbs/software`` and the ``/sps`` spaces of your
 groups; the DR11 data and products are in ``/sps/lsst``, readable by the ``lsst`` group.
 
-**1. Once: the environment and the kernel.**
+Environment and kernel, once
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Open a terminal (``ssh cca.in2p3.fr``, or File → New → Terminal in a session).
 ``$HOME`` has 20 GB, so Miniforge, its package cache, the environment (6 GB with the CUDA
 libraries) and pip's temporary files all go to ``/sps``:
@@ -80,7 +82,8 @@ libraries) and pip's temporary files all go to ``/sps``:
        --env XLA_PYTHON_CLIENT_PREALLOCATE false
    ln -s $SPS $HOME/sps                     # optional: /sps in the file browser of the platform
 
-``[cuda]`` installs the CUDA 12 JAX wheels, because CUDA 13 does not support the V100 GPUs.
+``[cuda]`` installs the CUDA 12 JAX wheels, because CUDA 13 does not support the V100 GPUs;
+keep it, although the platform documentation installs ``jax[cuda13]``.
 ``dev`` and ``docs`` add pytest and nbclient, to run the tests and execute the notebooks.
 
 A login shell at CC-IN2P3 (``ssh``) reads ``~/.profile``, not ``~/.bashrc``, so a ``conda init`` in
@@ -92,8 +95,9 @@ Add these two lines to both files; ``rema-env`` then activates the environment i
    export SPS=/sps/lsst/users/$USER
    alias rema-env='source $SPS/miniforge3/etc/profile.d/conda.sh && conda activate $SPS/envs/rema'
 
-Check the installation with a short batch job on a V100 (on 2026-10-07, interactive ``srun`` steps
-failed to launch on the GPU nodes, while batch jobs ran).
+The batch production at CC-IN2P3 (SLURM arrays, :doc:`ccin2p3`) uses the same environment, so
+check the installation with a short batch job on a V100.
+On 2026-10-07, interactive ``srun`` steps failed to launch on the GPU nodes, while batch jobs ran.
 JAX must list a CUDA device, and ``tests/test_jax_build.py`` detects a faulty JAX build;
 ``sbatch --wait`` returns when the job ends:
 
@@ -105,7 +109,7 @@ JAX must list a CUDA device, and ``tests/test_jax_build.py`` detects a faulty JA
        'python -c "import jax; print(jax.devices())"; cd $HOME/software/rema-jax && JAX_PLATFORMS=cpu python -m pytest -q tests/test_jax_build.py'
    cat $SPS/env_check.log          # [CudaDevice(id=0)] ... 1 passed
 
-**When it fails:**
+Errors at this step and their fixes:
 
 - ``conda: command not found``: run ``source $SPS/miniforge3/etc/profile.d/conda.sh`` (or
   ``rema-env``) in that shell; ``$SPS`` must be set.
@@ -114,7 +118,9 @@ JAX must list a CUDA device, and ``tests/test_jax_build.py`` detects a faulty JA
 - ``Disk quota exceeded``: a cache went to ``$HOME``; keep Miniforge on ``/sps``, and pip's
   ``--no-cache-dir`` and ``TMPDIR`` as above.
 
-**2. Each session.**
+Sessions
+~~~~~~~~
+
 On https://notebook.cc.in2p3.fr, choose the computing group (``lsst``), the partition and the
 resources below, open a notebook from ``software/rema-jax/docs/notebooks/`` and select the
 ``rema`` kernel (Kernel → Change Kernel):
@@ -143,16 +149,18 @@ CC-IN2P3:
   ``~/data/legacysurvey/dr11/south``.
 - ``REMA_WORK``, yours: everything the notebooks write.
   Default: ``rema_work`` in your space, ``/sps/lsst/users/$USER/rema_work`` when
-  ``/sps/lsst/users/$USER`` exists (``$HOME`` has 20 GB at CC-IN2P3), else ``~/rema_work``.
+  ``/sps/lsst/users/$USER`` exists, else ``~/rema_work``.
   The DR11 notebooks write about 0.5 GB there, and :doc:`notebooks/redmapper_dr11` 7.5 GB.
 
-In a GPU session, ``import jax; jax.devices()`` returns ``[CudaDevice(id=0)]``.
+Updates and kernel settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**3. Updates.**
 ``git -C $HOME/software/rema-jax pull`` updates the code and the notebooks together (the install
 is editable); then restart the kernel.
-
-The kernel and the environment in detail:
+The clone is installed rather than the PyPI release because the notebooks of the repository may
+need a newer ``rema`` than the last release.
+To change a kernel variable, run the ``ipykernel install`` line again (it replaces the kernel).
+``jupyter kernelspec list`` lists the kernels; ``jupyter kernelspec remove rema`` removes this one.
 
 - ``ipykernel install --user`` writes ``~/.local/share/jupyter/kernels/rema/kernel.json``, with
   the Python of the environment and the ``--env`` variables, so the kernel needs no login script.
@@ -162,48 +170,42 @@ The kernel and the environment in detail:
   notebooks and for the ``rema`` commands that the pipeline notebook runs.
   Without it, the notebooks still cache in your space (``.cache/rema/jax``), but the ``rema``
   command caches in ``~/.cache/rema/jax``.
-- To change a variable, run the ``ipykernel install`` line again (it replaces the kernel).
-  ``jupyter kernelspec list`` lists the kernels; ``jupyter kernelspec remove rema`` removes this one.
-- Keep the ``[cuda]`` extra (CUDA 12 JAX wheels): the platform documentation installs
-  ``jax[cuda13]``, which does not support the V100 GPUs.
-- Install the clone rather than the PyPI release: the notebooks of the repository may need a newer
-  ``rema`` than the last release.
 - Without access to ``/sps/lsst``, install the environment in a ``/sps`` space of your group, copy
   there the parts of the DR11 south directory you need, with the same layout, and give their
   location with ``--env REMA_DATA``.
 
-If something goes wrong:
+Session problems
+~~~~~~~~~~~~~~~~
 
 - **The kernel does not start:** ``ipykernel`` or ``pyzmq`` is missing from the environment, or
   ``kernel.json`` points to another Python.
   The session log is ``~/.jupyterhub/notebook_server_<job id>.log``.
 - **The session stops in the middle of a cell:** it went over its memory or time; start a new
   session with more memory.
-- **JAX sees only the CPU:** the session was started on a CPU partition, or ``JAX_PLATFORMS=cpu``
+- **JAX sees only the CPU** (in a GPU session, ``import jax; jax.devices()`` returns
+  ``[CudaDevice(id=0)]``): the session was started on a CPU partition, or ``JAX_PLATFORMS=cpu``
   is set; ``nvidia-smi`` in a terminal of the session shows the GPU.
 - **A write fails** (``cannot write to REMA_WORK``, or ``Permission denied``): ``REMA_WORK``
   points to a directory that is not yours; ``REMA_DATA`` is never written to.
 - End a session with File → Log Out: closing the tab leaves the job running until its time limit.
 
-The batch production at CC-IN2P3 (SLURM arrays, :doc:`ccin2p3`) uses the same environment.
-
 Devices and JAX settings
 ------------------------
 
 ``JAX_PLATFORMS``
-    ``cuda`` requires the GPU and ``cpu`` forces the CPU. When it is unset, JAX uses the GPU if
-    the CUDA wheels find one.
+    ``cuda`` requires the GPU and ``cpu`` forces the CPU.
+    When it is unset, JAX uses the GPU if the CUDA wheels find one.
 
 ``XLA_PYTHON_CLIENT_PREALLOCATE=false``
     The ``rema`` command sets it, so that JAX does not reserve 75% of the GPU memory at start.
-    Set it yourself in Python, before importing JAX.
 
 ``JAX_COMPILATION_CACHE_DIR``
-    The ``rema`` command keeps compiled programs here (default ``~/.cache/rema/jax``). A run
-    compiles a few dozen programs, each in a few seconds (z_λ takes 7–8 s per shape on a GPU).
+    The ``rema`` command keeps compiled programs here (default ``~/.cache/rema/jax``).
+    A run compiles a few dozen programs, each in a few seconds (z_λ takes 7–8 s per shape on a
+    GPU).
     With a warm cache, a run starts computing immediately.
 
-In Python, do the same before the first JAX computation:
+In Python, set the same before importing JAX:
 
 .. code-block:: python
 
@@ -213,9 +215,9 @@ In Python, do the same before the first JAX computation:
    jax.config.update("jax_compilation_cache_dir", os.path.expanduser("~/.cache/rema/jax"))
    jax.config.update("jax_persistent_cache_min_compile_time_secs", 1.0)
 
-The cluster kernels run in float32. CPU and GPU catalogues agree: on the 75 deg² development
-area, all 330 clusters with λ ≥ 20 have the same central galaxy on both, and their λ differ by
-at most 8·10⁻⁴ (relative).
+The cluster kernels run in float32.
+CPU and GPU catalogues agree: on the 75 deg² development area, all 330 clusters with λ ≥ 20 have
+the same central galaxy on both, and their λ differ by at most 8 × 10⁻⁴ (relative).
 
 Which device for what, measured on a laptop (i9-11900H with 16 threads, RTX 3060 Laptop GPU with
 6 GB):
@@ -235,7 +237,7 @@ Which device for what, measured on a laptop (i9-11900H with 16 threads, RTX 3060
      - GPU. 75 deg² with the footprint and wcen centring take 15 min, plus 1.5 min of
        spectroscopic post-processing. The CPU is 4–5 times slower.
    * - ``rema scan``
-     - Either. 25 positions take under a minute on the CPU. A GPU does 4,000 positions in 72 s.
+     - Either. 25 positions take under a minute on the CPU. A GPU does 4 000 positions in 72 s.
 
 Tests
 -----
@@ -256,10 +258,10 @@ Documentation
    make -C docs html                    # then open docs/_build/html/index.html
 
 The notebooks are stored with their outputs, so the build does not need the DR11 data.
-
 On GitHub, the ``docs`` workflow (``.github/workflows/docs.yml``) builds the documentation, with
-warnings as errors, whenever a push touches the package or the docs. It keeps the HTML as the
-``docs-html`` artifact of the run. The published documentation is built by Read the Docs
-(``.readthedocs.yaml``) at https://rema-jax.readthedocs.io/en/latest/. To publish on GitHub Pages as well,
-set the repository variable ``DOCS_DEPLOY`` to ``true`` and choose "GitHub Actions" as the Pages
-source; pushes to ``main`` then deploy the site.
+warnings as errors, whenever a push touches the package or the docs.
+It keeps the HTML as the ``docs-html`` artifact of the run.
+Read the Docs (``.readthedocs.yaml``) builds the published documentation at
+https://rema-jax.readthedocs.io/en/latest/.
+To publish on GitHub Pages as well, set the repository variable ``DOCS_DEPLOY`` to ``true`` and
+choose "GitHub Actions" as the Pages source; pushes to ``main`` then deploy the site.

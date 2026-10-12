@@ -3,7 +3,8 @@ Tour on mock data
 
 :download:`examples/mock_tour.py` injects two clusters into a mock field and runs blind mode,
 spectroscopic post-processing and scan mode on it, then takes derivatives of λ.
-It needs no data.
+It needs no data and starts with the JAX settings of :doc:`install`; :doc:`dr11` runs the same
+steps on the Legacy Surveys.
 On a laptop CPU it takes about two minutes with a cold compilation cache and 1.5 minutes with a
 warm one:
 
@@ -11,8 +12,6 @@ warm one:
 
    python docs/examples/mock_tour.py                       # CPU
    JAX_PLATFORMS=cuda python docs/examples/mock_tour.py    # GPU
-
-The script starts with the JAX settings of :doc:`install`.
 
 Mock region
 -----------
@@ -30,7 +29,8 @@ Mock region
   (dereddened nanomaggies, in the bands of ``cfg.survey.bands``), ``REFMAG``, ``REFMAG_ERR``
   and ``ZSPEC`` (−1 where there is none).
   ``rema ingest`` writes the same columns for DR11.
-- ``RSModel.from_template()`` is the BC03 griz red sequence before any calibration.
+- ``RSModel.from_template()`` is the griz red sequence of the :cite:t:`BruzualCharlot2003`
+  models (BC03) before any calibration.
   With real data, use ``Calibration.read(path).rs``.
 - A :class:`~rema.modes.common.Region` holds the galaxies, a neighbour index, the optional
   footprint and the filter model.
@@ -57,6 +57,7 @@ Blind mode and spectroscopic post-processing
     11.416 -0.283   0.8806     6.1          nan    nan +- nan          0
 
 The injected clusters had (z, λ) = (0.30, 40) and (0.55, 30), and σ_v = 700 km/s.
+Blind mode recovers them at z_λ = 0.3014 and 0.5598, with λ = 39.6 and 31.7.
 
 - :func:`~rema.modes.blind.run_blind` runs four stages:
 
@@ -97,7 +98,8 @@ Scan mode
    input 0: ZMAX 0.315  Z_LAMBDA_OPT 0.3014  LAMBDA_OPT 39.6  centre offset 0.0 arcsec
    input 1: ZMAX 0.555  Z_LAMBDA_OPT 0.5598  LAMBDA_OPT 31.7  centre offset 0.0 arcsec
 
-:func:`~rema.modes.scan.run_scan` is redMaPPer's zscan, in four steps:
+:func:`~rema.modes.scan.run_scan` is redMaPPer's zscan.
+It keeps every input position, including those without a cluster, and runs four steps:
 
 1. λ(z) and the likelihood are computed on Δz = 0.005 steps from z = 0.05 to 1.0, in a
    0.5 h⁻¹Mpc aperture at the input position.
@@ -105,8 +107,6 @@ Scan mode
 3. z_λ is refined from ZMAX with the percolation aperture.
 4. The optical centre is chosen within 0.4 h⁻¹Mpc.
    λ and z_λ are recomputed there and stored as ``LAMBDA_OPT`` and ``Z_LAMBDA_OPT``.
-
-Every input position is kept, including those without a cluster.
 
 Derivatives of λ
 ----------------
@@ -143,8 +143,6 @@ Derivatives of λ
    λ(z) is smooth but varies on scales of Δz ~ 10⁻³.
    At z = 0.32 in this mock, a centred difference with h = 10⁻³ gives +126, while the
    derivative is −11.6.
-   In float32 the finite difference converges to the autodiff value for h ≲ 3·10⁻⁵, and for the
+   In float32 the finite difference converges to the autodiff value for h ≲ 3 × 10⁻⁵, and for the
    colour nodes at h ~ 10⁻⁴.
    A gradient-based fit through λ(z) has to deal with this structure.
-
-:doc:`dr11` runs the same steps on the Legacy Surveys.

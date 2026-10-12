@@ -95,7 +95,7 @@ Calibration with LSST or Euclid photometry
 ------------------------------------------
 
 The bands, the reference band, the m*(z) table and the template go in the configuration.
-For LSST griz y with z as the reference band:
+For LSST grizy with z as the reference band:
 
 .. code-block:: yaml
 
@@ -160,7 +160,7 @@ Then calibrate as for DR11 (:doc:`dr11`, step 4), with the configuration written
 Other band combinations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-A template for another combination, for example LSST griz y with Euclid J and H, is built with the
+A template for another combination, for example LSST grizy with Euclid J and H, is built with the
 same code as the packaged tables.
 Every response file listed in ``rema.data.build.INPUTS`` can be used:
 

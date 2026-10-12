@@ -1,15 +1,16 @@
 Public cluster catalogues in DR11
 ==================================
 
-rema measured the richness λ, the redshift z_λ, the optical centre and, where members have one,
-the spectroscopic redshift at the position of every cluster of nine public catalogues, in the DR11
-south data.
+We measured the richness λ, the redshift z_λ, the optical centre and, where members have one, the
+spectroscopic redshift at the position of every cluster of nine public catalogues in the DR11 south
+data.
 The Sunyaev–Zel'dovich (SZ) catalogues are ACT DR5, ACT DR6 (Atacama Cosmology Telescope),
-SPT-SZ 2500d (South Pole Telescope) and Planck PSZ2; the X-ray ones are MCXC and eRASS1; the
-optical ones are SDSS DR8 redMaPPer, DES Y1 redMaPPer and Wen & Han (2024) (papers under
-`References`_).
-We measured the positions in scan mode, with the calibration of the DR11 south production run
-(:doc:`ccin2p3`).
+SPT-SZ 2500d (South Pole Telescope) and Planck PSZ2; the X-ray ones are MCXC (Meta-Catalogue of
+X-ray detected Clusters of galaxies) and eRASS1 (first eROSITA All-Sky Survey); the optical ones
+are SDSS DR8 redMaPPer (Sloan Digital Sky Survey), DES Y1 redMaPPer (Dark Energy Survey) and
+Wen & Han (2024) (papers under `References`_).
+We ran ``rema`` in scan mode at these positions, with the calibration of the DR11 south production
+run (:doc:`ccin2p3`).
 The products are on the CC-IN2P3 data system, one FITS file per catalogue, row for row with the
 catalogue:
 
@@ -84,9 +85,9 @@ comes out at about 1 700 with z_λ at the lower bound of the scan, 0.05.
 The cut removes all of these rows, for example 2 825 of SDSS DR8 and 185 of ACT DR6.
 A z_λ of 0.05 that survives the cut is a cluster at or below the lower limit of the redshift scan
 (``ZMAX_EDGE`` true); most are low-redshift MCXC and eRASS1 clusters.
-Like the production catalogue, the products are cut neither in Galactic latitude nor in E(B-V)
-(the ingestion only drops galaxies with E(B-V) ≥ 0.2).
-The production catalogue keeps \|b\| > 15°.
+Like the production catalogue, the products are not cut in E(B-V) (the ingestion only drops
+galaxies with E(B-V) ≥ 0.2).
+Unlike it, they are not cut in Galactic latitude: the production catalogue keeps \|b\| > 15°.
 
 Comparison with the catalogues and the production run
 -----------------------------------------------------
@@ -149,8 +150,8 @@ given positions":
    production catalogue (median λ ratio 1.00–1.02, \|Δz\| ≤ 0.001 where the clusters match).
 4. **Scans:** one V100 job per catalogue or slice, 32 in all (``scripts/scan/scan_positions.sh``
    with ``--index`` on the shared randoms index, 90 GB of memory), each taking 7 min to 2.5 h.
-   The Wen & Han slices, 13 733 to 114 426 positions each, took 7 min to 1.3 h each, 15 h of GPU
-   time for its 1.38 M scanned positions.
+   The Wen & Han slices, 13 733 to 114 426 positions each, took 7 min to 1.3 h each, in all 15 h
+   of GPU time for its 1.38 M scanned positions.
 5. **Final step:** ``scripts/scan/finalize_scan.sh`` joined the slices with
    ``scripts/scan/merge_parts.py`` and checked that every output has one row per input row.
    It then copied everything to the data system, compared the copies byte for byte and deleted the

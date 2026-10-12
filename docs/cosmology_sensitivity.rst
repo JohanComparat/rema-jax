@@ -50,14 +50,15 @@ The derivatives are d ln λ/dΩ_m = +0.12 and d ln λ/dw0 = +0.055; wa = 0.3 add
 The response follows the change of D_A with an elasticity d ln λ/d ln D_A ≈ −0.35, about half the
 −0.6 to −0.75 of a projected NFW profile, because the background subtracted per (h⁻¹ Mpc)² grows
 with the aperture too.
-From cluster to cluster it scatters by about its own size: a few members cross the aperture edge.
+
+From cluster to cluster the response scatters by about its own size: a few members cross the
+aperture edge.
 z_λ does not move (changes below 10⁻⁵), so the finder's cosmology dependence is a change of
 richness at fixed redshift.
-
 The derivatives by forward-mode autodiff through the distance table agree with finite differences
 (median difference 0.002).
-The re-measurement in the fiducial cosmology gives back the catalogue (median ln(λ/λ_cat) below
-10⁻⁵, NMAD 0.3%).
+The re-measurement in the fiducial cosmology gives back the catalogue (median ln(λ/λ_cat) of
+1.7 × 10⁻⁵, NMAD 0.3%).
 
 .. figure:: figures/cosmology_sensitivity/response_lambda.png
    :alt: d ln lambda / d Omega_m and d ln lambda / d w0 against z, and autodiff against finite differences
@@ -96,21 +97,20 @@ Below z = 0.45 it does not depend on the depth (≈ 0.13).
 
 We re-ran the finder blind in four other cosmologies (tier B: Ω_m = 0.25 and 0.35, w0 = −0.8 and
 −1.2, six regions).
-It makes the same catalogue: 99.1–99.7% of the 4 048 clusters with λ ≥ 20 are found again (98%
-with the same central galaxy), and the 0.3–1% lost or gained are those that the shift of λ moves
-across λ = 20.
-λ moves by −1.0%, +0.9%, +1.6% and −1.7%, as at fixed centres; 1.5–2% of the clusters change
+The re-runs give the same catalogue: 99.1–99.7% of the 4 223 clusters with λ ≥ 20 are found again
+(98% with the same central galaxy), and the 0.3–1% lost or gained are those that the shift of λ
+moves across λ = 20.
+λ moves by −1.0%, +0.8%, +1.6% and −1.7%, as at fixed centres; 1.5–2% of the clusters change
 centre, the member lists overlap at 97–98%, and z_λ does not move.
 The counts above each threshold are those of the fiducial catalogue with λ shifted by the tier-A
-response, within 0.5% at λ ≥ 10, 20 and 30 and within 1–3% at λ ≥ 45 and 60.
+response, within 1% at λ ≥ 10, 20 and 30 and within 3% at λ ≥ 45 and 60.
 So the seeds, the percolation order, the centring and the cuts add nothing measurable.
+
 Re-training the red sequence, the zred and z_λ corrections and the centring model in the other
 cosmology (tier C) absorbs 10–15% of the shift of λ (−0.6% and −0.9% instead of −0.7% and −1.0%
 for Ω_m = 0.25 in regions 15 and 82).
-
-The red-sequence model itself does not depend on the cosmology.
-It is a function of redshift and magnitude only (mean colours, slopes, scatter and pivot
-magnitude on redshift nodes).
+The red-sequence model itself does not depend on the cosmology: it is a function of redshift and
+magnitude only (mean colours, slopes, scatter and pivot magnitude on redshift nodes).
 The cosmology reaches it only through the calibration, whose clusters are measured in apertures of
 fixed physical size, against a background per (h⁻¹ Mpc)², with zred's volume factor.
 Calibrated in Ω_m = 0.25 or 0.35 instead of 0.3, on the same area and spectroscopic redshifts, the
@@ -118,14 +118,15 @@ mean colours change by 0.0002–0.0003 mag (median over 0.1 < z < 0.8; at most 0
 by 10⁻⁴, the intrinsic scatter by 1% (at most 3.5%), and the zred and z_λ corrections by 10⁻⁴.
 The calibration uses the same clusters (±0.2%) with the same z_λ accuracy, and the parameters of
 the centring model move by at most 0.02.
-These small, coherent changes make the 10–15% of the shift of λ that the re-calibration absorbs.
+These small, coherent changes account for the 10–15% of the shift of λ that the re-calibration
+absorbs.
 
 .. include:: figures/cosmology_sensitivity/calib_table.rst
 
 .. figure:: figures/cosmology_sensitivity/rerun_tierB.png
    :alt: Change of lambda of matched clusters, clusters lost or gained, and N(>lambda) ratios between re-runs
 
-   Tier B, blind re-runs against the fiducial re-run with the production calibration.
+   Blind re-runs of tier B against the fiducial re-run, with the production calibration.
    Left: median change of ln λ of the matched clusters with λ ≥ 20, per region (bars: NMAD).
    Middle: clusters with λ ≥ 20 without a match.
    Right: N(> λ) at 0.1 < z_λ < 0.6 summed over the regions, over that of the fiducial re-run with
@@ -159,7 +160,8 @@ Which convention the mass–richness relation assumes is part of the comparison.
 
 The counts depend on Ω_m through the mass function and the volume: d ln N/dΩ_m = +12 to +32 in
 the DR11 bins (median +19).
-The finder's response adds −0.08 to −0.34 (median −0.18), of the opposite sign, about 1%.
+The finder's response adds −0.08 to −0.34 (median −0.18).
+It is of the opposite sign and about 1% of the total.
 
 .. figure:: figures/cosmology_sensitivity/counts_dlnN.png
    :alt: d ln N / d Omega_m in each bin, total and through the finder
@@ -179,8 +181,12 @@ With the relation known exactly, the counts alone would constrain Ω_m to 0.005 
 and the same offsets would shift σ_8 by 1σ (ΔΩ_m = 0.05) to 2σ (Δw0 = 0.2), Δσ_8 ≈ 0.004–0.007.
 So the finder's cosmology starts to matter once the mass–richness relation is calibrated to about
 1%.
+
 With m* following the luminosity distance the shifts are similar (0.6–2.6σ with the relation
 fixed).
+The table below gives these shifts (Ω_m, then σ_8, in units of their errors) for the catalogue's
+m* and for m* following D_L, with the mass–richness relation free, with its richness normalisation
+fixed, and entirely fixed.
 
 .. include:: figures/cosmology_sensitivity/forecast_table.rst
 
@@ -191,10 +197,6 @@ fixed).
    catalogue made in a cosmology off by the offset on the left: mass–richness relation free (left)
    and fixed (right).
 
-The table gives these shifts (Ω_m, then σ_8, in units of their errors) for the catalogue's m* and
-for m* following D_L, with the mass–richness relation free, with its richness normalisation fixed,
-and entirely fixed.
-
 8. Demonstration fit to the DR11 counts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -203,7 +205,7 @@ and Planck 2018 priors :cite:p:`Planck2020` on h, n_s and Ω_b h².
 They give Ω_m = 0.276 ± 0.035 and σ_8 = 0.90 ± 0.04 (0.87 if the intrinsic scatter is free; it
 then runs to zero).
 Including the finder's response moves them by less than 0.005.
-The fit is poor (χ² = 83–103 for 20 bins): the model has no projection effects and no purity, and
+The fit is poor (χ² = 83–103 for twenty bins): the model has no projection effects and no purity, and
 the DR11 abundance at fixed λ depends on the depth.
 These numbers demonstrate the machinery and are not a cosmological measurement.
 
@@ -251,7 +253,8 @@ kernels, and :meth:`~rema.model.cosmo.CosmoTable.jvp` gives its derivatives.
   starting point of the fit.
 
 Catalogues and calibrations record the cosmology in their headers (OMEGAM, HUBBLE, OMEGAB, MNU,
-W0, WA); the combined DR11 catalogue has OMEGAM and HUBBLE and its configuration.
+W0, WA).
+The combined DR11 catalogue has OMEGAM and HUBBLE, and its configuration.
 
 Tier A: re-measurement at fixed centres
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -281,8 +284,8 @@ The strip RA 1–4°, Dec −14 to −1° was re-measured on a laptop (815 clust
 earlier local ingest); the fiducial re-measurement scatters by 3% there, and by 0.06–0.6% in the
 six regions.
 The response table of the counts model (:class:`~rema.abundance.response.ResponseTable`) is the
-median d ln λ/dθ of the six regions in bins of z_λ and λ, smoothed by a polynomial (quadratic in z,
-linear in ln λ).
+median d ln λ/dθ over the clusters of the six regions in bins of z_λ and λ, smoothed by a
+polynomial (quadratic in z, linear in ln λ).
 
 Tiers B and C: re-runs and re-calibration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -294,7 +297,7 @@ Tier B runs ``rema blind --cosmology KEY=VALUE`` with the production calibration
 (and the strip), for the fiducial, Ω_m = 0.25 and 0.35, w0 = −0.8 and −1.2 (20–60 minutes per run
 on a V100).
 Tier C runs ``rema calibrate --cosmology KEY=VALUE`` on the production calibration area (2 hours on
-8 cores) and the blind mode with that calibration on regions 15 and 82, for the fiducial,
+eight cores) and the blind mode with that calibration on regions 15 and 82, for the fiducial,
 Ω_m = 0.25 and 0.35.
 We compared the runs cluster by cluster with :mod:`rema.validate.compare` (matched by central
 galaxy, then seed, then position and redshift).
@@ -341,8 +344,9 @@ The likelihood (:class:`~rema.abundance.likelihood.Likelihood`) has three terms:
   Inverting ⟨M | λ⟩ into ⟨λ | M⟩ would ignore the Eddington bias and over-predict the counts by a
   factor 2–3;
 - **priors**: Planck 2018 :cite:p:`Planck2020` on h, n_s and Ω_b h², from its
-  TT,TE,EE+lowE+lensing column; flat on Ω_m, ln 10¹⁰A_s and the mass–richness parameters (the
-  emu_pk training box); σ_8 is derived.
+  TT,TE,EE+lowE+lensing column; Gaussian on the richness normalisation (widths 0.05 and 0.25)
+  and on dz_bias (width 0.005); flat on Ω_m (0.15–0.55), ln 10¹⁰A_s (1.7–4.0) and the
+  mass–richness parameters, with the emu_pk training box enforced on top; σ_8 is derived.
 
 :mod:`rema.abundance.fisher` gives the Fisher matrices and the shifts of the best fit
 (forward-mode Jacobians through the whole model).
@@ -354,10 +358,11 @@ catalogue is made in.
 DR11 data vector
 ~~~~~~~~~~~~~~~~
 
-λ ≥ 20 in five bins (20, 30, 45, 60, 100, ∞) and z_λ in four (0.1, 0.2, 0.3, 0.45, 0.6): the z_λ
-spikes at 0.82–0.86 are left out and the one at 0.38 sits inside a bin.
-Clusters and pixels within 2.33° of the seams between the two parts of the run are left out: 61 300
-clusters over 17 790 deg² (17 110 deg² for the last redshift bin).
+The data vector has λ ≥ 20 in five bins (20, 30, 45, 60, 100, ∞) and z_λ in four (0.1, 0.2, 0.3,
+0.45, 0.6).
+The z_λ spikes at 0.82–0.86 are left out and the one at 0.38 sits inside a bin.
+Without the clusters and pixels within 2.33° of the seams between the two parts of the run, it
+holds 61 300 clusters over 17 790 deg² (17 110 deg² for the last redshift bin).
 
 Assumptions and limits
 ----------------------
@@ -416,5 +421,5 @@ space exists, else ``~/rema_work``.
    python docs/figures/cosmology_sensitivity/make_all.py
 
 The strip (tier A and tier B on a laptop GPU) uses ``rema remeasure`` and ``rema blind`` with
-``--galaxies``, ``--calib``, ``--footprint``, ``--box 0 5 -15 0`` and ``--own 1 4 -14 -1``
-(``--cosmology KEY=VALUE`` for the blind re-runs).
+``--galaxies``, ``--calib``, ``--footprint``, ``--box 0 5 -15 0`` and ``--own 1 4 -14 -1``.
+The blind re-runs add ``--cosmology KEY=VALUE``.

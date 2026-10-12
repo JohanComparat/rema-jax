@@ -176,8 +176,9 @@ fixed, and entirely fixed.
 8. The DR11 counts give Ω_m ≈ 0.28 and σ_8 ≈ 0.87–0.90, as a demonstration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With the DES Y1 weak-lensing calibration of McClintock et al. (2019), Planck priors on h and n_s
-and BBN on Ω_b, the DR11 counts give **Ω_m = 0.276 ± 0.035 and σ_8 = 0.90 ± 0.04** (0.87 if the
+With the DES Y1 weak-lensing calibration of
+`McClintock et al. (2019) <https://doi.org/10.1093/mnras/sty2711>`__ and Planck 2018 priors on h, n_s
+and Ω_b h², the DR11 counts give **Ω_m = 0.276 ± 0.035 and σ_8 = 0.90 ± 0.04** (0.87 if the
 intrinsic scatter is free; it then runs to zero). Including the finder's response moves them by
 less than 0.005. The fit is poor (χ² = 83–103 for 20 bins): the model has no projection effects
 and no purity, and the DR11 abundance at fixed λ depends on the depth. These numbers show what
@@ -280,10 +281,12 @@ The counts model
 - **Ω_j**: the area where the depth reaches the bin's upper edge, z_vlim ≥ z_hi (z_vlim: where
   m*(z) + 1.75 reaches the 10σ z-band depth; :class:`~rema.abundance.area.ZvlimMap`); only the
   clusters there are counted. The area is angular, independent of the cosmology while m* is fixed.
-- **dn/d ln M**: the Tinker et al. (2008) mass function of M200m from ggah_mod (the emu_pk linear
-  spectrum of the cold matter, σ(M) and its slope by autodiff); dV/dz/dΩ from ggah_mod.
+- **dn/d ln M**: the `Tinker et al. (2008) <https://doi.org/10.1086/591439>`__ mass function of
+  M200m from ggah_mod (the emu_pk linear spectrum of the cold matter, σ(M) and its slope by
+  autodiff); dV/dz/dΩ from ggah_mod.
 - **P_i(M, z)**: log-normal richness, ⟨ln λ_DES | M, z⟩ = a + b ln(M/M_piv) + c ln((1+z)/1.35),
-  variance σ_int² + (e^μ − 1)/e^{2μ} (intrinsic and Poisson, Costanzi et al. 2019), in units of the
+  variance σ_int² + (e^μ − 1)/e^{2μ} (intrinsic and Poisson,
+  `Costanzi et al. 2019 <https://doi.org/10.1093/mnras/stz1949>`__, Sect. 6.2), in units of the
   DES Y1 redMaPPer richness; rema's richness is ln λ = ln λ_DES + ln s0 + s1 (z − 0.4), with the
   normalisation measured on common clusters (λ_rema/λ_DES = 1.05 at z = 0.2 and 0.85 at z = 0.6;
   Gaussian priors of width 0.05 and 0.25).
@@ -295,18 +298,21 @@ The counts model
   taken as independent of the cosmology, as in published analyses.
 
 The **likelihood** (:class:`~rema.abundance.likelihood.Likelihood`) has the counts (Gaussian, with
-Poisson noise and super-sample variance from :func:`ggah_mod.covariance.supersample.slab_sigma2_b`
-over each redshift bin's footprint, which adds 30–40 % to the variance of the richest bins),
-the **weak-lensing calibration** (in the bins inside the range of McClintock et al. 2019, DES Y1,
+Poisson noise and super-sample variance (`Hu & Kravtsov 2003 <https://doi.org/10.1086/345846>`__)
+from :func:`ggah_mod.covariance.supersample.slab_sigma2_b` over each redshift bin's footprint, which adds 30–40 % to the variance of the richest bins),
+the **weak-lensing calibration** (in the bins inside the range of
+`McClintock et al. 2019 <https://doi.org/10.1093/mnras/sty2711>`__, DES Y1,
 λ_DES ≥ 20, 0.2 ≤ z ≤ 0.65: the model's ln ⟨M200m | bin⟩ against their ⟨M | λ, z⟩ =
 M0 (λ/40)^F ((1+z)/1.35)^G at the bin's mean richness, with the covariance of (log₁₀ M0, F, G) =
 (14.489 ± 0.022 in M☉ for h = 0.7, 1.356 ± 0.052, −0.30 ± 0.31) and 5 % per bin, as the DES Y1
 cluster analysis did; inverting ⟨M | λ⟩ into ⟨λ | M⟩ would ignore the Eddington bias and
-over-predict the counts by a factor 2–3) and priors (Planck 2018 on h and n_s, BBN on Ω_b h², flat
-on Ω_m, ln 10¹⁰A_s and the mass–richness parameters, the emu_pk training box; σ_8 is derived).
+over-predict the counts by a factor 2–3) and priors (`Planck 2018 <https://doi.org/10.1051/0004-6361/201833910>`__
+on h, n_s and Ω_b h², from its TT,TE,EE+lowE+lensing column; flat on Ω_m, ln 10¹⁰A_s and the
+mass–richness parameters, the emu_pk training box; σ_8 is derived).
 :mod:`rema.abundance.fisher` gives the Fisher matrices and the shifts of the best fit (forward-mode
 Jacobians through the whole model); :mod:`rema.abundance.sampling` the best fit, the Laplace
-covariance and NUTS chains (blackjax, extra ``cosmo``). The forecasts of finding 7 keep the true
+covariance and NUTS chains (`Hoffman & Gelman 2014 <https://jmlr.org/papers/v15/hoffman14a.html>`__;
+blackjax, extra ``cosmo``). The forecasts of finding 7 keep the true
 universe at the best fit and offset the cosmology the catalogue is made in.
 
 The DR11 data vector
@@ -330,7 +336,8 @@ Assumptions and limits
   measurement; the comparisons with and without the response are the result.
 - **Six regions** make the response table (37,000 clusters with λ ≥ 5, 2,000 with λ ≥ 40),
   averaged over their depths although the response depends on the depth (finding 3).
-- **The mass function** is Tinker et al. (2008), without a calibration uncertainty.
+- **The mass function** is `Tinker et al. (2008) <https://doi.org/10.1086/591439>`__, without a
+  calibration uncertainty.
 - With m* following D_L, the z_vlim map and so the area would depend on the cosmology too; this is
   not included.
 

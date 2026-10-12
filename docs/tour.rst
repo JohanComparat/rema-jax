@@ -64,9 +64,11 @@ The injected clusters had (z, λ) = (0.30, 40) and (0.55, 30), and σ_v = 700 km
 
   The returned catalogue and members are dicts of numpy arrays with redMaPPer's column names
   (:doc:`reference`).
-- :func:`~rema.modes.specpost.process` is the Clerc et al. (2016) velocity clipping,
+- :func:`~rema.modes.specpost.process` is the
+  `Clerc et al. (2016) <https://doi.org/10.1093/mnras/stw2214>`__ velocity clipping,
   run on the members with ``ZSPEC > 0``. It uses a biweight location, a 5000 km/s window and
-  3σ clipping. σ_v is the gapper estimate below 15 members and the biweight scale above. 64
+  3σ clipping. σ_v is the gapper estimate below 15 members and the biweight scale above
+  (`Beers, Flynn & Gebhardt 1990 <https://doi.org/10.1086/115487>`__). 64
   bootstrap resamples give the errors. The keyword arguments are those of
   ``cfg.spec``.
 - There is no wcen model here, so the centre is redMaPPer's CenteringBCG: the brightest

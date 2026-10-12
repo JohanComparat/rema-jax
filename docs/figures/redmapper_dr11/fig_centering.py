@@ -23,7 +23,7 @@ rlam = np.asarray(cl["R_LAMBDA"])                    # h^-1 Mpc
 ra, dec = np.asarray(cl["RA"]), np.asarray(cl["DEC"])
 
 # %% [markdown]
-# ### Centring probabilities (Rykoff et al. 2016 Sect. 8)
+# ### Centring probabilities (Rykoff et al. 2014 Sect. 8)
 #
 # Distribution of the probability of the most likely central, its mean against λ and z_λ, and
 # the fraction of clusters with P_cen > 0.9.

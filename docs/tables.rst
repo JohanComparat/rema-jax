@@ -191,8 +191,10 @@ The figures' data at a few redshifts (m* in AB magnitudes, colours in magnitudes
 The passive population and the inputs
 -------------------------------------
 
-The BC03 tables follow one population: Bruzual & Charlot (2003), Salpeter IMF, metallicity
-Z = 0.02 (the SSP grid distributed with EzGal, Mancone & Gonzalez 2012), exponential star
+The BC03 tables follow one population:
+`Bruzual & Charlot (2003) <https://doi.org/10.1046/j.1365-8711.2003.06897.x>`__, Salpeter IMF
+(`Salpeter 1955 <https://doi.org/10.1086/145971>`__), metallicity Z = 0.02 (the SSP grid
+distributed with EzGal, `Mancone & Gonzalez 2012 <https://doi.org/10.1086/666502>`__), exponential star
 formation with τ = 0.1 Gyr from z_f = 3, normalised to SDSS i = 17.85 (AB) at z = 0.2, in a flat
 cosmology with Ω_m = 0.3 and h = 0.7. :mod:`rema.model.sps` integrates the exponential history
 exactly over the SSP ages and evaluates every redshift directly.

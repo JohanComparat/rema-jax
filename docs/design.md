@@ -1,6 +1,7 @@
 # rema design notes
 
-rema rewrites the redMaPPer cluster finder as a
+rema rewrites the redMaPPer cluster finder (Rykoff et al.
+[2014](https://doi.org/10.1088/0004-637X/785/2/104), [2016](https://doi.org/10.3847/0067-0049/224/1/1)) as a
 JAX package. This document gives the algorithm, the places where rema differs from
 redMaPPer v0.7.7 (the `jacobic/redmapper` fork) and why, and the validation
 on the development area. The DR11 south production catalogue and its validation against the
@@ -39,7 +40,7 @@ Values outside (0.001, 3), and COSMOS2015 photometric "reference" redshifts, are
 ## 3. Footprint and depth (`rema/sky/maps.py`)
 
 The DR11 randoms carry NOBS, GALDEPTH and MASKBITS at uniform positions. They give, per
-NESTED HEALPix pixel (nside 1024):
+NESTED HEALPix ([Górski et al. 2005](https://doi.org/10.1086/427976)) pixel (nside 1024):
 
 - `FRACGOOD`: the fraction of randoms passing the galaxies' MASKBITS and NOBS cuts, times the
   geometric coverage of the pixel by the data box;
@@ -71,15 +72,17 @@ are unconstrained:
   correlation matrix for any parameter values.
 
 `RSModel.from_redmapper_pars` reads redMaPPer `*_pars.fit` files, resampling colours that have
-different node sets onto common nodes. `RSModel.from_template` starts from the BC03 griz
-colours in `rema/data`.
+different node sets onto common nodes. `RSModel.from_template` starts from the BC03
+([Bruzual & Charlot 2003](https://doi.org/10.1046/j.1365-8711.2003.06897.x)) griz colours in `rema/data`.
 
-m*(z) defaults to redMaPPer's DES z03 table, as for DR10 and DES. The EzGal DECam-z table
-differs by 0.07 mag at z = 0.9.
+m*(z) defaults to redMaPPer's DES z03 table, as for DR10 and DES. The EzGal
+([Mancone & Gonzalez 2012](https://doi.org/10.1086/666502)) DECam-z table differs by 0.07 mag at
+z = 0.9.
 
 ## 5. Photometric likelihood (`rema/model/likelihood.py`)
 
-The default `chisq_mode = "lupt"` compares the asinh magnitudes of the non-reference bands with
+The default `chisq_mode = "lupt"` compares the asinh magnitudes
+([Lupton et al. 1999](https://doi.org/10.1086/301004)) of the non-reference bands with
 those of the model, softening each band at its own 1σ flux error b = σ_f:
 
   μ(f) = zp − 2.5/ln10 [asinh(f/2b) + ln b],  r_b = μ_b(f_b) − μ_b(F_b),
@@ -129,8 +132,9 @@ Lookup is trilinear and differentiable.
   p_i = λ N(r_λ) u_i / (λ N(r_λ) u_i + b_i),  pmem_i = p_i θ_i pfree_i θ_r(r_i; r_λ),
   Σ_i pmem_i = λ K(r_λ),  r_λ = r0 (λ/100)^β.
 
-- The projected NFW (r_s = 0.15, flat core r < 0.1 h⁻¹Mpc) and its enclosed integral are closed
-  form. Power series in u = 1 − x² remove the removable singularity at x = 1. N(r_λ) is exact
+- The projected NFW ([Navarro, Frenk & White 1997](https://doi.org/10.1086/304888);
+  r_s = 0.15, flat core r < 0.1 h⁻¹Mpc) and its enclosed integral are closed form. Power series
+  in u = 1 − x² remove the removable singularity at x = 1. N(r_λ) is exact
   rather than redMaPPer's degree-5 polynomial fit.
 - lumnorm uses Gauss–Legendre quadrature, checked against 2.5/ln10 E1(10^(0.4(m* − maxmag)))
   for α = −1.
@@ -305,10 +309,11 @@ have ID −1 and position −400.
     from a different batching decides the outcome. They lie up to 4.8° from any boundary, so
     this is not a boundary effect.
 - **Spectroscopic post-processing** (`rema/modes/specpost.py`):
-  - The Clerc et al. (2016) velocity clipping, vectorised in NumPy.
+  - The [Clerc et al. (2016)](https://doi.org/10.1093/mnras/stw2214) velocity clipping, vectorised in
+    NumPy.
   - Biweight location (c = 6), a 5000 km/s window, then 20 iterations of re-selection at 3σ
     from all spectroscopic members. σ is the gapper estimator below 15 members, the biweight
-    scale (c = 9) above.
+    scale (c = 9) above ([Beers, Flynn & Gebhardt 1990](https://doi.org/10.1086/115487)).
   - A seeded bootstrap (64 resamples) gives the means and errors.
   - BEST_Z falls back from SPEC_Z_BOOT to CG_SPEC_Z to Z_LAMBDA.
   - Tested identical to a reference recursive implementation for 3 to 80 members.
@@ -328,7 +333,8 @@ An EM version of redMaPPer's calibration, run on DR11 with the `Z_SPEC` of the p
      cluster counts once.
    - The weights are the members' pmem in clusters with λ ≥ 5.
 3. **M-step** (`fit.py`): a joint fit of every node, Σ w (χ² + ln det S)/2 plus a
-   second-difference smoothness prior, using optax L-BFGS in float64. Pivot magnitudes are the
+   second-difference smoothness prior, using optax L-BFGS
+   ([Liu & Nocedal 1989](https://doi.org/10.1007/BF01589116)) in float64. Pivot magnitudes are the
    members' weighted median reference magnitude.
 4. **Corrections** (`corrections.py`):
    - zred: offset and error scaling from spectroscopic members (pmem > 0.5).
@@ -422,7 +428,8 @@ The calibration file holds the model, the corrections, the background and the co
     calibration gained the third sweep's 6,000 spectroscopic redshifts. A calibration on 75 deg²
     is noisy. With the production calibration (400 deg²), rema λ is 0.89 times DES Y1 redMaPPer,
     0.90 times SDSS DR8 (decreasing with z as SDSS becomes shallow) and 1.13 times the λ_norm
-    of Kluge et al. (2024) (page "redMaPPer blind mode on DR11").
+    of [Kluge et al. (2024)](https://doi.org/10.1051/0004-6361/202349031) (page "redMaPPer blind mode on
+    DR11").
   - **Depth correction:** rema's catalogue reaches S/N 5 in z (5σ depth 23.4), deeper than
     m*+1.75 at z = 0.9. So SCALEVAL stays near 1 where redMaPPer's 10σ-limited counting needs
     1.1–1.6. For the ACT clusters (an SZ selection, independent of both catalogues), rema's λ at

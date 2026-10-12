@@ -2,6 +2,33 @@
 
 All notable changes to `rema` are documented here.
 
+## [0.5.1] - 2026-10-12
+
+### Documentation
+
+- Every paper cited in the README and the documentation links to its published version (DOI),
+  or to arXiv for a preprint; the reference lists (redMaPPer results page, photo-z finders,
+  public catalogues scan) give both.
+- The methods named without a reference now have one: asinh magnitudes, the gapper and biweight
+  estimators, HEALPix, the NFW profile, BC03, EzGal, L-BFGS, NUTS and super-sample variance.
+- Corrected statements about the cited papers:
+  - Kluge et al. (2024) define λ_norm = 1.039 λ_griz, so rema's λ is 17% above their griz λ
+    (not 9%);
+  - the centring section is Sect. 8 of Rykoff et al. (2014), not of Rykoff et al. (2016);
+  - the ACT DR6 cluster catalogue is by the ACT-DES-HSC Collaboration (OJAp 9, 2026);
+  - the Ω_b h² prior of the counts likelihood (0.02237 ± 0.00015) is the Planck 2018 value, not
+    a BBN prior;
+  - the g − r scatter of Comparat et al. (2025) is 0.042–0.059;
+  - Fig. 9 of Bleem et al. (2020) shows λ against the SZ significance;
+  - journal references: Euclid Q1 clusters (A&A 711, A34), Myles et al. 2025 (MNRAS 544,
+    2080), Lee et al. 2025 (PRD 111, 063502).
+
+### Fixed
+
+- The figure of λ against velocity dispersion on the redMaPPer results page draws the Kluge et
+  al. (2024) relation divided by 1.039 (it was multiplied;
+  `docs/figures/redmapper_dr11/fig_richness.py`); the figure and the notebook are updated.
+
 ## [0.5.0] - 2026-10-12
 
 ### Added

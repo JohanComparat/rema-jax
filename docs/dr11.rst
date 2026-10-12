@@ -70,7 +70,8 @@ Every command that takes ``--galaxies`` also accepts that directory, together wi
 
    rema maps $DR11/randoms/randoms-south-1-0.fits --box 0 5 -15 0 --out footprint.fits
 
-This writes a NESTED HEALPix map at nside 1024 with ``NRAND``, ``COVER``, ``FRACGOOD`` (the
+This writes a NESTED HEALPix (`Górski et al. 2005 <https://doi.org/10.1086/427976>`__)
+map at nside 1024 with ``NRAND``, ``COVER``, ``FRACGOOD`` (the
 fraction of randoms that pass the galaxy cuts, times the coverage of the box) and
 ``SIGF_<band>``. ``SIGF_<band>`` is the dereddened 1σ flux error of a canonical galaxy,
 1/√GALDEPTH/MW_TRANSMISSION, in nanomaggies. The 5σ depth is 22.5 − 2.5 log10(5 σ_f).
@@ -92,7 +93,9 @@ fraction of randoms that pass the galaxy cuts, times the coverage of the box) an
 
 This is redMaPPer's calibration written as EM (:doc:`design`, section 13):
 
-1. **Initial red sequence:** the BC03 griz template, refined on spectroscopic red galaxies
+1. **Initial red sequence:** the BC03
+   (`Bruzual & Charlot 2003 <https://doi.org/10.1046/j.1365-8711.2003.06897.x>`__) griz template, refined
+   on spectroscopic red galaxies
    (``--init-pars`` starts from a redMaPPer ``*_pars.fit`` file instead).
 2. **E-step:**
 
@@ -125,8 +128,8 @@ clusters. It ran in 17 min on the CPU. ``calib_plots/`` holds ``redsequence.png`
    **The calibration sets the λ scale.** On 75 deg², rema's λ is 10–15% above DR10's at
    z < 0.7. It moved by 7% when a third sweep's 6,000 redshifts joined the calibration. For
    production, calibrate on a few hundred deg² rich in spectroscopy (:doc:`hpc`). The DR11 south
-   production, calibrated on 400 deg², gives λ = 0.89 λ(DES Y1) and 1.13 λ_norm(Kluge et al.
-   2024) (:doc:`redmapper_dr11`).
+   production, calibrated on 400 deg², gives λ = 0.89 λ(DES Y1) and 1.13 λ_norm
+   (`Kluge et al. 2024 <https://doi.org/10.1051/0004-6361/202349031>`__) (:doc:`redmapper_dr11`).
 
 To start from a redMaPPer calibration instead, run
 ``rema calib-import pars.fit --out calib.fits``, which imports the red sequence and the zred
@@ -243,10 +246,12 @@ spectroscopic post-processing, and returns the input table with the results:
 
    rema specpost clusters.fits --out clusters_spec.fits
 
-It works on the members with ``ZSPEC > 0`` and follows the Clerc et al. (2016) velocity clipping:
+It works on the members with ``ZSPEC > 0`` and follows the
+`Clerc et al. (2016) <https://doi.org/10.1093/mnras/stw2214>`__ velocity clipping:
 
 - a biweight location, a 5000 km/s window, and 20 iterations of 3σ clipping;
-- σ_v from the gapper estimator below 15 members, and the biweight scale above;
+- σ_v from the gapper estimator below 15 members, and the biweight scale above
+  (`Beers, Flynn & Gebhardt 1990 <https://doi.org/10.1086/115487>`__);
 - 64 bootstrap resamples with a fixed seed.
 
 ``BEST_Z`` takes ``SPEC_Z_BOOT`` when at least 3 members survive the clipping and σ_v is not

@@ -174,7 +174,7 @@ save(fig, "richness_external")
 # Clusters with at least 15 spectroscopic members after the velocity clipping and an
 # unflagged dispersion (bootstrap mean). The line is an orthogonal-distance (major-axis) fit of
 # log λ = a log σ_v + b; dotted: the relation of Kluge et al. (2024) for λ_norm (eRASS1),
-# multiplied by 1.039, their griz-to-grz normalisation.
+# divided by 1.039 to give their griz λ (λ_norm = 1.039 λ_griz, their Table 2).
 
 # %%
 def orthogonal_fit(x, y):
@@ -196,7 +196,7 @@ xs = np.linspace(150, 1600, 50)
 ax.plot(xs, 10 ** (a_ * np.log10(xs) + b_), color=ORANGE, lw=1.4,
         label=f"rema: log λ = {a_:.2f} log σ_v {b_:+.2f}, scatter {np.std(resid):.2f} dex")
 ka, kb = LIT["K24_lam_sig"]
-ax.plot(xs, LIT["K24_snorm_griz"] * 10 ** (ka * np.log10(xs) + kb), color=INK2, ls=":", label="Kluge+24 (× 1.039)")
+ax.plot(xs, 10 ** (ka * np.log10(xs) + kb) / LIT["K24_snorm_griz"], color=INK2, ls=":", label="Kluge+24 (÷ 1.039)")
 ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel("σ_v [km/s]")

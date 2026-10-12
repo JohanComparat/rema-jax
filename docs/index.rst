@@ -3,9 +3,11 @@ rema
 
 **Red-sequence matched-filter galaxy cluster finding in JAX, for the Legacy Surveys DR11.**
 
-rema reimplements redMaPPer (Rykoff et al. 2014, 2016). It keeps redMaPPer's red-sequence
+rema reimplements redMaPPer (Rykoff et al. `2014 <https://doi.org/10.1088/0004-637X/785/2/104>`__,
+`2016 <https://doi.org/10.3847/0067-0049/224/1/1>`__). It keeps redMaPPer's red-sequence
 model, zred, richness λ, z_λ, BCG and wcen centring, percolation and redshift scans at given
-positions (zscan), and adds the Clerc et al. (2016) velocity clipping. The kernels are batched JAX that run on CPU or GPU, λ has exact
+positions (zscan), and adds the `Clerc et al. (2016) <https://doi.org/10.1093/mnras/stw2214>`__
+velocity clipping. The kernels are batched JAX that run on CPU or GPU, λ has exact
 derivatives, and the package installs with ``pip``.
 
 **The DR11 south catalogue is done:** 3,481,608 clusters with λ ≥ 3 (145,133 with λ ≥ 20) over
@@ -37,7 +39,8 @@ What differs from redMaPPer
      - rema
    * - Colour likelihood
      - χ² of the colours in magnitudes
-     - χ² in asinh magnitudes, softened at each band's 1σ flux error, so faint and negative
+     - χ² in asinh magnitudes (`Lupton et al. 1999 <https://doi.org/10.1086/301004>`__),
+       softened at each band's 1σ flux error, so faint and negative
        g fluxes stay usable (``model.chisq_mode: lupt``). ``mag`` reproduces redMaPPer.
    * - Selection and depth
      - The redMaPPer DR10 input catalogue drops galaxies with a flux ≤ 0 or σ_m > 1 in any band. The local depth

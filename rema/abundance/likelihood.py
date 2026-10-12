@@ -10,7 +10,7 @@
   covariance of their (M0, F, G) (stat + sys). This calibrates the mass-richness relation the way
   the DES Y1 cluster analysis did, rather than inverting <M | lambda> (which ignores the
   Eddington bias).
-- Priors: :data:`DEFAULT_PRIORS`; Planck 2018 on h and n_s, BBN on omega_b, the measured
+- Priors: :data:`DEFAULT_PRIORS`; Planck 2018 on h, n_s and omega_b, the measured
   normalisation of rema's richness against DES Y1, flat elsewhere; the emu_pk training box is
   enforced (outside it the log-posterior is -inf).
 

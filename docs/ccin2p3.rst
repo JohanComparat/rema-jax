@@ -18,7 +18,8 @@ The catalogue
 - **Calibration:** one red-sequence calibration in g, r, i, z (z-band reference), fitted on RA
   160–180° and 190–210°, Dec −10° to 10° (1.29 M spectroscopic redshifts, 49,524 clusters).
 - **Spectroscopy:** the ``Z_SPEC`` of the DR11 photo-z sweeps; ``SPEC_Z_BOOT``, ``VDISP_BOOT``,
-  ``CG_SPEC_Z`` and ``BEST_Z`` come from the Clerc et al. (2016) clipping (:doc:`dr11`, step 7).
+  ``CG_SPEC_Z`` and ``BEST_Z`` come from the `Clerc et al. (2016) <https://doi.org/10.1093/mnras/stw2214>`__
+  clipping (:doc:`dr11`, step 7).
 
 .. list-table::
    :header-rows: 1
@@ -40,7 +41,8 @@ The catalogue
      - Part 1: RA 240–360° and the polar cap below Dec −85°. 79 of 94 regions, 1,028,352
        clusters. The same files, with the same calibration.
    * - ``external/``
-     - The public cluster catalogues and the DR10 red-sequence model of Kluge et al. (2024)
+     - The public cluster catalogues and the DR10 red-sequence model of
+       `Kluge et al. (2024) <https://doi.org/10.1051/0004-6361/202349031>`__
        used by :doc:`redmapper_dr11`, with a ``README.txt`` of their sources.
    * - ``notebooks/``
      - What the :ref:`notebooks <notebooks>` wrote when they were executed at CC-IN2P3.
@@ -130,8 +132,8 @@ arrays of CPU jobs, then point the scans at that index:
 
 ``scripts/scan/public_catalogues.py`` writes the public cluster catalogues kept in
 ``dr11/south/rema/external`` as scan-positions inputs (``--sample N`` for N random clusters in
-the DR11 south sweeps). A catalogue of more than 200,000 rows (Wen & Han 2024) is written as
-slices of 15° in RA, ``<name>_ra<RA0>.fits``, one job each; ``scripts/scan/merge_parts.py OUT
+the DR11 south sweeps). A catalogue of more than 200,000 rows
+(`Wen & Han 2024 <https://doi.org/10.3847/1538-4365/ad409d>`__) is written as slices of 15° in RA, ``<name>_ra<RA0>.fits``, one job each; ``scripts/scan/merge_parts.py OUT
 PART...`` joins their outputs, sorted by the row in the original table.
 ``scripts/scan/finalize_scan.sh WORK DEST``, submitted after the scans, joins the slices, checks
 every output against its input, copies outputs, inputs and logs to ``DEST``

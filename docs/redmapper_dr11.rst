@@ -2,10 +2,11 @@ redMaPPer blind mode on DR11
 ============================
 
 This page shows the DR11 south production catalogue of rema (blind mode, version 0.2.0) in the
-figures of the redMaPPer papers: the SDSS DR8 catalogue of Rykoff et al. (2014, R14), the DES
-Science Verification catalogue of Rykoff et al. (2016, R16), the Legacy Surveys DR10 runs of
-Kluge et al. (2024, K24), and later papers that validated redMaPPer catalogues against
-spectroscopy, X-ray, SZ and other optical catalogues (list at the end). Each caption names the
+figures of the redMaPPer papers: the SDSS DR8 catalogue of
+`Rykoff et al. (2014, R14) <https://doi.org/10.1088/0004-637X/785/2/104>`__, the DES Science Verification catalogue of
+`Rykoff et al. (2016, R16) <https://doi.org/10.3847/0067-0049/224/1/1>`__, the Legacy Surveys DR10 runs of
+`Kluge et al. (2024, K24) <https://doi.org/10.1051/0004-6361/202349031>`__, and later papers that validated redMaPPer catalogues against
+spectroscopy, X-ray, SZ and other optical catalogues (`Literature`_, at the end). Each caption names the
 figure it reproduces. The scripts that make the figures, and a notebook built from them, are
 described under `Reproduce`_.
 
@@ -28,7 +29,7 @@ Catalogue and footprint
   statistics are therefore given outside this area ("independent") and inside it separately.
 - **Spectroscopic redshifts.** They come with the DR11 photo-z sweeps (``Z_SPEC``: SDSS, BOSS,
   eBOSS, DESI, GAMA and others; COSMOS2015 photo-z excluded). The spectroscopic post-processing
-  (Clerc et al. 2016 clipping) gives each cluster ``SPEC_Z_BOOT``, ``VDISP_BOOT`` and the redshift
+  (`Clerc et al. 2016 <https://doi.org/10.1093/mnras/stw2214>`__ clipping) gives each cluster ``SPEC_Z_BOOT``, ``VDISP_BOOT`` and the redshift
   of its central galaxy ``CG_SPEC_Z``.
 
 Numbers
@@ -36,7 +37,7 @@ Numbers
 
 The table collects the numbers measured in the figures below, next to the values published for
 other redMaPPer catalogues. λ is the rema richness in g, r, i, z, not normalised to any other
-filter set (K24 quote λ_norm, normalised to grz; their griz λ is 1.039 λ_norm).
+filter set (K24 quote λ_norm, normalised to grz; their λ_norm is 1.039 times their griz λ).
 
 .. include:: figures/redmapper_dr11/values.rst
 
@@ -58,9 +59,11 @@ Red-sequence calibration
 
    Red-sequence parameters against redshift (R14 Fig. 5): mean colour at the pivot, slope, intrinsic
    scatter and pivot magnitude. The mean g − r and r − z agree with K24 within 0.04 mag below
-   z ≈ 0.6; the g − r of Comparat et al. (2025, from cluster–galaxy cross-correlations) is 0.02–0.10
-   mag redder, the difference growing with redshift. The intrinsic scatter of g − r (0.06–0.08 at z < 0.35) is larger than that of K24 and Comparat et
-   al. (≈ 0.045); r − i and i − z are much tighter (0.01–0.03) where they carry the break.
+   z ≈ 0.6; the g − r of `Comparat et al. (2025) <https://doi.org/10.1051/0004-6361/202555287>`__ (from
+   cluster–galaxy cross-correlations) is 0.02–0.10 mag redder, the difference growing with
+   redshift. The intrinsic scatter of g − r (0.06–0.08 at z < 0.35) is larger than that of K24 and
+   of Comparat et al. (0.042–0.059 in their Table 2); r − i and i − z are much tighter
+   (0.01–0.03) where they carry the break.
 
 .. figure:: figures/redmapper_dr11/rs_cmd.png
    :alt: Colour-magnitude diagrams of members in four redshift slices
@@ -144,18 +147,21 @@ Richness
 .. figure:: figures/redmapper_dr11/richness_external.png
    :alt: rema lambda against DES Y1, SDSS DR8 and eRASS1 lambda, and their ratios against redshift
 
-   λ of rema against the λ of DES Y1, SDSS DR8 and the eRASS1 λ_norm of K24 (K24 Fig. 11; DES Y3
-   Fig. 3), for one-to-one matches within 1.5′ and \|Δz\|/(1+z) < 0.02 (MASKFRAC < 0.1), coloured by
-   z_λ; bottom: the ratio against z_λ. rema λ is 0.89 times DES Y1 in the median (K24 found 0.79 for
-   their DR10 λ_norm), from ≈ 1.05 at z = 0.2 to ≈ 0.85 at z = 0.6. Against SDSS the ratio drops above z = 0.3, where SDSS becomes
-   too shallow, and follows the relation of Ider Chitham et al. (2020). rema λ is 13% above λ_norm
-   (K24 run at the eRASS1 positions on DR10), 9% more than their griz/grz normalisation (1.039).
+   λ of rema against the λ of DES Y1, SDSS DR8 and the eRASS1 λ_norm of K24 (K24 Fig. 11;
+   `DES Collaboration 2025 <https://arxiv.org/abs/2503.13632>`__ Fig. 3), for one-to-one matches
+   within 1.5′ and \|Δz\|/(1+z) < 0.02 (MASKFRAC < 0.1), coloured by z_λ; bottom: the ratio
+   against z_λ. rema λ is 0.89 times DES Y1 in the median (K24 found 0.79 for their DR10 λ_norm),
+   from ≈ 1.05 at z = 0.2 to ≈ 0.85 at z = 0.6. Against SDSS the ratio drops above z = 0.3, where
+   SDSS becomes too shallow, and follows the relation of
+   `Ider Chitham et al. (2020) <https://doi.org/10.1093/mnras/staa3044>`__. rema λ is 13% above
+   λ_norm (K24 run at the eRASS1 positions on DR10), 17% more than their griz λ
+   (λ_norm = 1.039 λ_griz).
 
 .. figure:: figures/redmapper_dr11/richness_vdisp.png
    :alt: lambda against velocity dispersion for clusters with at least 15 spectroscopic members
 
    λ against the velocity dispersion of clusters with at least 15 spectroscopic members (K24 Fig.
-   18; Wetzell et al. 2022 Fig. 3), coloured by z_λ, with an orthogonal fit and the K24 relation.
+   18; `Wetzell et al. 2022 <https://doi.org/10.1093/mnras/stac1623>`__ Fig. 3), coloured by z_λ, with an orthogonal fit and the K24 relation.
    The slope is steeper than K24's (table) and the scatter larger (≈ 0.4 dex in λ): the blind
    catalogue includes projected systems, and the dispersions of poor clusters rest on few members.
 
@@ -192,8 +198,8 @@ Depth, volume limit and abundance
    Cluster density against z_λ for λ ≥ 10, 20 and 40, in the sky where z_vlim is above each bin
    (R14 Fig. 18; R16 Fig. 6; K24 Fig. 12). Left: per deg² and Δz = 0.05; right: comoving density,
    with the levels of SDSS DR8 below z = 0.35 (R14, bands), SDSS DR8 v6.3 and DES Y1 at λ ≥ 20
-   (symbols) and the abundance of halos above M500c = 0.7, 1.0 and 1.3 × 10¹⁴ M☉ (Tinker et al.
-   2008). The λ ≥ 20 density matches SDSS DR8 at z < 0.35 and lies 0–30% below DES Y1 at
+   (symbols) and the abundance of halos above M500c = 0.7, 1.0 and 1.3 × 10¹⁴ M☉
+   (`Tinker et al. 2008 <https://doi.org/10.1086/591439>`__). The λ ≥ 20 density matches SDSS DR8 at z < 0.35 and lies 0–30% below DES Y1 at
    0.2 < z < 0.6; it falls between the halo abundances above 0.7 and 1.0 × 10¹⁴ M☉, as in R16. At
    z > 0.6 it decreases faster than the halo abundance at fixed mass.
 
@@ -219,7 +225,8 @@ Depth, volume limit and abundance
    :alt: Normalised cluster density against depth, extinction, seeing, masked fraction and region-edge distance
 
    Density of λ ≥ 20 clusters at 0.1 < z_λ < 0.5, in pixels with z_vlim > 0.5, against the z-band
-   depth, E(B−V), z-band PSF size and masked fraction of the pixel (Baxter et al. 2016 Fig. 2), and
+   depth, E(B−V), z-band PSF size and masked fraction of the pixel
+   (`Baxter et al. 2016 <https://doi.org/10.1093/mnras/stw1939>`__ Fig. 2), and
    against the distance to the edge of the region that found the cluster (QA of the merge). The
    density decreases by ≈ 12% from the shallowest to the deepest pixels (the DES area), the
    effect seen in the previous figures. The pixels of lowest extinction, mostly in the deep DES
@@ -235,7 +242,7 @@ Centring
 .. figure:: figures/redmapper_dr11/centering_pcen.png
    :alt: Distribution of P_cen and its mean against lambda and redshift
 
-   Centring probability of the most likely central (R16 Sect. 8): distribution for 5 ≤ λ < 20 and
+   Centring probability of the most likely central (R14 Sect. 8): distribution for 5 ≤ λ < 20 and
    λ ≥ 20, mean against λ in four redshift bins, and mean against z_λ for λ ≥ 20 with the fraction of
    clusters with P_cen > 0.9. ⟨P_cen⟩ = 0.82 for λ ≥ 20, as predicted for DES SV (R16); it rises
    with λ and decreases above z ≈ 0.6.
@@ -244,7 +251,8 @@ Centring
    :alt: Offsets between rema centres and X-ray or SZ centres, with two-component fits
 
    Offsets between the rema centre and the eRASS1 X-ray, ACT DR6 SZ and SPT-SZ centres, in units of
-   R_λ, with the two-component model of R16 (Figs. 11–12; Zhang et al. 2019 Fig. 3): a fraction
+   R_λ, with the two-component model of R16 (Figs. 11–12;
+   `Zhang et al. 2019 <https://doi.org/10.1093/mnras/stz1361>`__ Fig. 3): a fraction
    ρ0 well centred (width σ0, the positional errors) and the rest miscentred (width σ1). With
    ACT and SPT, ρ0 = 0.79 and 0.83, within the 0.78 ± 0.11 of R16; σ1 ≈ 0.4 R_λ. The eRASS1 fit
    gives a lower ρ0 (0.63): its positional errors are tens of arcseconds, not a fixed fraction of
@@ -254,7 +262,7 @@ Centring
    :alt: Offsets between rema centres and DES Y1 or SDSS DR8 redMaPPer centres
 
    Offsets between the rema centres and those of DES Y1 and SDSS DR8 redMaPPer (λ ≥ 20 in both;
-   Zhang et al. 2019 Fig. 1). Three quarters of the clusters have the same central galaxy (first
+   `Zhang et al. 2019 <https://doi.org/10.1093/mnras/stz1361>`__ Fig. 1). Three quarters of the clusters have the same central galaxy (first
    bin); the rest are spread to R_λ, the signature of a different choice among the candidates.
 
 Comparison with SZ, X-ray and optical catalogues
@@ -263,7 +271,8 @@ Comparison with SZ, X-ray and optical catalogues
 .. figure:: figures/redmapper_dr11/external_recovery.png
    :alt: Redshift distributions of external clusters and the fraction recovered by rema
 
-   Recovery of external clusters in the footprint (K24 Fig. 10; Rozo & Rykoff 2014 Fig. 4): a
+   Recovery of external clusters in the footprint (K24 Fig. 10;
+   `Rozo & Rykoff 2014 <https://doi.org/10.1088/0004-637X/783/2/80>`__ Fig. 4): a
    rema cluster with λ ≥ 5 within 1 h⁻¹ Mpc and \|Δz\|/(1+z) < 0.05. Top: redshift distributions
    (lines) and recovered clusters (filled); bottom: recovered fraction against redshift and
    mass. 93–95% of the ACT and SPT clusters are recovered at all redshifts; Planck PSZ2, MCXC and
@@ -282,7 +291,8 @@ Comparison with SZ, X-ray and optical catalogues
    :alt: lambda against SZ masses, eRASS1 masses and eRASS1 luminosities
 
    λ against the SZ masses of ACT DR6 and SPT, the eRASS1 masses and the eRASS1 luminosity L500
-   (Rozo et al. 2015 Fig. 2; Saro et al. 2015 Fig. 4; Bleem et al. 2020 Fig. 9), for 0.1 < z < 0.6,
+   (`Rozo et al. 2015 <https://doi.org/10.1093/mnras/stv605>`__ Fig. 2; `Saro et al. 2015 <https://doi.org/10.1093/mnras/stv2141>`__ Fig. 4;
+   `Bleem et al. 2020 <https://doi.org/10.3847/1538-4365/ab6993>`__ Fig. 9), for 0.1 < z < 0.6,
    with a least-squares fit of ln λ on the mass proxy; the slopes and scatters are in the
    legends. The scatter (σ_lnλ ≈ 0.4–0.5) includes the measurement errors of both quantities and
    the outliers below the relation (projections and wrong counterparts).
@@ -290,8 +300,9 @@ Comparison with SZ, X-ray and optical catalogues
 .. figure:: figures/redmapper_dr11/external_wenhan.png
    :alt: Fraction of rema clusters with a Wen and Han counterpart and the reverse
 
-   Cross-identification with the 1.58 million clusters of Wen & Han (2024) in the Legacy Surveys
-   (their Fig. 10; Zou et al. 2021 Fig. 9). Left: fraction of rema clusters with a Wen & Han
+   Cross-identification with the 1.58 million clusters of
+   `Wen & Han (2024) <https://doi.org/10.3847/1538-4365/ad409d>`__ in the Legacy Surveys
+   (their Fig. 10; `Zou et al. 2021 <https://doi.org/10.3847/1538-4365/abe5b0>`__ Fig. 9). Left: fraction of rema clusters with a Wen & Han
    counterpart against λ; right: fraction of Wen & Han clusters with a rema counterpart against
    their mass. 93–97% of the Wen & Han clusters with M500 ≳ 2 × 10¹⁴ M☉ have a rema counterpart
    at every redshift. 85–90% of the rema clusters with λ ≳ 30 have a Wen & Han counterpart below
@@ -314,8 +325,9 @@ Members
    :alt: Fraction of spectroscopic members kept by the velocity clipping against P
 
    Fraction of the spectroscopic members (not the central) kept by the velocity clipping, in
-   bins of P, for clusters with at least 10 spectroscopic members (Rozo et al. 2015b Fig. 8;
-   Rines et al. 2018 Fig. 14). The fraction follows P above P ≈ 0.6 but stays at ≈ 0.45 at low P:
+   bins of P, for clusters with at least 10 spectroscopic members
+   (`Rozo et al. 2015b <https://doi.org/10.1093/mnras/stv1560>`__ Fig. 8; `Rines et al. 2018 <https://doi.org/10.3847/1538-4357/aacd49>`__
+   Fig. 14). The fraction follows P above P ≈ 0.6 but stays at ≈ 0.45 at low P:
    the spectroscopic targets are bright and red, and the clipping keeps every galaxy within
    ±3σ_v, including the interlopers projected in velocity (the next figure).
 
@@ -323,8 +335,9 @@ Members
    :alt: Stacked velocity distributions in four richness bins and the projected fraction
 
    P-weighted velocities of the spectroscopic members in units of each cluster's σ_v, stacked in
-   bins of λ, and the fraction in a flat (projected) component fitted with a Gaussian (Myles et
-   al. 2021 Fig. 3; Myles et al. 2025 Fig. 4). The projected fraction is 4–8%, decreasing with λ.
+   bins of λ, and the fraction in a flat (projected) component fitted with a Gaussian
+   (`Myles et al. 2021 <https://doi.org/10.1093/mnras/stab1243>`__ Fig. 3; `Myles et al. 2025 <https://doi.org/10.1093/mnras/staf1831>`__
+   Fig. 4). The projected fraction is 4–8%, decreasing with λ.
    It is a lower limit: Myles et al. also model the interlopers that fall inside the cluster
    Gaussian, which this simple fit does not separate.
 
@@ -335,7 +348,7 @@ Members
    against R/R_λ in four λ bins, with the NFW filter of the richness (dashed; R14 Fig. 16). The
    profiles are self-similar in R/R_λ; the first bin holds the central galaxy, and the drop beyond
    R_λ is the radial cut. Right: fraction of spectroscopic members kept by the clipping against
-   R/R_λ (Tomooka et al. 2020 Fig. 2): from 95% at the centre to 55–75% at R_λ, higher for richer
+   R/R_λ (`Tomooka et al. 2020 <https://doi.org/10.1093/mnras/staa2841>`__ Fig. 2): from 95% at the centre to 55–75% at R_λ, higher for richer
    clusters.
 
 Reproduce
@@ -343,7 +356,8 @@ Reproduce
 
 The figures are made by the scripts of ``docs/figures/redmapper_dr11``; they read the
 production catalogues, one DR11 randoms file and public cluster catalogues, and need no GPU,
-only ``colossus`` (halo mass function) and ``pandas`` (CDS tables) besides rema and matplotlib:
+only ``colossus`` (`Diemer 2018 <https://doi.org/10.3847/1538-4365/aaee8c>`__; halo mass function) and ``pandas`` (CDS
+tables) besides rema and matplotlib:
 
 .. code-block:: bash
 
@@ -388,29 +402,30 @@ their sources; at CC-IN2P3 in ``/sps/lsst/datasets/desi/legacysurveys/dr11/south
      - Source
    * - SDSS DR8 redMaPPer v6.3 (R16)
      - CDS ``J/ApJS/224/1``, ``cat_dr8.dat``
-   * - DES Y1 redMaPPer v6.4 (McClintock et al. 2019)
+   * - DES Y1 redMaPPer v6.4 (`McClintock et al. 2019 <https://doi.org/10.1093/mnras/sty2711>`__)
      - DES public release, ``redmapper_y1a1_public_v6.4_catalog.fits``
-   * - eRASS1 clusters (Bulbul et al. 2024; optical properties K24)
+   * - eRASS1 clusters (`Bulbul et al. 2024 <https://doi.org/10.1051/0004-6361/202348264>`__; optical properties K24)
      - eROSITA DR1, ``erass1cl_primary_v3.2.fits`` and ``eRASS1_clusters_optical.fits``
-   * - ACT DR6 clusters (ACT Collaboration 2025)
+   * - ACT DR6 clusters (`ACT-DES-HSC Collaboration 2026 <https://doi.org/10.33232/001c.155863>`__)
      - ``DR6_cluster-catalog_v1.0.fits`` (extragalactic.phys.wits.ac.za)
-   * - ACT DR5 clusters (Hilton et al. 2021)
+   * - ACT DR5 clusters (`Hilton et al. 2021 <https://doi.org/10.3847/1538-4365/abd023>`__)
      - ``ACT_DR5_cluster-catalog_v1.1.fits``
-   * - SPT-SZ 2500d (Bocquet et al. 2019)
+   * - SPT-SZ 2500d (`Bocquet et al. 2019 <https://doi.org/10.3847/1538-4357/ab1f10>`__)
      - ``2500d_cluster_sample_Bocquet19.fits``
-   * - Planck PSZ2 (Planck Collaboration 2016)
+   * - Planck PSZ2 (`Planck Collaboration 2016 <https://doi.org/10.1051/0004-6361/201525823>`__)
      - Planck Legacy Archive, ``HFI_PCCS_SZ-union_R2.08.fits``
-   * - MCXC (Piffaretti et al. 2011)
+   * - MCXC (`Piffaretti et al. 2011 <https://doi.org/10.1051/0004-6361/201015377>`__)
      - ``mcxc.fits``
-   * - Wen & Han (2024)
+   * - `Wen & Han (2024) <https://doi.org/10.3847/1538-4365/ad409d>`__
      - CDS ``J/ApJS/272/39``, ``table2.dat``
-   * - Kluge et al. (2024), DR10 south grz red-sequence model
+   * - K24, DR10 south grz red-sequence model
      - ``legacy_dr10_south_v0.3_grz_z_cal_iter1_pars.fit``
 
 Literature
 ----------
 
-Papers whose figures are reproduced or used as references on this page:
+Papers whose figures are reproduced or used as references on this page. The journal reference
+links to the published paper (DOI), the arXiv number to the preprint.
 
 .. list-table::
    :header-rows: 1
@@ -419,88 +434,110 @@ Papers whose figures are reproduced or used as references on this page:
    * - Paper
      - arXiv
      - Used here
-   * - Rykoff et al. 2014, ApJ 785, 104 (redMaPPer I, SDSS DR8)
+   * - Rykoff et al. 2014, `ApJ 785, 104 <https://doi.org/10.1088/0004-637X/785/2/104>`__ (redMaPPer I, SDSS DR8)
      - `1303.3562 <https://arxiv.org/abs/1303.3562>`__
      - Figs. 1, 3–5 (red sequence), 7, 9–12 (redshifts), 16 (example cluster), 17–19 (density,
-       λ–z), 27 (SCALEVAL)
-   * - Rozo & Rykoff 2014, ApJ 783, 80 (redMaPPer II)
+       λ–z), 27 (SCALEVAL); Sect. 8 (centring)
+   * - Rozo & Rykoff 2014, `ApJ 783, 80 <https://doi.org/10.1088/0004-637X/783/2/80>`__ (redMaPPer II)
      - `1303.3373 <https://arxiv.org/abs/1303.3373>`__
      - Fig. 4 (recovery of X-ray clusters)
-   * - Rozo et al. 2015, MNRAS 450, 592 (redMaPPer III, Planck)
+   * - Rozo et al. 2015, `MNRAS 450, 592 <https://doi.org/10.1093/mnras/stv605>`__ (redMaPPer III, Planck)
      - `1401.7716 <https://arxiv.org/abs/1401.7716>`__
      - Fig. 2 (λ against SZ mass)
-   * - Rozo et al. 2015, MNRAS 453, 38 (redMaPPer IV, membership)
+   * - Rozo et al. 2015b, `MNRAS 453, 38 <https://doi.org/10.1093/mnras/stv1560>`__ (redMaPPer IV, membership)
      - `1410.1193 <https://arxiv.org/abs/1410.1193>`__
      - Fig. 8 (P against spectroscopic membership)
-   * - Rykoff et al. 2016, ApJS 224, 1 (DES SV, SDSS DR8 v6.3)
+   * - Rykoff et al. 2016, `ApJS 224, 1 <https://doi.org/10.3847/0067-0049/224/1/1>`__ (DES SV, SDSS DR8 v6.3)
      - `1601.00621 <https://arxiv.org/abs/1601.00621>`__
      - Figs. 1–6 (depth, density maps, redshifts, comoving density), 11–12 (centring)
-   * - Kluge et al. 2024, A&A 688, A210 (eRASS1 identification, LS DR10)
+   * - Kluge et al. 2024, `A&A 688, A210 <https://doi.org/10.1051/0004-6361/202349031>`__ (eRASS1 identification, LS DR10)
      - `2402.08453 <https://arxiv.org/abs/2402.08453>`__
      - Figs. 2–4, 7, 10–13, 16–18, B.1–B.3, C.1; the eRASS1 λ_norm and z_vlim
-   * - Bulbul et al. 2024, A&A 685, A106 (eRASS1 clusters)
+   * - Bulbul et al. 2024, `A&A 685, A106 <https://doi.org/10.1051/0004-6361/202348264>`__ (eRASS1 clusters)
      - `2402.08452 <https://arxiv.org/abs/2402.08452>`__
      - eRASS1 positions, masses and luminosities
-   * - Ider Chitham et al. 2020, MNRAS 499, 4768 (CODEX)
+   * - Ider Chitham et al. 2020, `MNRAS 499, 4768 <https://doi.org/10.1093/mnras/staa3044>`__ (CODEX)
      - —
      - Eq. 1 (Legacy Surveys against SDSS λ)
-   * - McClintock et al. 2019, MNRAS 482, 1352 (DES Y1)
+   * - McClintock et al. 2019, `MNRAS 482, 1352 <https://doi.org/10.1093/mnras/sty2711>`__ (DES Y1)
      - `1805.00039 <https://arxiv.org/abs/1805.00039>`__
      - DES Y1 redMaPPer catalogue
-   * - Zhang et al. 2019, MNRAS 487, 2578 (DES Y1 miscentring)
+   * - DES Collaboration 2025 (DES Y3 cluster cosmology)
+     - `2503.13632 <https://arxiv.org/abs/2503.13632>`__
+     - Fig. 3 (DES Y1 against DES Y3 λ and redshift)
+   * - Zhang et al. 2019, `MNRAS 487, 2578 <https://doi.org/10.1093/mnras/stz1361>`__ (DES Y1 miscentring)
      - `1901.07119 <https://arxiv.org/abs/1901.07119>`__
      - Figs. 1, 3 (centre offsets)
-   * - Saro et al. 2015, MNRAS 454, 2305 (SPT × redMaPPer)
+   * - Saro et al. 2015, `MNRAS 454, 2305 <https://doi.org/10.1093/mnras/stv2141>`__ (SPT × redMaPPer)
      - `1506.07814 <https://arxiv.org/abs/1506.07814>`__
      - Fig. 4 (λ against SPT mass)
-   * - Bleem et al. 2020, ApJS 247, 25 (SPT-ECS)
+   * - Bleem et al. 2020, `ApJS 247, 25 <https://doi.org/10.3847/1538-4365/ab6993>`__ (SPT-ECS)
      - `1910.04121 <https://arxiv.org/abs/1910.04121>`__
-     - Fig. 9 (λ against SZ significance and mass)
-   * - Seppi et al. 2023, A&A 671, A57 (eRASS1 and eFEDS offsets)
+     - Fig. 9 (λ against SZ significance)
+   * - Seppi et al. 2023, `A&A 671, A57 <https://doi.org/10.1051/0004-6361/202245138>`__ (eRASS1 and eFEDS offsets)
      - `2212.10107 <https://arxiv.org/abs/2212.10107>`__
      - X-ray–optical offsets
-   * - Hilton et al. 2021, ApJS 253, 3 (ACT DR5)
+   * - Hilton et al. 2021, `ApJS 253, 3 <https://doi.org/10.3847/1538-4365/abd023>`__ (ACT DR5)
      - `2009.11043 <https://arxiv.org/abs/2009.11043>`__
      - ACT DR5 catalogue
-   * - ACT Collaboration 2025 (ACT DR6 clusters)
+   * - ACT-DES-HSC Collaboration 2026, `OJAp 9 <https://doi.org/10.33232/001c.155863>`__ (ACT DR6 clusters)
      - `2507.21459 <https://arxiv.org/abs/2507.21459>`__
      - ACT DR6 catalogue
-   * - Rines et al. 2018, ApJ 862, 172 (HeCS-redMaPPer)
+   * - Bocquet et al. 2019, `ApJ 878, 55 <https://doi.org/10.3847/1538-4357/ab1f10>`__ (SPT-SZ 2500d)
+     - `1812.01679 <https://arxiv.org/abs/1812.01679>`__
+     - SPT-SZ catalogue
+   * - Planck Collaboration 2016, `A&A 594, A27 <https://doi.org/10.1051/0004-6361/201525823>`__ (PSZ2)
+     - `1502.01598 <https://arxiv.org/abs/1502.01598>`__
+     - Planck PSZ2 catalogue
+   * - Piffaretti et al. 2011, `A&A 534, A109 <https://doi.org/10.1051/0004-6361/201015377>`__ (MCXC)
+     - `1007.1916 <https://arxiv.org/abs/1007.1916>`__
+     - MCXC catalogue
+   * - Rines et al. 2018, `ApJ 862, 172 <https://doi.org/10.3847/1538-4357/aacd49>`__ (HeCS-redMaPPer)
      - `1712.00212 <https://arxiv.org/abs/1712.00212>`__
      - Fig. 14 (spectroscopic member fraction against P)
-   * - Myles et al. 2021, MNRAS 505, 33 (projection effects, SDSS)
+   * - Myles et al. 2021, `MNRAS 505, 33 <https://doi.org/10.1093/mnras/stab1243>`__ (projection effects, SDSS)
      - `2011.07070 <https://arxiv.org/abs/2011.07070>`__
      - Fig. 3 (projected fraction against λ)
-   * - Myles et al. 2025 (projection effects, DESI)
+   * - Myles et al. 2025, `MNRAS 544, 2080 <https://doi.org/10.1093/mnras/staf1831>`__ (projection effects, DESI)
      - `2506.06249 <https://arxiv.org/abs/2506.06249>`__
      - Fig. 4 (projected fraction against λ and z)
-   * - Wetzell et al. 2022, MNRAS 514, 4696 (DES Y3 velocity dispersions)
+   * - Wetzell et al. 2022, `MNRAS 514, 4696 <https://doi.org/10.1093/mnras/stac1623>`__ (DES Y3 velocity dispersions)
      - `2107.07631 <https://arxiv.org/abs/2107.07631>`__
      - Fig. 3 (σ_v against λ)
-   * - Tomooka et al. 2020 (clusters have edges)
+   * - Tomooka et al. 2020, `MNRAS 499, 1291 <https://doi.org/10.1093/mnras/staa2841>`__ (clusters have edges)
      - `2003.11555 <https://arxiv.org/abs/2003.11555>`__
      - Fig. 2 (spectroscopic members against radius)
-   * - Baxter et al. 2016, MNRAS 463, 205 (redMaPPer clustering)
+   * - Baxter et al. 2016, `MNRAS 463, 205 <https://doi.org/10.1093/mnras/stw1939>`__ (redMaPPer clustering)
      - `1604.00048 <https://arxiv.org/abs/1604.00048>`__
      - Fig. 2 (density against observing conditions)
-   * - Wen & Han 2024, ApJS 272, 39 (1.58 million clusters)
+   * - Wen & Han 2024, `ApJS 272, 39 <https://doi.org/10.3847/1538-4365/ad409d>`__ (1.58 million clusters)
      - `2404.02002 <https://arxiv.org/abs/2404.02002>`__
      - Fig. 10 (cross-identification)
-   * - Zou et al. 2021, ApJS 253, 56 (Legacy Surveys clusters)
+   * - Zou et al. 2021, `ApJS 253, 56 <https://doi.org/10.3847/1538-4365/abe5b0>`__ (Legacy Surveys clusters)
      - `2101.12340 <https://arxiv.org/abs/2101.12340>`__
      - Fig. 9 (match rate with redMaPPer)
-   * - Comparat et al. 2025, A&A 700, A271
+   * - Comparat et al. 2025, `A&A 700, A271 <https://doi.org/10.1051/0004-6361/202555287>`__ (clusters × galaxies)
      - `2504.10241 <https://arxiv.org/abs/2504.10241>`__
      - Table 2 (g − r red sequence)
-   * - Tinker et al. 2008, ApJ 688, 709
+   * - Clerc et al. 2016, `MNRAS 463, 4490 <https://doi.org/10.1093/mnras/stw2214>`__ (SPIDERS)
+     - `1608.08963 <https://arxiv.org/abs/1608.08963>`__
+     - Velocity clipping of the spectroscopic members
+   * - Tinker et al. 2008, `ApJ 688, 709 <https://doi.org/10.1086/591439>`__
      - `0803.2706 <https://arxiv.org/abs/0803.2706>`__
      - Halo mass function
+   * - Diemer 2018, `ApJS 239, 35 <https://doi.org/10.3847/1538-4365/aaee8c>`__ (COLOSSUS)
+     - `1712.04512 <https://arxiv.org/abs/1712.04512>`__
+     - Halo mass function code
 
 Further papers with figures in the same spirit, not reproduced here (they need injections, shear
-catalogues or simulations): Costanzi et al. 2019 (`1807.07072 <https://arxiv.org/abs/1807.07072>`__,
-injections), Lee et al. 2024 (`2410.02497 <https://arxiv.org/abs/2410.02497>`__), Kelly et al. 2024
-(`2310.13207 <https://arxiv.org/abs/2310.13207>`__), Hikage et al. 2018
-(`1702.08614 <https://arxiv.org/abs/1702.08614>`__), Oguri et al. 2018 (CAMIRA,
-`1701.00818 <https://arxiv.org/abs/1701.00818>`__), Euclid Collaboration 2025 (XCI,
-`2509.06805 <https://arxiv.org/abs/2509.06805>`__), DES Collaboration 2025 (Y3 clusters,
-`2503.13632 <https://arxiv.org/abs/2503.13632>`__).
+catalogues or simulations): Costanzi et al. 2019
+(`MNRAS 482, 490 <https://doi.org/10.1093/mnras/sty2665>`__,
+`1807.07072 <https://arxiv.org/abs/1807.07072>`__; injections), Lee et al. 2025
+(`PRD 111, 063502 <https://doi.org/10.1103/PhysRevD.111.063502>`__,
+`2410.02497 <https://arxiv.org/abs/2410.02497>`__), Kelly et al. 2023 (preprint,
+`2310.13207 <https://arxiv.org/abs/2310.13207>`__), Hikage et al. 2018
+(`MNRAS 480, 2689 <https://doi.org/10.1093/mnras/sty2013>`__,
+`1702.08614 <https://arxiv.org/abs/1702.08614>`__), Oguri et al. 2018 (CAMIRA,
+`PASJ 70, S20 <https://doi.org/10.1093/pasj/psx042>`__,
+`1701.00818 <https://arxiv.org/abs/1701.00818>`__), Euclid Collaboration 2025 (XCI, preprint,
+`2509.06805 <https://arxiv.org/abs/2509.06805>`__).

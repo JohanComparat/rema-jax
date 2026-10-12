@@ -13,7 +13,8 @@ Summary
   10–40 % more clusters than the red-sequence finder**; the photo-z filter of rema finds no more.
 - The gain is at **z < 0.5**, in poor systems rich in blue members (median red fraction of the
   PSCD members 0.32–0.41, against 0.51–0.56 for the photo-z filter).
-- PSCD recovers more of the **low-mass clusters** of Wen & Han (2024): 38–64 % against 13–20 % at
+- PSCD recovers more of the **low-mass clusters** of
+  `Wen & Han (2024) <https://doi.org/10.3847/1538-4365/ad409d>`__: 38–64 % against 13–20 % at
   z < 0.2; above M500 = 3 × 10¹⁴ M☉ every finder recovers 75–100 %.
 - **No finder gains at z > 0.6**: fainter than z = 21 the DR11 photo-z scatter by 0.03–0.08 (1 + z),
   with 3–14 % outliers.
@@ -402,7 +403,8 @@ Open questions and next steps
   its false detections at z > 0.8 in shallow data, and favours it at high z.
 - Photo-z distributions from the quantiles (Z_PHOT_L68, U68, L95, U95: split normal), and a model
   of the outliers, instead of Gaussians.
-- Purity from mocks with realistic large-scale structure (AMICO's SinFoniA); the null tests miss
+- Purity from mocks with realistic large-scale structure (AMICO's SinFoniA,
+  `Maturi et al. 2025 <https://doi.org/10.1051/0004-6361/202554340>`__); the null tests miss
   projections of real structures.
 - A depth-dependent background for the red sequence: its false detections at fixed λ grow in
   shallow data.

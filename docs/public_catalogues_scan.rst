@@ -5,9 +5,9 @@ rema measured the richness λ, the redshift z_λ, the optical centre and, where 
 the spectroscopic redshift at the position of every cluster of nine public catalogues, in the
 DR11 south data. The SZ catalogues are ACT DR5, ACT DR6, SPT-SZ 2500d and Planck PSZ2; the X-ray
 ones are MCXC and eRASS1; the optical ones are SDSS DR8 redMaPPer, DES Y1 redMaPPer and Wen & Han
-(2024). The positions were measured in scan mode, with the calibration of the DR11 south
-production run (:doc:`ccin2p3`). The products are on the CC-IN2P3 data system, one FITS file per
-catalogue, row for row with the catalogue:
+(2024) (papers under `References`_). The positions were measured in scan mode, with the
+calibration of the DR11 south production run (:doc:`ccin2p3`). The products are on the CC-IN2P3
+data system, one FITS file per catalogue, row for row with the catalogue:
 
 .. code-block:: text
 
@@ -53,7 +53,8 @@ Products
   - ``MASKFRAC`` and ``SCALEVAL``;
   - the centring probabilities.
 - **The spectroscopic columns:** ``NSPEC``, ``SPEC_Z``, ``VDISP``, ``BEST_Z`` and
-  ``BEST_Z_TYPE``, from the Clerc et al. (2016) clipping of the members with a spectroscopic
+  ``BEST_Z_TYPE``, from the `Clerc et al. (2016) <https://doi.org/10.1093/mnras/stw2214>`__ clipping
+  of the members with a spectroscopic
   redshift (``ZSPEC`` of the DR11 photo-z sweeps: DESI, SDSS/BOSS/eBOSS, GAMA, 2dFLenS, ...).
 - **SCANNED:** false for a position outside the DR11 south sweeps; the rema columns are −1
   there.
@@ -159,12 +160,27 @@ To reproduce the figures and the table:
 References
 ----------
 
-- ACT DR5: Hilton et al. (2021), ApJS 253, 3. ACT DR6: ACT Collaboration (2025).
-- SPT-SZ 2500d: Bocquet et al. (2019), ApJ 878, 55.
-- Planck PSZ2: Planck Collaboration (2016), A&A 594, A27.
-- MCXC: Piffaretti et al. (2011), A&A 534, A109.
-- eRASS1: Bulbul et al. (2024), A&A 685, A106; Kluge et al. (2024), A&A 688, A210.
-- SDSS DR8 redMaPPer: Rykoff et al. (2014), ApJ 785, 104; Rykoff et al. (2016), ApJS 224, 1.
-- DES Y1 redMaPPer: McClintock et al. (2019), MNRAS 482, 1352.
-- Wen & Han (2024), ApJS 272, 39.
-- Clerc et al. (2016), MNRAS 463, 4490.
+- ACT DR5: Hilton et al. (2021), `ApJS 253, 3 <https://doi.org/10.3847/1538-4365/abd023>`__
+  (`arXiv:2009.11043 <https://arxiv.org/abs/2009.11043>`__).
+- ACT DR6: ACT-DES-HSC Collaboration (2026), `OJAp 9 <https://doi.org/10.33232/001c.155863>`__
+  (`arXiv:2507.21459 <https://arxiv.org/abs/2507.21459>`__).
+- SPT-SZ 2500d: Bocquet et al. (2019), `ApJ 878, 55 <https://doi.org/10.3847/1538-4357/ab1f10>`__
+  (`arXiv:1812.01679 <https://arxiv.org/abs/1812.01679>`__).
+- Planck PSZ2: Planck Collaboration (2016), `A&A 594, A27 <https://doi.org/10.1051/0004-6361/201525823>`__
+  (`arXiv:1502.01598 <https://arxiv.org/abs/1502.01598>`__).
+- MCXC: Piffaretti et al. (2011), `A&A 534, A109 <https://doi.org/10.1051/0004-6361/201015377>`__
+  (`arXiv:1007.1916 <https://arxiv.org/abs/1007.1916>`__).
+- eRASS1: Bulbul et al. (2024), `A&A 685, A106 <https://doi.org/10.1051/0004-6361/202348264>`__
+  (`arXiv:2402.08452 <https://arxiv.org/abs/2402.08452>`__);
+  Kluge et al. (2024), `A&A 688, A210 <https://doi.org/10.1051/0004-6361/202349031>`__
+  (`arXiv:2402.08453 <https://arxiv.org/abs/2402.08453>`__).
+- SDSS DR8 redMaPPer: Rykoff et al. (2014), `ApJ 785, 104 <https://doi.org/10.1088/0004-637X/785/2/104>`__
+  (`arXiv:1303.3562 <https://arxiv.org/abs/1303.3562>`__);
+  Rykoff et al. (2016), `ApJS 224, 1 <https://doi.org/10.3847/0067-0049/224/1/1>`__
+  (`arXiv:1601.00621 <https://arxiv.org/abs/1601.00621>`__).
+- DES Y1 redMaPPer: McClintock et al. (2019), `MNRAS 482, 1352 <https://doi.org/10.1093/mnras/sty2711>`__
+  (`arXiv:1805.00039 <https://arxiv.org/abs/1805.00039>`__).
+- Wen & Han: Wen & Han (2024), `ApJS 272, 39 <https://doi.org/10.3847/1538-4365/ad409d>`__
+  (`arXiv:2404.02002 <https://arxiv.org/abs/2404.02002>`__).
+- Spectroscopic clipping: Clerc et al. (2016), `MNRAS 463, 4490 <https://doi.org/10.1093/mnras/stw2214>`__
+  (`arXiv:1608.08963 <https://arxiv.org/abs/1608.08963>`__).

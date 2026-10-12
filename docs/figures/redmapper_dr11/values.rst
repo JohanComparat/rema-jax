@@ -75,7 +75,7 @@
      - 1/(1.04 + 0.17 e^{5.4(z−0.36)}) (IC20)
    * - λ / λ_norm (K24, eRASS1 positions)
      - 1.13
-     - 1.039 expected (griz vs grz, K24)
+     - 0.962 expected (λ_norm = 1.039 λ_griz, K24)
    * - λ–σ_v slope (orthogonal fit, ≥ 15 members)
      - 2.62
      - 2.40 (K24)

@@ -6,7 +6,8 @@ member candidate when its colours match the red sequence at the cluster redshift
 dominated by blue galaxies, poor groups and distant clusters, whose red sequence is faint in g
 and r, are missed or found with a low richness. This page tests two ways of finding clusters from
 the DR11 photometric redshifts instead, whatever the galaxies' colours, following the AMICO
-matched filter (Bellagamba et al. 2018; Maturi et al. 2019):
+matched filter (`Bellagamba et al. 2018 <https://doi.org/10.1093/mnras/stx2701>`__;
+`Maturi et al. 2019 <https://doi.org/10.1093/mnras/stz294>`__):
 
 - the **photo-z filter** of rema (``rema blind --set model.filter=photoz``): redMaPPer's
   machinery (seeds, λ, z_λ, percolation, centring on the brightest member) with the red-sequence
@@ -23,7 +24,8 @@ are the 75 deg² strip of the development runs and two regions of the production
 
 **In short:** at the same false-detection rate, PSCD finds 10–40 % more clusters than the
 red-sequence finder, mostly at z < 0.5, poor systems rich in blue members, and recovers more of
-the low-mass clusters of Wen & Han (2024); the photo-z filter finds no more than the red
+the low-mass clusters of `Wen & Han (2024) <https://doi.org/10.3847/1538-4365/ad409d>`__; the photo-z
+filter finds no more than the red
 sequence. Neither improves the completeness at z > 0.6: the DR11 photo-z of the faint members are
 too broad. Almost every photo-z detection is also a (low-λ) red-sequence cluster.
 
@@ -198,15 +200,16 @@ How the finders work
 Galaxy photo-z
 ~~~~~~~~~~~~~~
 
-The galaxy tables carry the photo-z of the DR11 photo-z sweeps (Zhou et al. 2021, 2023):
+The galaxy tables carry the photo-z of the DR11 photo-z sweeps (Zhou et al.
+`2021 <https://doi.org/10.1093/mnras/staa3764>`__, `2023 <https://doi.org/10.1088/1475-7516/2023/11/097>`__):
 ``ZPHOT`` = Z_PHOT_MEDIAN_I and ``ZPHOT_STD`` = Z_PHOT_STD_I. Both finders take the photo-z of
 a galaxy as a Gaussian of mean ZPHOT and width
 
     s = max(err_scale(m) ZPHOT_STD, err_floor (1 + ZPHOT)),
 
-with ``err_floor`` = 0.01 (as Euclid Q1). On the strip's 40,850 spectroscopic galaxies,
-ZPHOT_STD is too large: the robust width of (ZPHOT − ZSPEC)/ZPHOT_STD is 0.85 at z < 19 and
-0.55–0.59 fainter than z = 21. ``err_scale`` is that width, interpolated in magnitude
+with ``err_floor`` = 0.01 (as `Euclid Q1 <https://doi.org/10.1051/0004-6361/202554937>`__). On the strip's
+40,850 spectroscopic galaxies, ZPHOT_STD is too large: the robust width of
+(ZPHOT − ZSPEC)/ZPHOT_STD is 0.85 at z < 19 and 0.55–0.59 fainter than z = 21. ``err_scale`` is that width, interpolated in magnitude
 (``scripts/photoz/photoz_dr11.yaml``, fitted by ``scripts/photoz/fit_errscale.py``,
 :func:`rema.validate.photoz.fit_err_scale`). The predictions are cross-validated, so the
 spectroscopic galaxies give a fair estimate for galaxies like them; they are bright and mostly
@@ -262,11 +265,13 @@ ZPHOT_E, and the members' CHISQ_RS, their red-sequence χ² at the cluster redsh
 PSCD (AMICO)
 ~~~~~~~~~~~~
 
-PSCD (:mod:`rema.pscd`) follows Bellagamba et al. (2018) and Maturi et al. (2019). The data
+PSCD (:mod:`rema.pscd`) follows `Bellagamba et al. (2018) <https://doi.org/10.1093/mnras/stx2701>`__ and
+`Maturi et al. (2019) <https://doi.org/10.1093/mnras/stz294>`__. The data
 D(θ, m, z) are modelled as A M_c(θ − θ_c, m) q(z_c, z) + N(m, z), with the cluster template of
 KiDS (an NFW profile with c = 3.59 and R200 = 1 Mpc, truncated at 1.35 R200, times a Schechter
-function of slope −1.06 around m*(z), with 22.9 galaxies brighter than m* + 2 within R200) and
-the field N = Σ_pz. On a grid of 0.01° pixels (gnomonic projection of the region) and redshift
+function of slope −1.06 around m*(z), with 22.9 galaxies brighter than m* + 2 within R200;
+Maturi et al. `2019 <https://doi.org/10.1093/mnras/stz294>`__, `2025 <https://doi.org/10.1051/0004-6361/202554340>`__)
+and the field N = Σ_pz. On a grid of 0.01° pixels (gnomonic projection of the region) and redshift
 slices of 0.01, the optimal filter gives
 
     S(θ_c, z_c) = Σ_i M_c(θ_i − θ_c, m_i) p_i(z_c) / N(m_i, z_c),
@@ -292,7 +297,8 @@ Differences from AMICO:
 - the photo-z distributions are Gaussians (DR11 gives no full p(z));
 - the NFW template has a flat core within 0.1 h⁻¹ Mpc, as rema's radial filter: with a cusp
   narrower than the pixels, the amplitude of mock clusters came out up to 35 % low at z = 0.85;
-- no local background correction f(θ, z) (Bellagamba et al. 2018, Sect. 2.6) and no BCG term;
+- no local background correction f(θ, z)
+  (`Bellagamba et al. 2018 <https://doi.org/10.1093/mnras/stx2701>`__, Sect. 2.6) and no BCG term;
 - the depth enters through the local magnitude limit of the footprint (5σ in the z band).
 
 On mocks drawn from the template, the amplitude is unbiased (A = 1.95 ± 0.05, 2.01 ± 0.08,
@@ -363,24 +369,36 @@ with the regions' footprints, and make the figures:
 References
 ----------
 
-- Bellagamba F., Roncarelli M., Maturi M., Moscardini L., 2018, MNRAS 473, 5221, *AMICO:
-  optimized detection of galaxy clusters in photometric surveys* (arXiv:1705.03029).
-- Maturi M., Bellagamba F., Radovich M. et al., 2019, MNRAS, *AMICO galaxy clusters in KiDS-DR3:
-  sample properties and selection function* (arXiv:1810.02811).
-- Bellagamba F., Sereno M., Roncarelli M. et al., 2019, MNRAS, *AMICO galaxy clusters in
-  KiDS-DR3: weak-lensing mass calibration* (arXiv:1810.02827).
-- Euclid Collaboration: Adam R. et al., 2019, A&A, *Euclid preparation III. Galaxy cluster
-  detection in the wide photometric survey, performance and algorithm selection*
-  (arXiv:1906.04707).
-- Maturi M., Radovich M., Moscardini L. et al., 2025, A&A 701, A201, *AMICO galaxy clusters in
-  KiDS-1000: cosmological sample* (arXiv:2507.14338).
-- Euclid Collaboration: Bhargava S. et al., 2025, A&A, *Euclid Quick Data Release (Q1). First
-  detections from the galaxy cluster workflow* (arXiv:2503.19196).
-- Zhou R., Newman J. A. et al., 2021, MNRAS 501, 3309, *The clustering of DESI-like luminous red
-  galaxies using photometric redshifts* (arXiv:2001.06018); Zhou R., Ferraro S., White M. et al.,
-  2023, JCAP 11, 097, *DESI luminous red galaxy samples for cross-correlations*
-  (arXiv:2309.06443), which released the photo-z of the DR9-DR11 photo-z sweeps.
-- Wen Z. L., Han J. L., 2024, ApJS, *A catalog of 1.58 million clusters of galaxies identified
-  from the DESI Legacy Imaging Surveys* (arXiv:2404.02002).
-- Zou H., Gao J., Xu X. et al., 2021, ApJS, *Galaxy clusters from the DESI Legacy Imaging
-  Surveys. I. Cluster detection* (arXiv:2101.12340).
+- Bellagamba F., Roncarelli M., Maturi M., Moscardini L., 2018,
+  `MNRAS 473, 5221 <https://doi.org/10.1093/mnras/stx2701>`__, *AMICO: optimized detection of
+  galaxy clusters in photometric surveys* (`arXiv:1705.03029 <https://arxiv.org/abs/1705.03029>`__).
+- Maturi M., Bellagamba F., Radovich M. et al., 2019,
+  `MNRAS 485, 498 <https://doi.org/10.1093/mnras/stz294>`__, *AMICO galaxy clusters in KiDS-DR3:
+  sample properties and selection function* (`arXiv:1810.02811 <https://arxiv.org/abs/1810.02811>`__).
+- Bellagamba F., Sereno M., Roncarelli M. et al., 2019,
+  `MNRAS 484, 1598 <https://doi.org/10.1093/mnras/stz090>`__, *AMICO galaxy clusters in KiDS-DR3:
+  weak-lensing mass calibration* (`arXiv:1810.02827 <https://arxiv.org/abs/1810.02827>`__).
+- Euclid Collaboration: Adam R. et al., 2019,
+  `A&A 627, A23 <https://doi.org/10.1051/0004-6361/201935088>`__, *Euclid preparation III. Galaxy
+  cluster detection in the wide photometric survey, performance and algorithm selection*
+  (`arXiv:1906.04707 <https://arxiv.org/abs/1906.04707>`__).
+- Maturi M., Radovich M., Moscardini L. et al., 2025,
+  `A&A 701, A201 <https://doi.org/10.1051/0004-6361/202554340>`__, *AMICO galaxy clusters in
+  KiDS-1000: cosmological sample* (`arXiv:2507.14338 <https://arxiv.org/abs/2507.14338>`__).
+- Euclid Collaboration: Bhargava S. et al., 2026,
+  `A&A 711, A34 <https://doi.org/10.1051/0004-6361/202554937>`__, *Euclid Quick Data Release
+  (Q1). First detections from the galaxy cluster workflow*
+  (`arXiv:2503.19196 <https://arxiv.org/abs/2503.19196>`__).
+- Zhou R., Newman J. A. et al., 2021, `MNRAS 501, 3309 <https://doi.org/10.1093/mnras/staa3764>`__,
+  *The clustering of DESI-like luminous red galaxies using photometric redshifts*
+  (`arXiv:2001.06018 <https://arxiv.org/abs/2001.06018>`__); Zhou R., Ferraro S., White M. et al.,
+  2023, `JCAP 11, 097 <https://doi.org/10.1088/1475-7516/2023/11/097>`__, *DESI luminous red
+  galaxy samples for cross-correlations* (`arXiv:2309.06443 <https://arxiv.org/abs/2309.06443>`__),
+  which describes the photo-z of Legacy Surveys DR9 and is the paper the DR11 photo-z sweeps ask
+  their users to cite (`legacysurvey.org/dr11/files <https://www.legacysurvey.org/dr11/files/>`__).
+- Wen Z. L., Han J. L., 2024, `ApJS 272, 39 <https://doi.org/10.3847/1538-4365/ad409d>`__, *A
+  catalog of 1.58 million clusters of galaxies identified from the DESI Legacy Imaging Surveys*
+  (`arXiv:2404.02002 <https://arxiv.org/abs/2404.02002>`__).
+- Zou H., Gao J., Xu X. et al., 2021, `ApJS 253, 56 <https://doi.org/10.3847/1538-4365/abe5b0>`__,
+  *Galaxy clusters from the DESI Legacy Imaging Surveys. I. Cluster detection*
+  (`arXiv:2101.12340 <https://arxiv.org/abs/2101.12340>`__).

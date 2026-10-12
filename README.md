@@ -8,11 +8,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/JohanComparat/rema-jax/blob/main/LICENSE)
 
 Red-sequence matched-filter galaxy cluster finding in JAX, for the DESI Legacy Imaging Surveys
-DR11.
+([Dey et al. 2019](https://doi.org/10.3847/1538-3881/ab089d)) DR11.
 
 rema is a redesign of [redMaPPer](https://github.com/erykoff/redmapper) (Rykoff et al.
-2014, 2016). It keeps the science: red-sequence model, matched-filter richness λ, z_λ, centring, percolation, redshift scans at
-given positions, and Clerc et al. (2016) velocity clipping. The code is vectorised JAX. It
+[2014](https://doi.org/10.1088/0004-637X/785/2/104), [2016](https://doi.org/10.3847/0067-0049/224/1/1)). It keeps the science: red-sequence model, matched-filter richness λ, z_λ, centring, percolation, redshift scans at
+given positions, and [Clerc et al. (2016)](https://doi.org/10.1093/mnras/stw2214) velocity clipping. The code is vectorised JAX. It
 runs on CPU or GPU, it is differentiable (λ carries exact implicit derivatives), and it installs
 with `pip`. It needs no compiler, Spark, Java, GSL, esutil or healsparse.
 
@@ -22,7 +22,7 @@ calibration (`rema calibrate`), zred, backgrounds, richness, z_λ, BCG or wcen c
 mode, scan mode and spectroscopic post-processing, and SLURM drivers for the HPC. Experimental:
 cluster finding from the DR11 photo-z, whatever the galaxies' colours, with a photo-z filter in
 blind and scan mode (`--set model.filter=photoz`) and `rema pscd`, an implementation of the
-AMICO matched filter ([photo-z finders page](https://rema-jax.readthedocs.io/en/latest/photoz_finders.html)).
+AMICO matched filter ([Bellagamba et al. 2018](https://doi.org/10.1093/mnras/stx2701); [photo-z finders page](https://rema-jax.readthedocs.io/en/latest/photoz_finders.html)).
 
 **The DR11 south catalogue is done.** The blind run of rema 0.2.0 over Legacy Surveys DR11 south
 found 3,481,608 clusters with λ ≥ 3 (145,133 with λ ≥ 20) and 87.7 M members over 18,500 deg²
@@ -35,7 +35,7 @@ the redMaPPer, eROMaPPer, SZ and X-ray catalogues in 30 figures.
 
 **Public cluster catalogues in DR11.** `rema scan-positions` measured λ, z_λ, the optical centre
 and the spectroscopic redshift at the 1.64 M clusters of ACT DR5/DR6, SPT-SZ, Planck PSZ2, MCXC,
-eRASS1, SDSS and DES redMaPPer and Wen & Han (2024), in
+eRASS1, SDSS and DES redMaPPer and [Wen & Han (2024)](https://doi.org/10.3847/1538-4365/ad409d), in
 `/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/rema_dr11_v0.2.0_scan_public/`
 ([page](https://rema-jax.readthedocs.io/en/latest/public_catalogues_scan.html)).
 
@@ -129,11 +129,15 @@ spectroscopic post-processing adds `SPEC_Z_BOOT`, `VDISP`, `BEST_Z`, .... All se
 
 ## Credits
 
-The algorithms follow redMaPPer (Rykoff et al. 2014, ApJ 785, 104; Rykoff et al. 2016,
-ApJS 224, 1), scan mode included (redMaPPer's zscan). The spectroscopic post-processing follows
-Clerc et al. (2016, MNRAS 463, 4490). Distances come from
-[ggah_mod](https://pypi.org/project/ggah_mod/). The m*(z) and colour tables in `rema/data` are built
-from redMaPPer's m*(z), the Bruzual & Charlot (2003) SSP grid distributed with EzGal and the
-speclite filter curves (`python -m rema.data.build`); see [rema/data/README.md](https://github.com/JohanComparat/rema-jax/blob/main/rema/data/README.md).
+The algorithms follow redMaPPer ([Rykoff et al. 2014, ApJ 785, 104](https://doi.org/10.1088/0004-637X/785/2/104);
+[Rykoff et al. 2016, ApJS 224, 1](https://doi.org/10.3847/0067-0049/224/1/1)), scan mode included
+(redMaPPer's zscan).
+The spectroscopic post-processing follows
+[Clerc et al. (2016, MNRAS 463, 4490)](https://doi.org/10.1093/mnras/stw2214).
+Distances come from [ggah_mod](https://pypi.org/project/ggah_mod/).
+The m*(z) and colour tables in `rema/data` are built from redMaPPer's m*(z), the
+[Bruzual & Charlot (2003)](https://doi.org/10.1046/j.1365-8711.2003.06897.x) SSP grid distributed with EzGal
+([Mancone & Gonzalez 2012](https://doi.org/10.1086/666502)) and the speclite filter curves
+(`python -m rema.data.build`); see [rema/data/README.md](https://github.com/JohanComparat/rema-jax/blob/main/rema/data/README.md).
 
 MIT licence.

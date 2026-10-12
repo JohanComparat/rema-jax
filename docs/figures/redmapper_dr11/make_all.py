@@ -61,7 +61,7 @@ ROWS = [
     ("Same central as SDSS DR8 redMaPPer", "centring_same_sdss_dr8", lambda v: pct(v[0]), ""),
     ("λ / λ(DES Y1), median, λ_DES ≥ 20", "lam_ratio_des_y1", ".2f", "0.79 for LS DR10 λ_norm (K24)"),
     ("λ / λ(SDSS DR8), median, λ_SDSS ≥ 20", "lam_ratio_sdss_dr8", ".2f", "1/(1.04 + 0.17 e^{5.4(z−0.36)}) (IC20)"),
-    ("λ / λ_norm (K24, eRASS1 positions)", "lam_ratio_erass1", ".2f", "1.039 expected (griz vs grz, K24)"),
+    ("λ / λ_norm (K24, eRASS1 positions)", "lam_ratio_erass1", ".2f", "0.962 expected (λ_norm = 1.039 λ_griz, K24)"),
     ("λ–σ_v slope (orthogonal fit, ≥ 15 members)", "lam_sigma_fit", pair(0), "2.40 (K24)"),
     ("Recovered ACT DR6 clusters", "recovery_act_dr6", lambda v: pct(v[0]), "> 95% (K24, scan mode)"),
     ("Recovered SPT-SZ 2500d clusters", "recovery_spt_2500d", lambda v: pct(v[0]), "> 95% (K24, scan mode)"),

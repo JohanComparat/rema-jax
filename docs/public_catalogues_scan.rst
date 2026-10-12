@@ -134,8 +134,8 @@ The two columns "λ / production" and "\|Δz\| production" are medians over the 
 Production of the scan
 ----------------------
 
-We ran the scan on 2026-10-11 at CC-IN2P3, with the commands of :doc:`ccin2p3`, "Your own
-positions":
+We ran the scan on 2026-10-11 and 12 at CC-IN2P3, with the commands of :doc:`ccin2p3`, "Scan mode at
+given positions":
 
 1. **Ingest and randoms index:** ``scripts/slurm/rema_dr11_blind.sh prepare`` with
    ``OUTDIR=/sps/lsst/users/$USER/rema_scan``.

@@ -34,7 +34,7 @@ SEAM_BUFFER=${SEAM_BUFFER:-0}
 PART_CPU=${PART_CPU:-htc}
 PART_GPU=${PART_GPU:-gpu_v100}
 
-IDX=$WORK/randoms_index
+IDX=${IDX:-$WORK/randoms_index}      # an existing full index (e.g. that of rema_scan) is reused
 P=$WORK/products
 LOGS=$WORK/logs
 mkdir -p "$IDX" "$P" "$LOGS"
@@ -70,11 +70,14 @@ case ${1:-} in
     [[ -f $P/catalog_config.yaml ]] || { echo "run $0 config first"; exit 1; }
     files=""
     for k in $(seq 0 $((NRAND - 1))); do files="$files $DR11/randoms/randoms-south-1-$k.fits"; done
-    j_idx=$(submit index "" --partition=$PART_CPU --array=0-$((NRAND - 1)) --mem=40G --time=6:00:00 -- \
-      "f=($files); python -m rema.cli randoms-index \${f[\$SLURM_ARRAY_TASK_ID]} --outdir $IDX --config $P/catalog_config.yaml")
-    j_map=$(submit maps "$j_idx" --partition=$PART_CPU --mem=140G --time=8:00:00 -- \
+    j_idx=""
+    if [[ ! -s $IDX/randoms-south-1-$((NRAND - 1)).json ]]; then
+      j_idx=$(submit index "" --partition=$PART_CPU --array=0-$((NRAND - 1)) --cpus-per-task=2 --mem=40G --time=6:00:00 -- \
+        "f=($files); python -m rema.cli randoms-index \${f[\$SLURM_ARRAY_TASK_ID]} --outdir $IDX --config $P/catalog_config.yaml")
+    fi
+    j_map=$(submit maps "$j_idx" --partition=$PART_CPU --cpus-per-task=4 --mem=140G --time=8:00:00 -- \
       "python -m rema.cli maps --index $IDX --nrand $NRAND --config $P/catalog_config.yaml --out $P/footprint_dr11.fits")
-    j_cp=$(submit copies "$j_map" --partition=$PART_CPU --mem=100G --time=12:00:00 -- \
+    j_cp=$(submit copies "$j_map" --partition=$PART_CPU --cpus-per-task=8 --mem=100G --time=12:00:00 -- \
       "python -m rema.cli cluster-randoms domain --runs $RUNS --seam-buffer $SEAM_BUFFER --out $P/domain.fits
 python -m rema.cli cluster-randoms vlim-map --footprint $P/footprint_dr11.fits --domain $P/domain.fits --catalog $CAT --lstar $LSTAR --nsigma $NSIGMA --index $IDX --nrand $NRAND --out $P/zvlim_dr11.fits
 python -m rema.cli cluster-randoms copies --clusters $CAT --spec $SPEC --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --index $IDX --nrand $NRAND --with-id --out $P/copies_parent.fits")
@@ -88,7 +91,7 @@ python -m rema.cli cluster-randoms place --copies $P/copies_parent.fits --footpr
 python -m rema.cli cluster-randoms sample --clusters $CAT --spec $s --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --copies $P/copies_parent.fits --keep MEM_MATCH_ID --keep Z_LAMBDA_E --keep R_LAMBDA --keep GLAT --out $P/$n.fits
 python -m rema.cli cluster-randoms qa --sample $P/$n.fits --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --out $P/${n}_qa.json"
     done
-    j_s=$(submit sample "$j_pl" --partition=$PART_CPU --mem=80G --time=6:00:00 -- "$cmds")
+    j_s=$(submit sample "$j_pl" --partition=$PART_CPU --cpus-per-task=4 --mem=80G --time=6:00:00 -- "$cmds")
     echo "index $j_idx, maps $j_map, copies $j_cp, place $j_pl, samples $j_s" | tee -a "$LOGS/jobs.txt"
     ;;
   external)   # X-ray / SZ samples (after submit has made the footprint, domain and z_vlim map)
@@ -108,7 +111,7 @@ python -m rema.cli cluster-randoms place --copies $P/copies_$c.fits --footprint 
 python -m rema.cli cluster-randoms sample --clusters $P/${c}_joined.fits --config $P/catalog_config.yaml --spec $spec --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --copies $P/copies_$c.fits --keep RA_OPT --keep DEC_OPT --keep INPUT_NAME --out $P/$c.fits
 python -m rema.cli cluster-randoms qa --sample $P/$c.fits --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --out $P/${c}_qa.json"
     done
-    j=$(submit external "" --partition=$PART_CPU --mem=100G --time=24:00:00 -- "$cmds")
+    j=$(submit external "" --partition=$PART_CPU --cpus-per-task=8 --mem=100G --time=24:00:00 -- "$cmds")
     echo "external $j" | tee -a "$LOGS/jobs.txt"
     ;;
   config)   # the catalogue's configuration, for the randoms cuts (run once before submit)

@@ -8,11 +8,11 @@ We measured how much λ and z_λ change with the cosmology, and what this does t
 analysis of the cluster counts N(λ, z) with a mass–richness relation calibrated by weak lensing.
 
 We used three tiers and one model.
-In *tier A*, we re-measured 52 800 catalogued clusters in other cosmologies at fixed centres, on six
+In *tier A*, we re-measured 52 800 catalogued clusters in other cosmologies at fixed centres, on six
 regions of the production plan and one strip.
 In *tier B*, we re-ran the blind mode in other cosmologies on the same regions, and in *tier C*
 also with a calibration re-trained in them.
-The model of the DR11 counts (61 300 clusters with λ ≥ 20 at 0.1 < z_λ < 0.6) was fitted with and
+The model of the DR11 counts (61 300 clusters with λ ≥ 20 at 0.1 < z_λ < 0.6) was fitted with and
 without the finder's response.
 The findings come first and the method after them; the code is :mod:`rema.modes.remeasure`
 (``rema remeasure``), :mod:`rema.abundance` and ``scripts/cosmo_sens`` (`Reproduction`_).
@@ -45,7 +45,7 @@ smaller.
 
 A smaller D_A means larger apertures on the sky, and more members.
 λ changes by +0.6% and −0.7% for Ω_m = 0.35 and 0.25, and by ±1.1% for w0 = −0.8 and −1.2 (medians
-over the 52 800 clusters).
+over the 52 800 clusters).
 The derivatives are d ln λ/dΩ_m = +0.12 and d ln λ/dw0 = +0.055; wa = 0.3 adds 0.2%.
 The response follows the change of D_A with an elasticity d ln λ/d ln D_A ≈ −0.35, about half the
 −0.6 to −0.75 of a projected NFW profile, because the background subtracted per (h⁻¹ Mpc)² grows
@@ -96,7 +96,7 @@ Below z = 0.45 it does not depend on the depth (≈ 0.13).
 
 We re-ran the finder blind in four other cosmologies (tier B: Ω_m = 0.25 and 0.35, w0 = −0.8 and
 −1.2, six regions).
-It makes the same catalogue: 99.1–99.7% of the 4 048 clusters with λ ≥ 20 are found again (98%
+It makes the same catalogue: 99.1–99.7% of the 4 048 clusters with λ ≥ 20 are found again (98%
 with the same central galaxy), and the 0.3–1% lost or gained are those that the shift of λ moves
 across λ = 20.
 λ moves by −1.0%, +0.9%, +1.6% and −1.7%, as at fixed centres; 1.5–2% of the clusters change
@@ -275,7 +275,7 @@ finding 5.
        --vary Omega_m=0.25,0.35 --vary w0=-0.8,-1.2 --jvp Omega_m,w0 --fd --out tierA.fits
 
 We re-measured regions 15 and 9 (DES area), 55 (intermediate), 82, 91 and 113 (DECaLS) of the
-production plan on CC-IN2P3: 6 200 to 10 700 clusters with λ ≥ 5 each, 7–10 minutes per region on
+production plan on CC-IN2P3: 6 200 to 10 700 clusters with λ ≥ 5 each, 7–10 minutes per region on
 a V100, with the galaxy tables ingested again.
 The strip RA 1–4°, Dec −14 to −1° was re-measured on a laptop (815 clusters with λ ≥ 10, from an
 earlier local ingest); the fiducial re-measurement scatters by 3% there, and by 0.06–0.6% in the
@@ -356,8 +356,8 @@ DR11 data vector
 
 λ ≥ 20 in five bins (20, 30, 45, 60, 100, ∞) and z_λ in four (0.1, 0.2, 0.3, 0.45, 0.6): the z_λ
 spikes at 0.82–0.86 are left out and the one at 0.38 sits inside a bin.
-Clusters and pixels within 2.33° of the seams between the two parts of the run are left out: 61 300
-clusters over 17 790 deg² (17 110 deg² for the last redshift bin).
+Clusters and pixels within 2.33° of the seams between the two parts of the run are left out: 61 300
+clusters over 17 790 deg² (17 110 deg² for the last redshift bin).
 
 Assumptions and limits
 ----------------------
@@ -371,7 +371,7 @@ Assumptions and limits
   0.5 < z < 0.6; density against depth in :doc:`redmapper_dr11`), a sign of projections.
   So the absolute Ω_m and σ_8 are not a measurement; the comparisons with and without the response
   are the result.
-- **Six regions** make the response table (37 000 clusters with λ ≥ 5, 2 000 with λ ≥ 40),
+- **Six regions** make the response table (37 000 clusters with λ ≥ 5, 2 000 with λ ≥ 40),
   averaged over their depths although the response depends on the depth (finding 3).
 - **The mass function** is :cite:t:`Tinker2008`, without a calibration uncertainty.
 - **With m* following D_L**, the z_vlim map and so the area would depend on the cosmology too; this

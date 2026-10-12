@@ -16,12 +16,12 @@ Catalogue and footprint
 -----------------------
 
 - **Catalogue.** The two parts of the production run (:doc:`ccin2p3`), read with their
-  ``PART``: 3 481 608 clusters with λ ≥ 3 and MASKFRAC ≤ 0.2 over 18 491 deg², and 69.6 M
+  ``PART``: 3 481 608 clusters with λ ≥ 3 and MASKFRAC ≤ 0.2 over 18 491 deg², and 69.6 M
   members with P ≥ 0.05 or a spectroscopic redshift.
   We ran the blind mode with one red-sequence calibration in g, r, i, z (z-band reference).
 - **Footprint.** The DR11 randoms cut like the galaxies (mask bits, at least one exposure in g,
   r, i and z, E(B−V) < 0.2), at \|b\| ≥ 15°, inside the own boxes of the regions that finished.
-  The area quoted below is the number of such randoms over their density (2 500 per deg² in one
+  The area quoted below is the number of such randoms over their density (2 500 per deg² in one
   randoms file).
 - **Seams.** The two parts of the run meet at RA 0° and 240° and at Dec −85°; within 2.33° of
   these lines λ may be low, as the data of a cluster stop at the seam.

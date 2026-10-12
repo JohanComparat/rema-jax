@@ -1,7 +1,7 @@
 Production on an HPC
 ====================
 
-The blind run over the whole of the Legacy Surveys Data Release 11 (DR11) south (1 600 sweeps,
+The blind run over the whole of the Legacy Surveys Data Release 11 (DR11) south (1 600 sweeps,
 Dec −90 to +40) takes the sweeps, their photo-z files, the randoms and a calibration area, and
 produces one cluster catalogue with its members on a high-performance computing (HPC) cluster.
 It cuts the sky into regions of about 100 deg² and runs one SLURM array task per region.
@@ -192,7 +192,7 @@ cross-region close pairs.
 **Measured.** We ran the 74 deg² strip at RA 0–5°, Dec −15–0° as three regions of 25 deg² and as
 one region (pipeline notebook):
 
-- The merged catalogue holds the same 12 857 clusters as the one-region catalogue.
+- The merged catalogue holds the same 12 857 clusters as the one-region catalogue.
 - Every cluster with λ ≥ 5 has the same central galaxy at every distance from the two internal
   boundaries, including within 0.25°.
 - λ agrees to a median relative difference of 3 × 10⁻⁶.

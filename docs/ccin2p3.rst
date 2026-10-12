@@ -2,7 +2,7 @@ DR11 south catalogue at CC-IN2P3
 ================================
 
 The blind run of rema 0.2.0 over Legacy Surveys DR11 south produced a catalogue of
-3 481 608 clusters.
+3 481 608 clusters.
 It is on the data system of the IN2P3 computing centre
 (`CC-IN2P3 <https://doc.cc.in2p3.fr>`_), next to the DR11 data, in
 ``/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/`` (readable by the ``lsst`` group).
@@ -14,14 +14,14 @@ The products are described in `Catalogue products`_, their use in `Reading the c
 Catalogue products
 ------------------
 
-- **3 481 608 clusters** with λ ≥ 3, over 18 500 deg²: 585 991 with λ ≥ 10, 145 133 with λ ≥ 20,
-  11 763 with λ ≥ 50 and 899 with λ ≥ 100.
+- **3 481 608 clusters** with λ ≥ 3, over 18 500 deg²: 585 991 with λ ≥ 10, 145 133 with λ ≥ 20,
+  11 763 with λ ≥ 50 and 899 with λ ≥ 100.
   **87.7 M members** (P ≥ 0.01).
 - **Footprint:** E(B−V) < 0.2 (cut on the galaxies and the randoms alike) and \|b\| ≥ 15°.
   Near the Galactic plane, stellar contamination makes most seeds survive the first pass and the
   percolation runs out of memory.
 - **Calibration:** one red-sequence calibration in g, r, i, z (z-band reference), fitted on RA
-  160–180° and 190–210°, Dec −10° to 10° (1.29 M spectroscopic redshifts, 49 524 clusters).
+  160–180° and 190–210°, Dec −10° to 10° (1.29 M spectroscopic redshifts, 49 524 clusters).
 - **Spectroscopy:** the ``Z_SPEC`` of the DR11 photo-z sweeps; ``SPEC_Z_BOOT``, ``VDISP_BOOT``,
   ``CG_SPEC_Z`` and ``BEST_Z`` come from the clipping of :cite:t:`Clerc2016` (:doc:`dr11`,
   step 7).
@@ -40,13 +40,13 @@ Catalogue products
        clusters and the members.
    * - ``rema_dr11_v0.2.0_ra0-240/``
      - Part 0: RA 0–240°, Dec −85° to 40°.
-       191 of 198 regions, 2 453 256 clusters.
+       191 of 198 regions, 2 453 256 clusters.
        The merged catalogues, ``clusters_dr11_regions.fits`` (per-region statistics), the plan
        ``regions.fits``, ``logs/``, and the calibration ``calib/calib.fits`` with its plots and
        training galaxies (``calib/plots/rs_specz.fits``).
    * - ``rema_dr11_v0.2.0_ra240-360/``
      - Part 1: RA 240–360° and the polar cap below Dec −85°.
-       79 of 94 regions, 1 028 352 clusters.
+       79 of 94 regions, 1 028 352 clusters.
        The same files, with the same calibration.
    * - ``external/``
      - The public cluster catalogues and the DR10 red-sequence model of :cite:t:`Kluge2024`
@@ -57,7 +57,7 @@ Catalogue products
 **Seams.** The two parts were run separately.
 Within 2.33° of their common boundaries (RA 0° and 240° above Dec −85°, and Dec −85° between
 RA 0° and 240°) the data of a cluster stop at the boundary, so its λ may be low: ``FLAG_SEAM``
-marks these 123 160 clusters (``SEAM_DIST`` in degrees).
+marks these 123 160 clusters (``SEAM_DIST`` in degrees).
 In the files of the parts, ``MEM_MATCH_ID`` is unique within a part only.
 
 **Missing regions.** Seven regions of part 0 and fifteen of part 1 are missing, all of them
@@ -144,7 +144,7 @@ arrays of CPU jobs, then point the scans at that index:
 ``scripts/scan/public_catalogues.py`` writes the public cluster catalogues kept in
 ``dr11/south/rema/external`` as scan-positions inputs (``--sample N`` for N random clusters in
 the DR11 south sweeps).
-A catalogue of more than 200 000 rows, such as that of :cite:t:`WenHan2024`, is written as
+A catalogue of more than 200 000 rows, such as that of :cite:t:`WenHan2024`, is written as
 slices of 15° in RA, ``<name>_ra<RA0>.fits``, one job each; ``scripts/scan/merge_parts.py OUT
 PART...`` joins their outputs, sorted by the row in the original table.
 ``scripts/scan/finalize_scan.sh WORK DEST``, submitted after the scans, joins the slices, checks
@@ -158,7 +158,7 @@ Production run
 We ran the production from 2026-10-05 to 2026-10-07 with ``scripts/slurm/rema_dr11_blind.sh``
 (:doc:`hpc`), on the V100 nodes:
 
-1. **Ingest** of the 1 600 sweeps and their photo-z files, and the index of the randoms files 0
+1. **Ingest** of the 1 600 sweeps and their photo-z files, and the index of the randoms files 0
    to 3.
 2. **Calibration**, one CPU job on the two boxes above (``CALIB_BOX``).
 3. **Two partial runs**, because the download of RA 240–360° was not finished when the first one
@@ -227,7 +227,7 @@ task with 5 CPUs and 45 GB, ``--licenses=sps`` on every job, ``MAX_ARRAY=90``, t
 - Without ``CLUSTERS_DIR`` and ``MEMBERS_DIR`` the products go next to the sweeps, in
   ``sweep/11.0-rm/`` and ``sweep/11.0-rm-mem/``, with fixed names that a later run overwrites.
   ``AREA_BOX`` restricts a run to part of the sky (:doc:`hpc`).
-- The DR11 data are complete on ``/sps`` (1 600 sweeps and photo-z files, randoms files 0 to 3).
+- The DR11 data are complete on ``/sps`` (1 600 sweeps and photo-z files, randoms files 0 to 3).
   ``scripts/get_dr11_south_sweeps.sh`` and ``scripts/get_dr11_south_randoms.sh`` download them
   elsewhere (:doc:`dr11`, step 1).
 
@@ -265,7 +265,7 @@ Validation at CC-IN2P3
 - On 2026-10-05, the three-sweep development area (RA 0–5°, Dec −15° to 0°) run at CC-IN2P3 on a
   V100 matched the laptop: identical galaxies and footprint, 448 against 449 clusters with
   λ ≥ 20 (median \|Δλ/λ\| 2×10⁻⁶), the same centres at the 25 Atacama Cosmology Telescope (ACT)
-  clusters, and 12 859 against 12 857 clusters in the three-region run.
+  clusters, and 12 859 against 12 857 clusters in the three-region run.
   The test suite passes on a CPU node, and the GPU test on a V100.
 - On 2026-10-07, the notebooks executed at CC-IN2P3 with the calibration of the production run.
   Inside their three sweeps the blind catalogue matches the production one (all 369 clusters

@@ -26,7 +26,7 @@ Summary
 - Cluster redshifts are as good as the red sequence's: a normalised median absolute deviation
   (NMAD) of 0.006–0.008 (1 + z).
 - The red-sequence code path is unchanged: its outputs on a mock region are bit-identical, and the
-  strip rerun matches 0.3.1 cluster by cluster (all 2 734 clusters with λ ≥ 5 matched, scatter of
+  strip rerun matches 0.3.1 cluster by cluster (all 2 734 clusters with λ ≥ 5 matched, scatter of
   ln λ 7 × 10⁻⁶, one centre changed).
 
 Results
@@ -53,15 +53,15 @@ SNR is the signal-to-noise ratio.
      - region 82 (DECaLS)
    * - red sequence, λ
      - 12.7: 490 (0.98)
-     - 13.6: 1 063 (0.98)
+     - 13.6: 1 063 (0.98)
      - 18.6: 977 (0.97)
    * - red sequence, SNR
      - 4.25: 522 (0.98)
-     - 4.34: 1 214 (0.98)
-     - 5.12: 1 114 (0.98)
+     - 4.34: 1 214 (0.98)
+     - 5.12: 1 114 (0.98)
    * - photo-z filter, SNR
      - 5.31: 469 (0.98)
-     - 5.86: 1 093 (0.98)
+     - 5.86: 1 093 (0.98)
      - 5.86: 941 (0.97)
    * - photo-z filter, λ
      - 31.9: 273 (0.96)
@@ -73,20 +73,20 @@ SNR is the signal-to-noise ratio.
      - 5.82: 932 (0.97)
    * - PSCD, AMICO SNR
      - 4.13: 659 (0.98)
-     - 4.43: 1 232 (0.98)
-     - 4.45: 1 128 (0.98)
+     - 4.43: 1 232 (0.98)
+     - 4.45: 1 128 (0.98)
    * - PSCD, SNR_NOCL
      - 10.6: 728 (0.99)
-     - 12.0: 1 462 (0.98)
-     - 12.2: 1 230 (0.98)
+     - 12.0: 1 462 (0.98)
+     - 12.2: 1 230 (0.98)
    * - PSCD, λ*
      - 24.1: 388 (0.97)
      - 26.8: 884 (0.97)
      - 28.5: 780 (0.97)
    * - PSCD z < 22, SNR_NOCL
      - 10.8: 743 (0.99)
-     - 12.2: 1 472 (0.98)
-     - 12.2: 1 309 (0.98)
+     - 12.2: 1 472 (0.98)
+     - 12.2: 1 309 (0.98)
 
 - The best statistic is SNR for the red sequence and the photo-z filter, and SNR_NOCL for PSCD;
   with it, PSCD has 39–42%, 20–21% and 10–18% more clusters than the red sequence.
@@ -123,7 +123,7 @@ Clusters at 0.3 false per deg² with the default statistic of each finder (λ, S
      - 888 / 240
    * - PSCD, z < 22
      - 537 / 117
-     - 1 037 / 305
+     - 1 037 / 305
      - 992 / 181
 
 - PSCD has about twice the red sequence's clusters at 0.1 < z < 0.45, and fewer above z = 0.6.
@@ -190,19 +190,19 @@ per deg², with the default statistics; a counterpart lies within 1 h⁻¹ Mpc a
      - 0.78
      - 0.78
    * - Wen & Han 2024, strip
-     - 2 423
+     - 2 423
      - 0.18
      - 0.17
      - 0.25
      - 0.24
    * - Wen & Han 2024, region 9
-     - 6 719
+     - 6 719
      - 0.15
      - 0.15
      - 0.17
      - 0.18
    * - Wen & Han 2024, region 82
-     - 6 476
+     - 6 476
      - 0.13
      - 0.13
      - 0.16
@@ -265,8 +265,8 @@ dz/(1 + z); the column headers give the number of galaxies:
    :widths: 16 21 21 21 21
 
    * - z-band magnitude
-     - strip (40 850)
-     - region 82 (78 790)
+     - strip (40 850)
+     - region 82 (78 790)
      - strip NMAD dz, outliers
      - region 82 NMAD dz, outliers, offset
    * - < 19
@@ -311,8 +311,8 @@ The photo-z filter
   has on 75 deg².
 - A significance floor limits the candidates: they need SNR = √(2 LNLAMLIKE) ≥ 3 after the first
   and the likelihood pass (``richness.min_lnlamlike: 4.5``).
-  This leaves 9 490 candidates on that box, against 2 031 in the null test (204 with SNR > 5,
-  against 3 440), and 67 081 candidates on the strip, against 176 136 for the red sequence.
+  This leaves 9 490 candidates on that box, against 2 031 in the null test (204 with SNR > 5,
+  against 3 440), and 67 081 candidates on the strip, against 176 136 for the red sequence.
 - On mocks whose members are half blue, its λ counts the members of every colour (λ = 31–45 for
   input λ = 25–40), where the red-sequence λ holds about half (16–27).
   On the data, at a matched false rate, it keeps 10–15% fewer clusters than the red sequence on
@@ -346,8 +346,8 @@ PSCD (the AMICO method)
   A cluster of amplitude A then has S/N ≈ √(A α²/γ), about 3–7 for A = 1–2, while it stands
   25–50σ above the background (SNR_NOCL).
   At a matched false rate, SNR_NOCL keeps 9–19% more clusters than the AMICO S/N.
-- Extraction with the cleaning takes about 60 ms per detection: 12 192 detections on the strip in
-  12 min, 28 000–34 000 per region.
+- Extraction with the cleaning takes about 60 ms per detection: 12 192 detections on the strip in
+  12 min, 28 000–34 000 per region.
   Cells whose profile lies less than 20% inside the footprint are not searched (at the edges,
   α → 0 made A overflow).
 
@@ -400,14 +400,14 @@ Computing cost
      - strip (laptop: RTX 3060, 24 cores)
      - regions (CC-IN2P3: V100 or 8 htc cores)
    * - red sequence
-     - 41 min, 176 136 candidates
-     - 59–60 min, 401 000–643 000 candidates
+     - 41 min, 176 136 candidates
+     - 59–60 min, 401 000–643 000 candidates
    * - photo-z filter
-     - 16 min, 67 081 candidates
-     - 21–25 min, 171 000–197 000 candidates
+     - 16 min, 67 081 candidates
+     - 21–25 min, 171 000–197 000 candidates
    * - PSCD
-     - 14 min, 12 192 detections, 4.2 GB
-     - 14–17 min, 28 000–34 000 detections, 7–9 GB
+     - 14 min, 12 192 detections, 4.2 GB
+     - 14–17 min, 28 000–34 000 detections, 7–9 GB
 
 The whole study at CC-IN2P3 (galaxy tables of the two regions, 20 region runs and three strip runs)
 used 5.2 GB on /sps.

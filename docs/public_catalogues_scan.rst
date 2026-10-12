@@ -80,8 +80,8 @@ Apply the cut of the production catalogue:
    good = c["SCANNED"] & (c["LAMBDA"] > 0) & (c["MASKFRAC"] < 0.2)
 
 Outside the footprint ``MASKFRAC`` is 1, the completeness correction ``SCALEVAL`` diverges, and λ
-comes out at about 1 700 with z_λ at the lower bound of the scan, 0.05.
-The cut removes all of these rows, for example 2 825 of SDSS DR8 and 185 of ACT DR6.
+comes out at about 1 700 with z_λ at the lower bound of the scan, 0.05.
+The cut removes all of these rows, for example 2 825 of SDSS DR8 and 185 of ACT DR6.
 A z_λ of 0.05 that survives the cut is a cluster at or below the lower limit of the redshift scan
 (``ZMAX_EDGE`` true); most are low-redshift MCXC and eRASS1 clusters.
 Like the production catalogue, the products are cut neither in Galactic latitude nor in E(B-V)
@@ -107,7 +107,7 @@ The two columns "λ / production" and "\|Δz\| production" are medians over the 
   cluster elsewhere or percolated it away.
 - **The catalogues' redshifts** are recovered to 0.005–0.009 in median for the SZ, X-ray and
   redMaPPer catalogues, with 87–99% of them within 0.05.
-  Wen & Han is at 0.016 and 73%: most of its clusters are poor (170 423 of the 1 163 325 good rows
+  Wen & Han is at 0.016 and 73%: most of its clusters are poor (170 423 of the 1 163 325 good rows
   have λ > 20).
 - **z_λ above 0.8** falls below the catalogue redshifts (ACT DR6 and eRASS1, the top-right
   corners): the DR11 photometry and the red-sequence model run out there, as for the production
@@ -139,7 +139,7 @@ positions":
 
 1. **Ingest and randoms index:** ``scripts/slurm/rema_dr11_blind.sh prepare`` with
    ``OUTDIR=/sps/lsst/users/$USER/rema_scan``.
-   All 1 600 sweeps were ingested (about 80 GB) and the randoms files 0–3 indexed once, as CPU
+   All 1 600 sweeps were ingested (about 80 GB) and the randoms files 0–3 indexed once, as CPU
    arrays.
    The survey hash of the configuration matches the production calibration, so the tables are
    those of the production.
@@ -149,7 +149,7 @@ positions":
    production catalogue (median λ ratio 1.00–1.02, \|Δz\| ≤ 0.001 where the clusters match).
 4. **Scans:** one V100 job per catalogue or slice, 32 in all (``scripts/scan/scan_positions.sh``
    with ``--index`` on the shared randoms index, 90 GB of memory), each taking 7 min to 2.5 h.
-   The Wen & Han slices, 13 733 to 114 426 positions each, took 7 min to 1.3 h each, 15 h of GPU
+   The Wen & Han slices, 13 733 to 114 426 positions each, took 7 min to 1.3 h each, 15 h of GPU
    time for its 1.38 M scanned positions.
 5. **Final step:** ``scripts/scan/finalize_scan.sh`` joined the slices with
    ``scripts/scan/merge_parts.py`` and checked that every output has one row per input row.

@@ -32,7 +32,7 @@ if need(*paths.values()):
             record(f"calib_{ext}_{col}_{c}_max", float(d.max()))
         lines += [f"   * - {label}"] + [f"     - {x}" for x in cells]
     nc = [int(h[c][0].header["NCLUSTER"]) for c in ["fiducial"] + COSMOS]
-    lines += ["   * - calibration clusters (fiducial: {:,})".format(nc[0])] + [f"     - {n:,}" for n in nc[1:]]
+    lines += ["   * - calibration clusters (fiducial: {:,})".format(nc[0]).replace(",", "\u202f")] + [f"     - {n:,}".replace(",", "\u202f") for n in nc[1:]]
     zl = [float(h[c][0].header["ZLNMAD"]) for c in ["fiducial"] + COSMOS]
     lines += [f"   * - z_λ against spectroscopic z, NMAD (fiducial: {zl[0]:.4f})"] + [f"     - {v:.4f}" for v in zl[1:]]
     wf = h["fiducial"]["WCEN"].data

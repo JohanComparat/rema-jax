@@ -25,9 +25,9 @@
    * - z_λ correction: scatter
      - 0.0011 (0.0002)
      - 0.0006 (0.0001)
-   * - calibration clusters (fiducial: 49,437)
-     - 49,328
-     - 49,522
+   * - calibration clusters (fiducial: 49 437)
+     - 49 328
+     - 49 522
    * - z_λ against spectroscopic z, NMAD (fiducial: 0.0135)
      - 0.0133
      - 0.0135

@@ -8,8 +8,8 @@
      - DR11 (rema)
      - Literature
    * - Area of the run [deg²]
-     - 18,491
-     - SDSS DR8 10,134 (R16); DES Y1 1,437; LS DR10 grz 19,342 (K24)
+     - 18 491
+     - SDSS DR8 10 134 (R16); DES Y1 1 437; LS DR10 grz 19 342 (K24)
    * - Median 10σ z-band depth [mag]
      - 22.24
      - —

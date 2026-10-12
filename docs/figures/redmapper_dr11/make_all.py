@@ -25,7 +25,7 @@ def fmt(v, spec):
         return "—"
     if callable(spec):
         return spec(v)
-    return format(v, spec)
+    return format(v, spec).replace(",", "\u202f")  # thousands grouped with a narrow no-break space
 
 
 def pct(v):
@@ -38,7 +38,7 @@ def pair(i, spec=".2f"):
 
 # (quantity, key in values.json, format, literature)
 ROWS = [
-    ("Area of the run [deg²]", "area_total", ",.0f", "SDSS DR8 10,134 (R16); DES Y1 1,437; LS DR10 grz 19,342 (K24)"),
+    ("Area of the run [deg²]", "area_total", ",.0f", "SDSS DR8 10\u202f134 (R16); DES Y1 1\u202f437; LS DR10 grz 19\u202f342 (K24)"),
     ("Median 10σ z-band depth [mag]", "depth_z10", ".2f", ""),
     ("Median z_vlim (0.2 L*, 10σ) at the clusters", "median_zvlim", ".3f", "≈ 0.7 (K24, grz)"),
     ("z_vlim − ZVLIM_02 of K24 at the eRASS1 clusters", "zvlim_minus_k24", "+.3f", "0 if the depth maps agree"),

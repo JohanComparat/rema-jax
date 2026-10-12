@@ -162,7 +162,7 @@ def main(argv):
                         f"{dzp:.3f}", f"{dzi:.3f}", f"{100 * f05:.0f}%", f"{ns:,}")
                        for lab, n, s, ps, g, l20, nm, rat, dzp, dzi, f05, ns in rows]:
         out.append("   * - " + r[0])
-        out += [f"     - {v}" for v in r[1:]]
+        out += [f"     - {v}".replace(",", "\u202f") for v in r[1:]]  # thousands: narrow no-break space
     (HERE / "comparison.rst").write_text("\n".join(out) + "\n")
     print("wrote", HERE / "comparison.rst")
 

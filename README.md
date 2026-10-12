@@ -33,6 +33,12 @@ and SPT clusters in its footprint; the
 [results page](https://rema-jax.readthedocs.io/en/latest/redmapper_dr11.html) compares it with
 the redMaPPer, eROMaPPer, SZ and X-ray catalogues in 30 figures.
 
+**Public cluster catalogues in DR11.** `rema scan-positions` measured λ, z_λ, the optical centre
+and the spectroscopic redshift at the 1.64 M clusters of ACT DR5/DR6, SPT-SZ, Planck PSZ2, MCXC,
+eRASS1, SDSS and DES redMaPPer and Wen & Han (2024), in
+`/sps/lsst/datasets/desi/legacysurveys/dr11/south/rema/rema_dr11_v0.2.0_scan_public/`
+([page](https://rema-jax.readthedocs.io/en/latest/public_catalogues_scan.html)).
+
 The documentation is at [rema-jax.readthedocs.io](https://rema-jax.readthedocs.io/en/latest/): install
 (including the CC-IN2P3 notebook platform), a tour on mock data, DR11 end to end, HPC production,
 the DR11 catalogue and its validation, reference, API and DR11 notebooks. Design and validation

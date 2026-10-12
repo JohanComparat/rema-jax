@@ -2,10 +2,17 @@
 
 All notable changes to `rema` are documented here.
 
-## [Unreleased]
+## [0.5.0] - 2026-10-12
 
 ### Added
 
+- The DR11 scan of the public cluster catalogues (documentation page "Public cluster catalogues
+  in DR11"): λ, z_λ, the optical centre and the spectroscopic redshift at every cluster of
+  ACT DR5/DR6, SPT-SZ 2500d, Planck PSZ2, MCXC, eRASS1, SDSS DR8 and DES Y1 redMaPPer and Wen &
+  Han (2024), 1.64 M positions, on the CC-IN2P3 data system
+  (`dr11/south/rema/rema_dr11_v0.2.0_scan_public`). `scripts/scan/finalize_scan.sh` joins,
+  checks and copies the products; `docs/figures/public_scan/make_figures.py` makes the page's
+  figures.
 - `rema scan-positions` (`rema.modes.positions`): scan mode and spectroscopic post-processing
   for a table of positions (FITS, CSV, ...), joined to it row for row (input columns as
   `INPUT_<NAME>`, `SCANNED`). It ingests the sweeps around the positions (kept in a work

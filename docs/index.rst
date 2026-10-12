@@ -10,7 +10,8 @@ derivatives, and the package installs with ``pip``.
 
 **The DR11 south catalogue is done:** 3,481,608 clusters with λ ≥ 3 (145,133 with λ ≥ 20) over
 18,500 deg², on the CC-IN2P3 data system (:doc:`ccin2p3`). :doc:`redmapper_dr11` validates it in
-the figures of the redMaPPer papers.
+the figures of the redMaPPer papers. :doc:`public_catalogues_scan` gives λ, z_λ and the
+spectroscopic redshift at the 1.64 M clusters of nine public SZ, X-ray and optical catalogues.
 
 These pages are for readers who know redMaPPer, and they are hands-on: every command and code
 block has been run.
@@ -70,6 +71,7 @@ What differs from redMaPPer
    cosmology_sensitivity
    photoz_finders
    photoz_study_findings
+   public_catalogues_scan
 
 .. toctree::
    :maxdepth: 2

@@ -72,6 +72,9 @@ SCANNED (false outside the DR11 south sweeps; pipeline columns are -1 there). ME
 keyed by MEM_MATCH_ID = the input row. CONFIG: the rema configuration.
 Calibration: rema_dr11_v0.2.0_ra0-240/calib/calib.fits (the production one). No |b| or E(B-V) cut
 on the positions: cut on the input coordinates as needed (the production catalogue uses |b| > 15).
+Good rows: SCANNED & (LAMBDA > 0) & (MASKFRAC < 0.2), the cut of the production catalogue; outside
+the survey footprint MASKFRAC = 1 and LAMBDA comes out at ~1700 with Z_LAMBDA = 0.05.
+Documentation: https://rema-jax.readthedocs.io/en/latest/public_catalogues_scan.html
 Large catalogues ran in 15 deg RA slices (inputs/<name>_ra*.fits) joined by scripts/scan/merge_parts.py.
 summary.json: rows, scanned, lambda > 0, lambda > 20, members per catalogue. Code: rema-jax $(git -C "$HERE" rev-parse --short HEAD).
 EOF

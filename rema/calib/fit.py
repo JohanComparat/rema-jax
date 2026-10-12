@@ -1,4 +1,4 @@
-"""M-step of the red-sequence calibration: a joint fit of the red-sequence nodes.
+"""Fits the red-sequence nodes jointly on weighted cluster members: the M-step of the calibration.
 
 Given galaxies with membership weights w_i (pmem from spectroscopically seeded cluster runs) at
 their cluster redshifts z_i, the node values of the mean colours, slopes, log scatters and
@@ -8,9 +8,9 @@ partial correlations maximise
 
 with chi^2 the photometric likelihood of :mod:`rema.model.likelihood` (asinh magnitudes by
 default) and a smoothness prior on second differences of the nodes, which also fills nodes
-without data. This is the M-step of an EM iteration: the weights are the posterior membership
-probabilities from the previous model (redMaPPer fits each colour separately with scipy;
-here all colours and their correlations are fitted together with gradients).
+without data. In this M-step of an EM iteration, the weights are the posterior membership
+probabilities from the previous model. redMaPPer fits each colour separately with scipy; here
+all colours and their correlations are fitted together with gradients.
 
 Pivot magnitudes are set to the weighted median reference magnitude of the members per node.
 """
@@ -42,7 +42,13 @@ def _second_diff(x):
 def fit_redsequence(rs0: RSModel, flux, ivar, z, w, *, mode: str = "lupt", eps: float = 0.015,
                     smooth: float = 1.0, maxiter: int = 300, tol: float = 1e-7,
                     fit=FIT_KEYS) -> tuple[RSModel, dict]:
-    """Fit the red-sequence nodes. Returns (model, info)."""
+    """Fit the red-sequence nodes; return (model, info), info holding the loss history and ``niter``.
+
+    ``z`` are the galaxies' cluster redshifts and ``w`` their membership weights. ``fit`` names
+    the node groups left free; ``smooth`` scales the second-difference prior (0: no prior).
+    L-BFGS stops after ``maxiter`` steps, or when the loss changes by less than
+    ``tol`` x max(1, |loss|).
+    """
     with jax.enable_x64(True):
         flux = jnp.asarray(np.asarray(flux, np.float64))
         ivar = jnp.asarray(np.asarray(ivar, np.float64))
@@ -92,7 +98,11 @@ def fit_redsequence(rs0: RSModel, flux, ivar, z, w, *, mode: str = "lupt", eps: 
 
 
 def update_pivot(rs: RSModel, refmag, z, w, halfwidth: float = 0.05, min_weight: float = 20.0) -> RSModel:
-    """Pivot nodes = weighted median reference magnitude of the members near each node."""
+    """Return ``rs`` with each pivot node set to the weighted median reference magnitude of the members.
+
+    The members are those within ``halfwidth`` of the node in redshift; a node whose members'
+    summed weight is below ``min_weight`` keeps its value.
+    """
     zp = np.asarray(rs.z_pivot)
     piv = np.asarray(rs.pivot, np.float64).copy()
     refmag, z, w = (np.asarray(a, np.float64) for a in (refmag, z, w))

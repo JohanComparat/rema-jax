@@ -1,4 +1,4 @@
-"""Initial red-sequence model from spectroscopic galaxies.
+"""Builds the initial red-sequence model from a template and the spectroscopic galaxies.
 
 Starting from a template (BC03 colours, or a redMaPPer pars file), the red sequence is located
 in the spectroscopic galaxies by iterative clipping: in sliding redshift bins, galaxies whose
@@ -26,7 +26,10 @@ log = logging.getLogger(__name__)
 
 
 def observed_colours(flux, ivar, iref, zeropoint: float = 22.5):
-    """Adjacent colours from asinh magnitudes (softened at each band's 1-sigma error)."""
+    """Return the adjacent colours and the reference magnitude, from asinh magnitudes.
+
+    Each band's asinh magnitude is softened at its 1-sigma flux error.
+    """
     b = 1.0 / np.sqrt(np.maximum(ivar, 1e-20))
     mu = zeropoint - MAG_PER_LN * (np.arcsinh(flux / (2 * b)) + np.log(b))
     return mu[:, :-1] - mu[:, 1:], mu[:, iref]
@@ -35,7 +38,11 @@ def observed_colours(flux, ivar, iref, zeropoint: float = 22.5):
 def initial_model(flux, ivar, refmag, zspec, rs0: RSModel, mstar_fn, *, zrange=(0.05, 0.9),
                   dz_bin: float = 0.04, dmag: float = 1.75, sigma_start: float = 0.15,
                   nsig: float = 2.0, niter: int = 6, min_gal: int = 30) -> tuple[RSModel, np.ndarray]:
-    """Refine ``rs0`` on spectroscopic galaxies. Returns (model, mask of retained galaxies)."""
+    """Refine ``rs0`` on spectroscopic galaxies; return (model, mask of the retained galaxies).
+
+    Galaxies outside ``zrange`` widened by 0.02, or fainter than m*(z) + ``dmag``, are left out;
+    a redshift bin with fewer than ``min_gal`` retained galaxies keeps its values.
+    """
     flux = np.asarray(flux, np.float64)
     ivar = np.asarray(ivar, np.float64)
     zspec = np.asarray(zspec, np.float64)

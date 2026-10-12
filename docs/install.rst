@@ -1,8 +1,8 @@
 Installation
 ============
 
-From PyPI (the distribution is ``rema-jax``; the package is imported as ``rema`` and installs the
-``rema`` command):
+``rema`` is on PyPI as the distribution ``rema-jax``; it is imported as ``rema`` and installs the
+``rema`` command:
 
 .. code-block:: bash
 
@@ -10,14 +10,18 @@ From PyPI (the distribution is ``rema-jax``; the package is imported as ``rema``
    pip install "rema-jax[cuda]"         # NVIDIA GPU, CUDA 12 JAX wheels ([cuda13] for CUDA 13)
    pip install "rema-jax[plots]"        # matplotlib, for the calibration plots
 
-rema needs Python 3.11 or later. The SLURM scripts of :doc:`hpc` and the notebooks are in the
-repository, not in the package.
+``rema`` needs Python ≥ 3.11.
+The SLURM scripts of :doc:`hpc` and the notebooks are in the repository, not in the package.
 
-From the repository, for development:
+For development, install from the repository:
 
 .. note::
 
-   **Maintainer setup.** On the development laptop, use the shared ``dev`` environment defined in ``~/software/dev_env`` (``conda activate dev``); this package is already installed there in editable mode. Do not create a separate environment for it: add missing dependencies to ``~/software/dev_env`` and rebuild.
+   **Maintainer setup.** On the development laptop, use the shared ``dev`` environment defined in
+   ``~/software/dev_env`` (``conda activate dev``); this package is already installed there in
+   editable mode.
+   Do not create a separate environment for it: add missing dependencies to ``~/software/dev_env``
+   and rebuild.
 
 .. code-block:: bash
 
@@ -30,30 +34,32 @@ From the repository, for development:
 
 .. warning::
 
-   Install JAX from PyPI (``pip``), as ``environment.yml`` does. The conda-forge build
-   ``jaxlib 0.10.2`` for the CPU (``cpu_py312h02fec33_1``) computes wrong richnesses, different
-   at every call; the PyPI wheels of the same version are correct. ``pytest
-   tests/test_jax_build.py`` checks the installed build in a few seconds.
+   Install JAX from PyPI (``pip``), as ``environment.yml`` does.
+   The conda-forge build ``jaxlib 0.10.2`` for the CPU (``cpu_py312h02fec33_1``) computes wrong
+   richnesses, different at every call; the PyPI wheels of the same version are correct.
+   ``pytest tests/test_jax_build.py`` checks the installed build in a few seconds.
 
-On a machine without a GPU, replace ``jax[cuda12]`` by ``jax`` in ``environment.yml``. There is
-nothing to compile, and no Spark, Java, GSL, esutil or healsparse.
+On a machine without a GPU, replace ``jax[cuda12]`` by ``jax`` in ``environment.yml``.
+Nothing is compiled, and neither Spark, Java, GSL, esutil nor healsparse is needed.
 
 .. _cc-notebooks:
 
-The notebooks at CC-IN2P3 (notebook.cc.in2p3.fr)
-------------------------------------------------
+Notebooks on the CC-IN2P3 Jupyter platform
+------------------------------------------
 
-The :ref:`notebooks <notebooks>` run on the `notebook platform <https://notebook.cc.in2p3.fr>`_
-of CC-IN2P3, next to the DR11 data and the products of the DR11 south run (:doc:`ccin2p3`). The
-platform runs a JupyterLab session as an interactive SLURM job, on a CPU or a GPU node
-(`platform documentation <https://doc.cc.in2p3.fr/fr/Computing/jnps/jn-platform.html>`_). Log in
-with your CC-IN2P3 account or eduGAIN. A session sees ``$HOME``, ``/pbs/throng``,
-``/pbs/software`` and the ``/sps`` spaces of your groups; the DR11 data and products are in
-``/sps/lsst``, readable by the ``lsst`` group.
+The :ref:`notebooks <notebooks>` run on the `notebook platform <https://notebook.cc.in2p3.fr>`_ of
+the IN2P3 computing centre (CC-IN2P3), next to the DR11 data and the products of the DR11 south
+run (:doc:`ccin2p3`).
+The platform runs a JupyterLab session as an interactive SLURM job, on a CPU or a GPU node
+(`platform documentation <https://doc.cc.in2p3.fr/fr/Computing/jnps/jn-platform.html>`_).
+Log in with your CC-IN2P3 account or eduGAIN.
+A session sees ``$HOME``, ``/pbs/throng``, ``/pbs/software`` and the ``/sps`` spaces of your
+groups; the DR11 data and products are in ``/sps/lsst``, readable by the ``lsst`` group.
 
-**1. Once: the environment and the kernel.** In a terminal (``ssh cca.in2p3.fr``, or File → New →
-Terminal in a session). ``$HOME`` is small (20 GB), so Miniforge, its package cache, the
-environment (6 GB with the CUDA libraries) and pip's temporary files all go to ``/sps``:
+**1. Once: the environment and the kernel.**
+Open a terminal (``ssh cca.in2p3.fr``, or File → New → Terminal in a session).
+``$HOME`` has 20 GB, so Miniforge, its package cache, the environment (6 GB with the CUDA
+libraries) and pip's temporary files all go to ``/sps``:
 
 .. code-block:: bash
 
@@ -74,22 +80,22 @@ environment (6 GB with the CUDA libraries) and pip's temporary files all go to `
        --env XLA_PYTHON_CLIENT_PREALLOCATE false
    ln -s $SPS $HOME/sps                     # optional: /sps in the file browser of the platform
 
-``[cuda]`` installs the CUDA 12 JAX wheels (CUDA 13 does not support the V100 GPUs); ``dev`` and
-``docs`` add pytest and nbclient, to run the tests and execute the notebooks.
+``[cuda]`` installs the CUDA 12 JAX wheels, because CUDA 13 does not support the V100 GPUs.
+``dev`` and ``docs`` add pytest and nbclient, to run the tests and execute the notebooks.
 
-A login shell at CC-IN2P3 (``ssh``) reads ``~/.profile``, not ``~/.bashrc``, so a ``conda init``
-in ``~/.bashrc`` does not define ``conda`` there. Add these two lines to both files; ``rema-env``
-then activates the environment in any shell:
+A login shell at CC-IN2P3 (``ssh``) reads ``~/.profile``, not ``~/.bashrc``, so a ``conda init`` in
+``~/.bashrc`` does not define ``conda`` there.
+Add these two lines to both files; ``rema-env`` then activates the environment in any shell:
 
 .. code-block:: bash
 
    export SPS=/sps/lsst/users/$USER
    alias rema-env='source $SPS/miniforge3/etc/profile.d/conda.sh && conda activate $SPS/envs/rema'
 
-Check the installation with a short job on a V100: JAX must list a CUDA device, and
-``tests/test_jax_build.py`` detects a faulty JAX build. ``sbatch --wait`` returns when the job
-ends (on 2026-10-07 interactive ``srun`` steps failed to launch on the GPU nodes, while batch
-jobs ran):
+Check the installation with a short batch job on a V100 (on 2026-10-07, interactive ``srun`` steps
+failed to launch on the GPU nodes, while batch jobs ran).
+JAX must list a CUDA device, and ``tests/test_jax_build.py`` detects a faulty JAX build;
+``sbatch --wait`` returns when the job ends:
 
 .. code-block:: bash
 
@@ -105,12 +111,13 @@ jobs ran):
   ``rema-env``) in that shell; ``$SPS`` must be set.
 - ``CondaValueError: prefix already exists``: an older environment is there; remove it with
   ``rm -rf $SPS/envs/rema`` before ``conda create``.
-- ``Disk quota exceeded``: a cache went to ``$HOME``; keep Miniforge on ``/sps`` and pip's
+- ``Disk quota exceeded``: a cache went to ``$HOME``; keep Miniforge on ``/sps``, and pip's
   ``--no-cache-dir`` and ``TMPDIR`` as above.
 
-**2. Each session.** On https://notebook.cc.in2p3.fr, choose the computing group (``lsst``), the
-partition and the resources below, open a notebook from ``software/rema-jax/docs/notebooks/``
-and select the ``rema`` kernel (Kernel → Change Kernel):
+**2. Each session.**
+On https://notebook.cc.in2p3.fr, choose the computing group (``lsst``), the partition and the
+resources below, open a notebook from ``software/rema-jax/docs/notebooks/`` and select the
+``rema`` kernel (Kernel → Change Kernel):
 
 .. list-table::
    :header-rows: 1
@@ -119,54 +126,57 @@ and select the ``rema`` kernel (Kernel → Change Kernel):
    * - Notebook
      - Session
    * - ``blind_dr11``, ``pipeline_dr11``, ``scan_dr11``
-     - GPU partition (V100 or H100), 1 GPU, 5 CPUs, 32 GB. The three run in under 2 hours on a
-       V100 and need about 23 GB of memory.
+     - GPU partition (V100 or H100), 1 GPU, 5 CPUs, 32 GB.
+       The three run in under 2 hours on a V100 and need about 23 GB of memory.
    * - ``redmapper_dr11``
-     - CPU partition, 4 CPUs, 32 GB, no GPU. The first run reduces the two parts of the
-       production catalogue and one 23 GB randoms file (about 30 minutes); later runs reuse them
-       and take a few minutes.
+     - CPU partition, 4 CPUs, 32 GB, no GPU.
+       The first run reduces the two parts of the production catalogue and one 23 GB randoms file
+       (about 30 minutes); later runs reuse them and take a few minutes.
 
-The notebooks use two directories, given by two environment variables, and need neither at
+The notebooks take two directories from two environment variables, which need not be set at
 CC-IN2P3:
 
-- ``REMA_DATA``, shared and read only: the DR11 south directory, with the sweeps, the randoms
-  and, in ``rema/``, the production catalogues, their calibration and the external catalogues of
-  :doc:`redmapper_dr11`. Default: ``/sps/lsst/datasets/desi/legacysurveys/dr11/south`` when it
-  exists, else ``~/data/legacysurvey/dr11/south``.
-- ``REMA_WORK``, yours: everything the notebooks write. Default: ``rema_work`` in your space,
-  ``/sps/lsst/users/$USER/rema_work`` when ``/sps/lsst/users/$USER`` exists (``$HOME`` has 20 GB
-  at CC-IN2P3), else ``~/rema_work``. The DR11 notebooks write about 0.5 GB there,
-  :doc:`notebooks/redmapper_dr11` 7.5 GB.
+- ``REMA_DATA``, shared and read-only: the DR11 south directory, with the sweeps, the randoms and,
+  in ``rema/``, the production catalogues, their calibration and the external catalogues of
+  :doc:`redmapper_dr11`.
+  Default: ``/sps/lsst/datasets/desi/legacysurveys/dr11/south`` when it exists, else
+  ``~/data/legacysurvey/dr11/south``.
+- ``REMA_WORK``, yours: everything the notebooks write.
+  Default: ``rema_work`` in your space, ``/sps/lsst/users/$USER/rema_work`` when
+  ``/sps/lsst/users/$USER`` exists (``$HOME`` has 20 GB at CC-IN2P3), else ``~/rema_work``.
+  The DR11 notebooks write about 0.5 GB there, and :doc:`notebooks/redmapper_dr11` 7.5 GB.
 
 In a GPU session, ``import jax; jax.devices()`` returns ``[CudaDevice(id=0)]``.
 
-**3. Updates.** ``git -C $HOME/software/rema-jax pull`` updates the code and the notebooks
-together (the install is editable); then restart the kernel.
+**3. Updates.**
+``git -C $HOME/software/rema-jax pull`` updates the code and the notebooks together (the install
+is editable); then restart the kernel.
 
-What the kernel settings do:
+The kernel and the environment in detail:
 
 - ``ipykernel install --user`` writes ``~/.local/share/jupyter/kernels/rema/kernel.json``, with
   the Python of the environment and the ``--env`` variables, so the kernel needs no login script.
-  The platform starts kernels through ``ipykernel`` and ``pyzmq``; ``colossus`` and ``pandas``
-  are used only by :doc:`notebooks/redmapper_dr11`.
-- ``JAX_COMPILATION_CACHE_DIR`` keeps the compiled programs on ``/sps`` between sessions, also
-  for the ``rema`` commands that the pipeline notebook runs (the notebooks alone default to
-  ``.cache/rema/jax`` in your space too, the ``rema`` command to ``~/.cache/rema/jax``).
+  The platform starts kernels through ``ipykernel`` and ``pyzmq``; ``colossus`` and ``pandas`` are
+  used only by :doc:`notebooks/redmapper_dr11`.
+- ``JAX_COMPILATION_CACHE_DIR`` keeps the compiled programs on ``/sps`` between sessions, for the
+  notebooks and for the ``rema`` commands that the pipeline notebook runs.
+  Without it, the notebooks still cache in your space (``.cache/rema/jax``), but the ``rema``
+  command caches in ``~/.cache/rema/jax``.
 - To change a variable, run the ``ipykernel install`` line again (it replaces the kernel).
   ``jupyter kernelspec list`` lists the kernels; ``jupyter kernelspec remove rema`` removes this one.
 - Keep the ``[cuda]`` extra (CUDA 12 JAX wheels): the platform documentation installs
   ``jax[cuda13]``, which does not support the V100 GPUs.
-- Install the clone, not the PyPI release: the notebooks of the repository may need a newer
-  rema than the last release.
-- Without access to ``/sps/lsst``: install the environment in a ``/sps`` space of your group, copy
-  the parts of the DR11 south directory you need there, with the same layout, and give their
+- Install the clone rather than the PyPI release: the notebooks of the repository may need a newer
+  ``rema`` than the last release.
+- Without access to ``/sps/lsst``, install the environment in a ``/sps`` space of your group, copy
+  there the parts of the DR11 south directory you need, with the same layout, and give their
   location with ``--env REMA_DATA``.
 
 If something goes wrong:
 
 - **The kernel does not start:** ``ipykernel`` or ``pyzmq`` is missing from the environment, or
-  ``kernel.json`` points to another Python. The session log is
-  ``~/.jupyterhub/notebook_server_<job id>.log``.
+  ``kernel.json`` points to another Python.
+  The session log is ``~/.jupyterhub/notebook_server_<job id>.log``.
 - **The session stops in the middle of a cell:** it went over its memory or time; start a new
   session with more memory.
 - **JAX sees only the CPU:** the session was started on a CPU partition, or ``JAX_PLATFORMS=cpu``
@@ -175,7 +185,7 @@ If something goes wrong:
   points to a directory that is not yours; ``REMA_DATA`` is never written to.
 - End a session with File → Log Out: closing the tab leaves the job running until its time limit.
 
-The batch production at CC-IN2P3 (SLURM arrays) uses the same environment: :doc:`ccin2p3`.
+The batch production at CC-IN2P3 (SLURM arrays, :doc:`ccin2p3`) uses the same environment.
 
 Devices and JAX settings
 ------------------------

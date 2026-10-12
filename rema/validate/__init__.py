@@ -1,1 +1,2 @@
-"""Validation helpers: mock cluster injection and comparisons with reference catalogues."""
+"""Validation helpers: mock clusters, comparisons with reference catalogues, null tests and the
+photo-z width calibration."""

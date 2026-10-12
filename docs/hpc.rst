@@ -1,11 +1,17 @@
 Production on an HPC
 ====================
 
-The full DR11 south blind run (1,600 sweeps, Dec −90 to +40) cuts the sky into regions of
-about 100 deg² and runs one SLURM array task per region. `scripts/slurm/rema_dr11_blind.sh`
-drives it in two phases, with a check of the calibration in between. Each task runs one stage
-of `scripts/slurm/rema_task.sh`, which also runs without SLURM. The pipeline notebook
-(:doc:`notebooks/pipeline_dr11`) runs the same stages on a few sweeps.
+The blind run over the whole of the Legacy Surveys Data Release 11 (DR11) south (1 600 sweeps,
+Dec −90 to +40) takes the sweeps, their photo-z files, the randoms and a calibration area, and
+produces one cluster catalogue with its members on a high-performance computing (HPC) cluster.
+It cuts the sky into regions of about 100 deg² and runs one SLURM array task per region.
+`scripts/slurm/rema_dr11_blind.sh` drives it in two phases, with a check of the calibration in
+between, and each task runs one stage of `scripts/slurm/rema_task.sh`, which also runs without
+SLURM.
+The table below lists the stages; the sections after it give the commands, the settings at
+CC-IN2P3, the rules for parallel jobs, the configuration, the regions, the randoms, the
+resources, the pilot run and the cost.
+The pipeline notebook (:doc:`notebooks/pipeline_dr11`) runs the same stages on a few sweeps.
 
 .. list-table::
    :header-rows: 1
@@ -41,7 +47,7 @@ of `scripts/slurm/rema_task.sh`, which also runs without SLURM. The pipeline not
        first to fill the shared JAX compilation cache.
    * - merge
      - 1
-     - ``rema merge``: one catalogue, members in a separate file, and the QA.
+     - ``rema merge``: one catalogue, members in a separate file, and the quality assurance (QA).
 
 Quick start
 -----------
@@ -62,11 +68,10 @@ Quick start
    scripts/slurm/rema_dr11_blind.sh run              # plan, priming region, region array, merge
    scripts/slurm/rema_dr11_blind.sh status
 
-The calibration box above is only an example: use one of the boxes that ``--calib-suggest``
-proposes.
+The calibration box above is an example; use one of the boxes that ``--calib-suggest`` proposes.
 
-- ``prepare`` and ``run`` submit only what is missing, or stale: made with another plan,
-  calibration or rema version (``rema status``). After failures or timeouts, call them again.
+- ``prepare`` and ``run`` submit only what is missing or stale, that is, made with another plan,
+  calibration or rema version (``rema status``); after failures or timeouts, call them again.
   They refuse to submit while jobs they submitted before are still queued or running.
 - To rerun particular regions, for example with more memory:
   ``ARRAY=17,42 REGION_MEM=192G scripts/slurm/rema_dr11_blind.sh run``.
@@ -84,7 +89,8 @@ CC-IN2P3
 --------
 
 ``scripts/slurm/ccin2p3.env`` holds the settings for the `CC-IN2P3 <https://doc.cc.in2p3.fr>`_
-cluster. With rema cloned in ``$HOME/software/rema-jax``:
+cluster.
+With rema cloned in ``$HOME/software/rema-jax``:
 
 .. code-block:: bash
 
@@ -106,106 +112,112 @@ It sets:
   REGION_MEM=96G`` for the H100 nodes;
 - ``--licenses=sps`` on every job, which the cluster requires for jobs that use ``/sps``.
 
-Variables exported before sourcing the file are kept. ``ACCOUNT`` defaults to your main group.
-It also moves the pip and matplotlib caches out of ``$HOME``, which is small. :doc:`ccin2p3`
-gives the install on ``/sps``, the data download and the commands of a run, step by step.
+Variables exported before sourcing the file are kept, and ``ACCOUNT`` defaults to your main
+group.
+The file also moves the pip and matplotlib caches out of ``$HOME``, which is small.
+:doc:`ccin2p3` gives the installation on ``/sps``, the data download and the commands of a run,
+step by step.
 
 Parallel jobs and disk space
 ----------------------------
 
 - **No shared files.** Every task writes its own outputs: one galaxy table per sweep, one index
-  per randoms file, one directory per region, one log per task. Writes go to a temporary file
-  renamed into place.
-- **JAX cache.** JAX writes compilation-cache entries in place, without locking. The priming
-  region writes the shared cache (``$OUTDIR/jax_cache``) alone; every later region task copies it
-  to its job's ``TMPDIR`` and compiles there, so concurrent tasks never read a partial entry.
+  per randoms file, one directory per region, one log per task.
+  Writes go to a temporary file renamed into place.
+- **JAX cache.** JAX writes compilation-cache entries in place, without locking.
+  The priming region writes the shared cache (``$OUTDIR/jax_cache``) alone; every later region
+  task copies it to its job's ``TMPDIR`` and compiles there, so concurrent tasks never read a
+  partial entry.
 - **Per region.** A region task deletes its ``checkpoint/`` once ``clusters.fits`` is written; it
   keeps ``footprint.fits`` and ``clusters.fits``.
 - **After the merge.** ``scripts/slurm/rema_dr11_blind.sh clean`` deletes the per-sweep galaxy
-  tables, the randoms index and the JAX cache. It refuses unless the merged products exist,
-  every region is done, and nothing changed after the merge. Rerunning a region afterwards
-  needs ``prepare`` again.
+  tables, the randoms index and the JAX cache.
+  It refuses unless the merged products exist, every region is done, and nothing changed after
+  the merge.
+  Rerunning a region afterwards needs ``prepare`` again.
 
 The configuration
 -----------------
 
-``scripts/slurm/dr11_south.yaml`` holds the defaults plus ``survey.ebv_max: 0.2``. Galaxies and
-randoms with E(B−V) ≥ 0.2 are cut alike, so the masked area and MASKFRAC stay consistent with
-the galaxies.
-
-- **Where it applies:** ingest, the randoms index, the footprints and the calibration use it.
-  The region runs inherit it from the calibration.
-- **SURVHASH:** a galaxy table made with another selection is refused, because its SURVHASH
-  differs from the run's.
+``scripts/slurm/dr11_south.yaml`` holds the defaults plus ``survey.ebv_max: 0.2``.
+Galaxies and randoms with E(B−V) ≥ 0.2 are cut alike, so the masked area and MASKFRAC stay
+consistent with the galaxies.
+Ingest, the randoms index, the footprints and the calibration use this configuration, and the
+region runs inherit it from the calibration.
+A galaxy table made with another selection is refused, because its SURVHASH differs from the
+run's.
 
 Regions and boundaries
 ----------------------
 
 **The planner.** ``rema regions`` builds the plan from the per-sweep galaxy counts:
 
-- **Bands:** Dec bands of 10° follow the sweep rows. The polar cap (\|Dec\| > 85°) is one
-  full-RA ring.
+- **Bands:** Dec bands of 10° follow the sweep rows.
+  The polar cap (\|Dec\| > 85°) is one full-RA ring.
 - **Own boxes:** in each band, own boxes are runs of whole sweeps, starting after the band's
-  largest RA gap so that RA 0/360 needs no special case. Each run holds about ``TARGET_AREA``
-  deg² (100 by default): 10° × 10° near the equator, wider in RA towards the pole.
+  largest RA gap so that RA 0/360 needs no special case.
+  Each run holds about ``TARGET_AREA`` deg² (100 by default): 10° × 10° near the equator, wider
+  in RA towards the pole.
 - **Caps:** regions above ``MAX_GAL`` galaxies, or ``MAX_PAIRS`` estimated percolation pairs,
   in their data box are split.
 - **Order:** regions are numbered by decreasing cost.
-- **Size:** DR11 south at \|b\| ≥ 15° gives 292 regions. The data box of a median region holds
-  6–7 M galaxies, and the densest 13 M.
+- **Size:** DR11 south at \|b\| ≥ 15° gives 292 regions.
+  The data box of a median region holds 6–7 M galaxies, and the densest 13 M.
 
 **Clusters across sweeps and regions.**
 
-- Sweeps are only I/O units. A region reads every per-sweep table that overlaps its *data box*
-  (its own box grown by ``BUFFER`` = 2°) and cuts it to the box. A cluster spanning two sweeps is
-  therefore seen whole.
+- Sweeps are only I/O units.
+  A region reads every per-sweep table that overlaps its *data box* (its own box grown by
+  ``BUFFER`` = 2°) and cuts it to the box, so a cluster spanning two sweeps is seen whole.
 - A cluster is kept only by the region whose *own box* contains its final centre, so the merged
-  catalogue has no duplicates. ``MEM_MATCH_ID = region << 32 | rank`` is unique, and
-  ``MEM_MATCH_ID >> 32`` gives the region. Runs over separate parts of the sky are combined with
-  ``PART << 40`` added (``scripts/dr11/combine_dr11.py``).
-- Members are concatenated as they are. A galaxy can be a member of clusters owned by two
-  regions, as in a run over the whole sky.
+  catalogue has no duplicates.
+  ``MEM_MATCH_ID = region << 32 | rank`` is unique, and ``MEM_MATCH_ID >> 32`` gives the region.
+  Runs over separate parts of the sky are combined with ``PART << 40`` added
+  (``scripts/dr11/combine_dr11.py``).
+- Members are concatenated as they are.
+  A galaxy can be a member of clusters owned by two regions, as in a run over the whole sky.
 
 **What the buffer covers.** A cluster changes directly through its aperture, and through the
-claims of higher-ranked neighbours: their mask radius plus their seed offset. At z = 0.05 that
-reach is 1.4°, 1.6° and 1.9° for λ = 30, 100 and 300, so the 2° buffer covers it
-(:func:`rema.pipeline.required_buffer`).
+claims of higher-ranked neighbours: their mask radius plus their seed offset.
+At z = 0.05 that reach is 1.4°, 1.6° and 1.9° for λ = 30, 100 and 300, so the 2° buffer covers
+it (:func:`rema.pipeline.required_buffer`).
 
-**What it does not cover.** Percolation's full dependency radius is 1.9°, 2.3° and 2.9°. Chains
-of claims that start beyond the buffer can still change a cluster near a boundary, at second
-order, as in redMaPPer's tiling. ``rema merge`` reports the cluster density against the
-distance to internal edges, and the cross-region close pairs.
+**What it does not cover.** Percolation's full dependency radius is 1.9°, 2.3° and 2.9°.
+Chains of claims that start beyond the buffer can still change a cluster near a boundary, at
+second order, as in redMaPPer's tiling.
+``rema merge`` reports the cluster density against the distance to internal edges, and the
+cross-region close pairs.
 
-**Measured** (pipeline notebook): the 74 deg² strip RA 0–5°, Dec −15–0° was run as three
-25 deg² regions and as one region.
+**Measured.** We ran the 74 deg² strip at RA 0–5°, Dec −15–0° as three regions of 25 deg² and as
+one region (pipeline notebook):
 
-- The merged catalogue holds the same 12,857 clusters as the one-region catalogue.
+- The merged catalogue holds the same 12 857 clusters as the one-region catalogue.
 - Every cluster with λ ≥ 5 has the same central galaxy at every distance from the two internal
   boundaries, including within 0.25°.
-- λ agrees to a median relative difference of 3·10⁻⁶.
-- 15 clusters (0.12%) land on another z_λ solution, with a different λ:
+- λ agrees to a median relative difference of 3 × 10⁻⁶.
+- Fifteen clusters (0.12%) land on another z_λ solution, with a different λ:
 
-  - all 15 had reached the 5-iteration cap of z_λ (Z_LAMBDA_NITER = 5), as had about 20% of
-    all clusters;
+  - all fifteen had reached the cap of five z_λ iterations (Z_LAMBDA_NITER = 5), as had about
+    20% of all clusters;
   - a different batching of the float32 kernels changes their result;
   - they lie up to 4.8° from any boundary, beyond the buffer's reach, so they are not a
     boundary effect.
 
-With 25 deg² own boxes the regions' blind runs took twice the one-region time. Production regions of
-100 deg² read relatively less buffer.
+With own boxes of 25 deg², the blind runs of the regions took twice the one-region time;
+production regions of 100 deg² read relatively less buffer.
 
 The randoms
 -----------
 
-``NRAND`` (default 20) is the number of randoms files whose index the footprints use. The
-CC-IN2P3 copy (``/sps/lsst/datasets/desi/legacysurveys``) holds files 0 to 3 only: set
+``NRAND`` (default 20) is the number of randoms files whose index the footprints use.
+The CC-IN2P3 copy (``/sps/lsst/datasets/desi/legacysurveys``) holds files 0 to 3 only: set
 ``NRAND=4`` there, or download more files with ``scripts/get_dr11_south_randoms.sh`` into a
-copy you can write to and point ``DR11`` at it.
+writable copy and point ``DR11`` at it.
 
-- One file gives about 8 randoms per nside-1024 pixel. The aperture of a λ = 20 cluster covers
-  4 pixels at z = 0.3 and 1.4 pixels at z = 0.8.
+- One file gives about eight randoms per nside-1024 pixel.
+  The aperture of a λ = 20 cluster covers 4 pixels at z = 0.3 and 1.4 pixels at z = 0.8.
 - The index is built once (about 3 GB per file on disk), so more files cost little time.
-- Use all 20 in production, unless scratch space is short.
+- Use all twenty in production, unless scratch space is short.
 
 Devices and resources
 ---------------------
@@ -213,28 +225,29 @@ Devices and resources
 ``DEVICE=gpu``
     Region tasks request ``GPU_GRES`` (``gpu:1``), or ``GPUS`` GPUs with ``--gpus`` when it is
     set, ``PART_GPU`` and ``GPU_CONSTRAINT`` (pin the GPU model), with 8 CPUs, 96 GB and 8 h,
-    and run JAX on the GPU. Blind mode is 4–5 times faster on a laptop GPU than on 16 CPU
-    threads.
+    and run JAX on the GPU.
+    Blind mode is 4–5 times faster on a laptop GPU than on 16 CPU threads.
 ``DEVICE=cpu``
     Region tasks use ``PART_CPU``, with 16 CPUs, 64 GB and 24 h.
 
-Override any of these with ``REGION_CPUS``, ``REGION_MEM`` and ``REGION_TIME``.
+``REGION_CPUS``, ``REGION_MEM`` and ``REGION_TIME`` override these values.
 
-In the DR11 south production (:doc:`ccin2p3`), a region peaked at a median of 18 GB of memory
-(90% below 37 GB, 2.4–3 kB per galaxy of its data box); a region at the edge of the Galactic
-bulge, with 1.06 M candidates, reached 84 GB. Rerun such regions with ``REGION_MEM``. A region
-took about 1 h on a V100 and 4 h on its 5 CPU cores.
+In the DR11 south production (:doc:`ccin2p3`), the peak memory of a region had a median of 18 GB
+(90% below 37 GB, 2.4–3 kB per galaxy of its data box), and a region at the edge of the
+Galactic bulge, with 1.06 M candidates, reached 84 GB.
+Rerun such regions with ``REGION_MEM``.
+A region took about 1 h on a V100 and 4 h on its 5 CPU cores.
 
 - **Other stages:** ingest, randoms, calib and merge always run on CPUs.
 - **Throttles:** ``GPAR``, ``RPAR`` and ``BPAR`` limit the concurrent tasks of the arrays.
 - **Extra options:** ``EXTRA_SBATCH`` adds sbatch options to every job.
-- **JAX cache:** each device kind has its own ``$OUTDIR/jax_cache/$DEVICE``. The priming task
-  fills it before the array starts, because JAX writes cache entries without a lock.
+- **JAX cache:** each device kind has its own ``$OUTDIR/jax_cache/$DEVICE``, filled by the
+  priming task before the array starts.
 
-Before the full run
--------------------
+Pilot run
+---------
 
-Run a pilot of about 10 regions with ``ARRAY=…``. Include:
+Before the full run, run a pilot of about ten regions with ``ARRAY=…``, including:
 
 - the most expensive (region 0);
 - the polar ring;
@@ -243,18 +256,19 @@ Run a pilot of about 10 regions with ``ARRAY=…``. Include:
 - one on a survey edge.
 
 From their headers (NGAL, NCAND, NDEP, TTOTAL, PEAKRSS), check time and memory against the
-galaxy and pair counts. Set ``MAX_GAL`` or ``MAX_PAIRS`` if needed. Then delete the plan and
-run. The plan is fixed once the run starts.
+galaxy and pair counts, and set ``MAX_GAL`` or ``MAX_PAIRS`` if needed.
+Then delete the plan and run: the plan is fixed once the run starts.
 
 To run only part of the sky, for a test or while the download is incomplete, export
-``AREA_BOX="RA0 RA1 DEC0 DEC1[;...]"`` before ``prepare`` and keep it for ``run``. Every stage,
-and the driver's bookkeeping, then use only the sweeps overlapping that area. Use a separate
-``OUTDIR`` and ``CLUSTERS_DIR``, because a plan made for one area is not extended to another.
+``AREA_BOX="RA0 RA1 DEC0 DEC1[;...]"`` before ``prepare`` and keep it for ``run``.
+Every stage, and the driver's bookkeeping, then use only the sweeps overlapping that area.
+Use a separate ``OUTDIR`` and ``CLUSTERS_DIR``, because a plan made for one area is not extended
+to another.
 
-Cost
-----
+Cost of the DR11 south production
+---------------------------------
 
-The DR11 south production of rema 0.2.0 (:doc:`ccin2p3`):
+The DR11 south production of rema 0.2.0 (:doc:`ccin2p3`) cost:
 
 .. list-table::
    :header-rows: 1

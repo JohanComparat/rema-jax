@@ -1,7 +1,7 @@
-"""Redshift corrections fitted against spectroscopic redshifts.
+"""Fits the zred and z_lambda corrections and the z -> zred_uncorr mapping to spectroscopic redshifts.
 
 zred correction (redMaPPer ``corr``, ``corr_r``): for red galaxies with spectroscopic redshifts,
-dz = z_spec - zred_uncorr is binned in zred_uncorr; per node the corrected offset is the
+dz = z_spec - zred_uncorr is binned in zred_uncorr; per node the offset is the
 5-sigma-clipped median of dz and the error scaling is the clipped robust spread of
 dz / zred_uncorr_e. The slope with magnitude is set to zero (DR10: ``calib_corr_nocorrslope``).
 
@@ -99,12 +99,12 @@ def fit_zlambda_correction(z_lambda, z_lambda_e, zspec, lam, *, zrange=(0.05, 0.
 
 
 def fit_zred_uncorr(z_lambda, zred, nodes) -> np.ndarray | None:
-    """Node values of the z -> zred_uncorr mapping, or None with fewer clusters than nodes.
+    """Return the z -> zred_uncorr node values, or None with fewer valid clusters than nodes.
 
-    redMaPPer's MedZFitter (fitters.py:14-91), as called in zlambdacal.py:338-343: the natural
+    As redMaPPer's MedZFitter (fitters.py:14-91), called in zlambdacal.py:338-343: the natural
     cubic spline s through ``nodes`` minimising sum |zred - s(z_lambda)| (a running median), from
     s(z) = z, with L-BFGS-B on forward differences. ``z_lambda`` is the clusters' raw z_lambda
-    and ``zred`` their central galaxy's zred; failed values (<= 0) are left out.
+    and ``zred`` their central galaxy's zred; failed (<= 0) and non-finite values are left out.
     """
     x, y = (np.asarray(a, np.float64) for a in (z_lambda, zred))
     nodes = np.asarray(nodes, np.float64)

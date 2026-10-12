@@ -1,4 +1,4 @@
-"""Diagnostic plots of a calibration (matplotlib, optional dependency)."""
+"""Draws the diagnostic plots of a calibration (matplotlib, an optional dependency)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,10 @@ from ..model.redsequence import RSModel
 
 
 def plot_redsequence(rs: RSModel, flux, ivar, z, w, refmag, path, zrange=(0.05, 0.9)):
-    """Members' colours (at the pivot magnitude) vs redshift, with the model mean and scatter."""
+    """Plot the members' colours (at the pivot magnitude) against redshift; return the path.
+
+    The model mean and scatter are drawn over the members.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -44,7 +47,7 @@ def plot_redsequence(rs: RSModel, flux, ivar, z, w, refmag, path, zrange=(0.05, 
 
 
 def plot_zlambda(zspec, zlambda, zlambda_e, path):
-    """z_lambda vs spectroscopic redshift of the calibration clusters."""
+    """Plot z_lambda against the spectroscopic redshift of the calibration clusters; return the path."""
     import matplotlib
 
     matplotlib.use("Agg")

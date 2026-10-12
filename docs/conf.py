@@ -1,7 +1,15 @@
 """Sphinx configuration for the rema documentation (``make -C docs html``)."""
 
+import dataclasses
 import os
 import sys
+
+import pybtex.plugin
+import sphinxcontrib.bibtex.plugin
+from pybtex.style.formatting.plain import Style as PlainStyle
+from pybtex.style.template import join, node, sentence
+from sphinxcontrib.bibtex.style.referencing import BracketStyle
+from sphinxcontrib.bibtex.style.referencing.author_year import AuthorYearReferenceStyle
 
 # autodoc imports rema; no GPU is needed for that.
 os.environ.setdefault("JAX_PLATFORMS", "cpu")
@@ -21,8 +29,15 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinxcontrib.bibtex",
     "myst_nb",
 ]
+
+# Citations: :cite:t:`key` gives "Rykoff et al. (2014)", :cite:p:`key{Fig. 3}` gives
+# "(Rykoff et al., 2014, Fig. 3)"; every cited paper is listed on the Literature page.
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year_round"
+bibtex_default_style = "rema"
 
 # The notebooks need the DR11 data: they are stored with their outputs and never run here.
 nb_execution_mode = "off"
@@ -46,6 +61,44 @@ html_theme_options = {"navigation_depth": 3}
 html_title = f"rema {release}"
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**/.ipynb_checkpoints", "examples"]
+
+
+@dataclasses.dataclass
+class _RoundAuthorYear(AuthorYearReferenceStyle):
+    """Author-year citations in round brackets, as in the astronomy journals."""
+
+    bracket_parenthetical: BracketStyle = dataclasses.field(
+        default_factory=lambda: BracketStyle("(", ")", sep="; ", sep2="; ", last_sep="; "))
+    bracket_textual: BracketStyle = dataclasses.field(default_factory=lambda: BracketStyle("(", ")"))
+    bracket_author: BracketStyle = dataclasses.field(default_factory=lambda: BracketStyle("(", ")"))
+    bracket_label: BracketStyle = dataclasses.field(default_factory=lambda: BracketStyle("(", ")"))
+    bracket_year: BracketStyle = dataclasses.field(default_factory=lambda: BracketStyle("(", ")"))
+
+
+@node
+def _names_et_al(children, context, role, **kwargs):
+    """The first three names of a role, then "et al." when there are more."""
+    persons = context["entry"].persons[role]
+    style = context["style"]
+    shown = [p for p in persons if str(p) != "others"]
+    more = len(shown) > 3 or len(shown) < len(persons)
+    names = [style.format_name(p, style.abbreviate_names) for p in shown[:3]]
+    if more:
+        return join(sep=", ")[names + ["et al."]].format_data(context)
+    return join(sep=", ", sep2=" and ", last_sep=", and ")[names].format_data(context)
+
+
+class _RemaStyle(PlainStyle):
+    """pybtex's plain style with at most three authors per entry."""
+
+    def format_names(self, role, as_sentence=True):
+        formatted = _names_et_al(role)
+        return sentence[formatted] if as_sentence else formatted
+
+
+sphinxcontrib.bibtex.plugin.register_plugin(
+    "sphinxcontrib.bibtex.style.referencing", "author_year_round", _RoundAuthorYear)
+pybtex.plugin.register_plugin("pybtex.style.formatting", "rema", _RemaStyle)
 
 
 def _escape_bars(app, what, name, obj, options, lines):

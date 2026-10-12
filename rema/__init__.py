@@ -1,9 +1,9 @@
-"""rema: red-sequence matched-filter galaxy cluster finding in JAX.
+"""rema finds galaxy clusters with a red-sequence matched filter, in JAX.
 
-A redMaPPer-inspired redesign (Rykoff et al. 2014, 2016) for the DESI Legacy Imaging Surveys
-DR11: blind cluster finding, richness scans at given positions, and
-spectroscopic post-processing (cluster redshift and velocity dispersion), with a red-sequence
-model calibrated on DR11.
+It takes the galaxies of the DESI Legacy Imaging Surveys DR11 and produces cluster catalogues by
+blind cluster finding, richness scans at given positions, and spectroscopic post-processing
+(cluster redshift and velocity dispersion), with a red-sequence model calibrated on DR11. It is a
+redMaPPer-inspired redesign (Rykoff et al. 2014, 2016).
 
 Subpackages are imported on demand, so ``import rema`` stays light.
 """

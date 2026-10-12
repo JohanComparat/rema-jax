@@ -1,4 +1,4 @@
-"""Red-sequence calibration on DR11 with spectroscopic seeds (``rema calibrate``).
+"""Calibrates the red sequence on DR11 with spectroscopic seeds (``rema calibrate``).
 
 1. Initial model: the BC03 template colours (``rema/data``) refined on the spectroscopic
    galaxies by iterative clipping (:mod:`rema.calib.init`).
@@ -49,7 +49,11 @@ log = logging.getLogger(__name__)
 
 
 def spec_seeds(region: Region, cfg: RemaConfig, dmag: float = 1.0) -> np.ndarray:
-    """Indices of spectroscopic galaxies usable as cluster seeds."""
+    """Return the indices of the spectroscopic galaxies usable as cluster seeds.
+
+    A seed has ZSPEC within ``model.zrange``, REFMAG < m*(ZSPEC) + ``dmag`` and
+    chi^2(ZSPEC) < ``model.chisq_max``.
+    """
     import jax.numpy as jnp
 
     from ..model.likelihood import chisq
@@ -77,7 +81,7 @@ def _stage(cfg: RemaConfig):
 
 
 def calibration_candidates(region: Region, seeds: np.ndarray, cfg: RemaConfig) -> dict:
-    """Likelihood pass of the spectroscopic seeds at their ZSPEC (keepz candidates)."""
+    """Run the likelihood pass of the spectroscopic seeds at their ZSPEC; return the keepz candidates."""
     st, q = _stage(cfg)
     zs = region.gal["ZSPEC"][seeds]
     lk = _run_batched(region, seeds, zs, st, q, "richness")
@@ -89,7 +93,7 @@ def calibration_candidates(region: Region, seeds: np.ndarray, cfg: RemaConfig) -
 
 def calibration_clusters(region: Region, seeds: np.ndarray, cfg: RemaConfig, centering: str = "bcg",
                          cand: dict | None = None):
-    """Spectroscopically seeded clusters at fixed redshift (percolated)."""
+    """Return the percolated, spectroscopically seeded clusters at fixed redshift, and their members."""
     st, q = _stage(cfg)
     if cand is None:
         cand = calibration_candidates(region, seeds, cfg)
@@ -97,8 +101,10 @@ def calibration_clusters(region: Region, seeds: np.ndarray, cfg: RemaConfig, cen
 
 
 def _central_terms(region: Region, cat: dict):
-    """Per-cluster inputs of the central-magnitude fit: m*(z), chi^2 pdf of the central's colours
-    (cwt) and the chi^2-background counts within r_lambda (bcounts), as redMaPPer's WcenCalibrator."""
+    """Return the per-cluster inputs of the central-magnitude fit, as redMaPPer's WcenCalibrator.
+
+    They are m*(z), the chi^2 pdf of the central's colours (cwt) and the chi^2-background counts
+    within r_lambda (bcounts)."""
     import jax.numpy as jnp
 
     from . import wcen as W
@@ -141,7 +147,7 @@ def calibrate_wcen(region: Region, seeds: np.ndarray, cfg: RemaConfig, cand: dic
     g = region.gal
 
     def table(c):
-        """(lambda/S, training selection) of a cluster catalogue; empty for no clusters."""
+        """Return (lambda/S, training selection) of a cluster catalogue; empty arrays for no clusters."""
         if not c:
             return np.zeros(0), np.zeros(0, bool)
         lam_s = np.asarray(c["LAMBDA"], np.float64) / np.asarray(c["SCALEVAL"], np.float64)
@@ -326,7 +332,7 @@ def calibrate_region(gal: dict, cfg: RemaConfig, footprint=None, rs0: RSModel | 
 
 
 def calibrate(args):
-    """CLI entry point."""
+    """Run ``rema calibrate`` on the parsed command-line arguments and write the calibration file."""
     from ..sky.maps import Footprint
 
     from ..io.legacy import read_galaxies
@@ -356,7 +362,7 @@ def calibrate(args):
 
 
 def write_plots(cal: Calibration, info: dict, outdir) -> None:
-    """Diagnostic plots of the red sequence and of z_lambda vs z_spec."""
+    """Write the diagnostic plots of the red sequence and of z_lambda against z_spec to ``outdir``."""
     from pathlib import Path
 
     from .plots import plot_redsequence, plot_zlambda

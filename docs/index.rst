@@ -3,32 +3,37 @@ rema
 
 **Red-sequence matched-filter galaxy cluster finding in JAX, for the Legacy Surveys DR11.**
 
-rema reimplements redMaPPer (Rykoff et al. `2014 <https://doi.org/10.1088/0004-637X/785/2/104>`__,
-`2016 <https://doi.org/10.3847/0067-0049/224/1/1>`__). It keeps redMaPPer's red-sequence
-model, zred, richness λ, z_λ, BCG and wcen centring, percolation and redshift scans at given
-positions (zscan), and adds the `Clerc et al. (2016) <https://doi.org/10.1093/mnras/stw2214>`__
-velocity clipping. The kernels are batched JAX that run on CPU or GPU, λ has exact
-derivatives, and the package installs with ``pip``.
+``rema`` finds galaxy clusters in a multi-band photometric galaxy catalogue and returns their
+richness λ, redshift z_λ, centre candidates and members.
+It reimplements redMaPPer :cite:p:`Rykoff2014,Rykoff2016`: the red-sequence model, zred, λ, z_λ,
+brightest cluster galaxy (BCG) and wcen centring, percolation, and redshift scans at given
+positions (zscan).
+It adds the velocity clipping of :cite:t:`Clerc2016`.
+The kernels are batched JAX functions that run on a CPU or a GPU, λ has exact derivatives, and the
+package installs with ``pip``.
 
-**The DR11 south catalogue is done:** 3,481,608 clusters with λ ≥ 3 (145,133 with λ ≥ 20) over
-18,500 deg², on the CC-IN2P3 data system (:doc:`ccin2p3`). :doc:`redmapper_dr11` validates it in
-the figures of the redMaPPer papers. :doc:`public_catalogues_scan` gives λ, z_λ and the
-spectroscopic redshift at the 1.64 M clusters of nine public SZ, X-ray and optical catalogues.
+We ran ``rema`` on the south part of the Legacy Surveys data release 11 (DR11 south).
+The catalogue holds 3 481 608 clusters with λ ≥ 3 (145 133 with λ ≥ 20) over 18 500 deg² and is
+on the data system of the IN2P3 computing centre (CC-IN2P3, :doc:`ccin2p3`).
+We validated it against the figures of the redMaPPer papers (:doc:`redmapper_dr11`).
+At the 1.64 M clusters of nine public Sunyaev–Zel'dovich, X-ray and optical catalogues, we
+measured λ, z_λ and the spectroscopic redshift (:doc:`public_catalogues_scan`).
 
-These pages are for readers who know redMaPPer, and they are hands-on: every command and code
-block has been run.
+The pages are for readers who know redMaPPer, and we ran every command and code block in them:
 
 - :doc:`install`, including :ref:`the notebooks at CC-IN2P3 <cc-notebooks>` on the Jupyter
   platform https://notebook.cc.in2p3.fr;
-- :doc:`tour`: mock data, two minutes on a laptop;
+- :doc:`tour`: two minutes on a laptop, without data;
 - :doc:`dr11`: the chain on three DR11 sweeps, step by step;
 - the :ref:`notebooks <notebooks>`: a set of sweeps as one region, the same sweeps through the
-  HPC pipeline, one cluster in scan mode, and the figures of the production catalogue;
-- :doc:`hpc` and :doc:`ccin2p3`: the production on an HPC, and the DR11 catalogue at CC-IN2P3;
+  high-performance computing (HPC) pipeline, one cluster in scan mode, and the figures of the
+  production catalogue;
+- :doc:`hpc` and :doc:`ccin2p3`: production runs on an HPC system, and the DR11 catalogue at
+  CC-IN2P3;
 - :doc:`design`: the algorithm, the deviations from redMaPPer and the validation.
 
-What differs from redMaPPer
----------------------------
+Differences from redMaPPer
+--------------------------
 
 .. list-table::
    :header-rows: 1
@@ -39,14 +44,14 @@ What differs from redMaPPer
      - rema
    * - Colour likelihood
      - χ² of the colours in magnitudes
-     - χ² in asinh magnitudes (`Lupton et al. 1999 <https://doi.org/10.1086/301004>`__),
-       softened at each band's 1σ flux error, so faint and negative
-       g fluxes stay usable (``model.chisq_mode: lupt``). ``mag`` reproduces redMaPPer.
+     - χ² in asinh magnitudes :cite:p:`Lupton1999`, softened at each band's 1σ flux error, so that
+       faint and negative g fluxes stay usable (``model.chisq_mode: lupt``).
+       ``mag`` reproduces redMaPPer.
    * - Selection and depth
-     - The redMaPPer DR10 input catalogue drops galaxies with a flux ≤ 0 or σ_m > 1 in any band. The local depth
-       enters θ_i and the maskgals.
-     - An explicit cut at S/N ≥ 5 in the reference band. Mask and depth enter only the
-       completeness K(r_λ) = 1/SCALEVAL.
+     - The redMaPPer DR10 input catalogue drops galaxies with a flux ≤ 0 or σ_m > 1 in any band.
+       The local depth enters θ_i and the maskgals.
+     - An explicit cut at signal-to-noise ratio S/N ≥ 5 in the reference band.
+       Mask and depth enter only the completeness K(r_λ) = 1/SCALEVAL.
    * - Mask correction
      - Monte-Carlo maskgals
      - Deterministic quadrature over a footprint map made from the DR11 randoms
@@ -59,8 +64,9 @@ What differs from redMaPPer
      - The same result as the sequential loop, computed in batches over a dependency graph
    * - Calibration
      - Per-node fits, iterated
-     - EM: one L-BFGS fit of all red-sequence nodes with a smoothness prior. wcen is fitted
-       as in redMaPPer's WcenCalibrator.
+     - Expectation–maximisation: one L-BFGS fit of all red-sequence nodes with a smoothness
+       prior.
+       wcen is fitted as in redMaPPer's WcenCalibrator.
    * - Infrastructure
      - C extensions, esutil, healsparse
      - numpy, scipy, astropy, healpy and JAX, with one process per sky region (SLURM arrays)
@@ -104,4 +110,5 @@ What differs from redMaPPer
    tables
    api
    design
+   literature
    changelog

@@ -1,1 +1,1 @@
-"""Calibration of the red-sequence model and of the zred, z_lambda and centring corrections."""
+"""Calibrates the red-sequence model, the zred and z_lambda corrections and the wcen centring model."""

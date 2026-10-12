@@ -1,9 +1,9 @@
-"""PSCD: Photo-z Space Cluster Detection.
+"""PSCD (Photo-z Space Cluster Detection) detects galaxy clusters with a matched filter on photo-z.
 
-An implementation of the AMICO matched-filter cluster finder (Bellagamba, Roncarelli, Maturi &
-Moscardini 2018, MNRAS 473, 5221, arXiv:1705.03029; with the magnitude-dependent redshift
-statistics and the KiDS template of Maturi et al. 2019, MNRAS 485, 498, arXiv:1810.02811). It is
-not the AMICO code: the method follows the papers, the implementation is rema's, on the DR11
+It implements the AMICO matched-filter cluster finder (Bellagamba, Roncarelli, Maturi &
+Moscardini 2018, MNRAS 473, 5221, arXiv:1705.03029), with the magnitude-dependent redshift
+statistics and the KiDS template of Maturi et al. (2019, MNRAS 485, 498, arXiv:1810.02811). The
+method follows the papers; the implementation is rema's, not the AMICO code, and runs on the DR11
 photo-z (:mod:`rema.model.photoz`). Galaxies of any colour count; no red sequence is used.
 
 The data D(theta, m, z), galaxies smeared by their photo-z distribution p_i(z), are modelled as

@@ -1,4 +1,4 @@
-"""Calibration products, read from and written to one FITS file.
+"""Reads and writes the calibration products, held in one FITS file.
 
 A :class:`Calibration` holds everything a run needs besides the galaxies and the footprint:
 
@@ -39,12 +39,12 @@ ZRMOD_PAD = (0.02, 0.07)
 @jax.tree_util.register_dataclass
 @dataclass(frozen=True)
 class ZlambdaCorrection:
-    """z_lambda += offset(z) + slope(z) ln(lambda / pivot); z_lambda_e^2 += scatter(z)^2.
+    """Correction of z_lambda: z_lambda += offset(z) + slope(z) ln(lambda / pivot); z_lambda_e^2 += scatter(z)^2.
 
     ``zred_uncorr`` holds redMaPPer's z -> zred_uncorr mapping at the nodes ``z``: the median
     zred of the central galaxies of clusters at raw z_lambda = z, which centres the zred term of
-    LNCGLIKE (:meth:`zrmod_table`). None when not fitted (files written before it): LNCGLIKE then
-    uses z itself.
+    LNCGLIKE (:meth:`zrmod_table`). It is None when not fitted (no ZRED_UNCORR column in the
+    file): LNCGLIKE then uses z itself.
     """
 
     z: jnp.ndarray
@@ -61,7 +61,7 @@ class ZlambdaCorrection:
         return zl + dz, jnp.sqrt(zl_e**2 + sc**2)
 
     def zrmod_table(self, binsize: float = ZRMOD_BINSIZE):
-        """(z, zred) table of the z -> zred_uncorr mapping (float64 numpy), or None without one.
+        """Return the (z, zred) table of the z -> zred_uncorr mapping (float64 numpy), or None without one.
 
         As redMaPPer's ZlambdaCorrectionPar (zlambda.py:621-622, 662-663): the natural cubic
         spline through (z, zred_uncorr), sampled every ``binsize`` from 0.02 below the first node
@@ -165,7 +165,7 @@ class Calibration:
 
     @classmethod
     def from_redmapper_pars(cls, path: str | Path, config: RemaConfig | None = None) -> "Calibration":
-        """Red-sequence model and zred correction of a redMaPPer ``*_pars.fit`` file."""
+        """Return a calibration with the red-sequence model and zred correction of a redMaPPer ``*_pars.fit`` file."""
         return cls(rs=RSModel.from_redmapper_pars(str(path)),
                    zredcorr=ZredCorrection.from_redmapper_pars(str(path)), config=config,
                    meta={"PARSFILE": Path(path).name[:68]})

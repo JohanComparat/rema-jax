@@ -1,4 +1,4 @@
-"""Calibration of the wcen centring model (redMaPPer ``WcenCalibrator``, calibration/centeringcal.py).
+"""Fits the wcen centring model, as redMaPPer's ``WcenCalibrator`` (calibration/centeringcal.py).
 
 The wcen model (:mod:`rema.core.centering`) scores central candidates with their magnitude, zred
 and connectivity W = ln[sum p L / sqrt(r^2 + rsoft^2) / ((1/r_lambda) sum p L)]. W is already a
@@ -26,15 +26,15 @@ the likelihood acts as a chi^2-dependent outlier clip, and the ln W fit is a sin
 Formulas, constants, floors and Nelder-Mead settings (xtol = ftol = 1e-5) are redMaPPer's,
 including its mixed richness conventions: ln(lambda/pivot) in the least-squares start and in
 phi1, ln((lambda/S)/pivot) in the fitted mean magnitude, widths scaled by 1/sqrt((lambda/S)/pivot).
-Deviations:
+Deviations from redMaPPer:
 
 - phi1: magnitudes come from the continuous truncated Schechter function by inverse CDF.
   redMaPPer's ``sample_from_pdf`` quantises the CDF on its 0.002 mag grid, which puts the whole
   bright tail m* - 2.5 to m* - 1.87 (mass 1/2124) exactly on m* - 2.5, where 1-5% of the trials
-  then find their brightest galaxy. The histogram fits hardly see that spike: in an emulation
-  over 40 seeds the PHI1 values (-0.93, -0.31, 0.39, -0.08 for alpha = -1) move by less than
-  their seed-to-seed scatter of 0.006-0.009, while the plain mean of m1 would shift (slope -0.335
-  instead of -0.318). Fitted widths are taken in absolute value (the Gaussian is even in sigma).
+  then find their brightest galaxy. In an emulation over 40 seeds, this spike moves the PHI1
+  values (-0.93, -0.31, 0.39, -0.08 for alpha = -1) by less than their seed-to-seed scatter of
+  0.006-0.009, while it would shift the plain mean of m1 (slope -0.335 instead of -0.318).
+  Fitted widths are taken in absolute value (the Gaussian is even in sigma).
 - ln W fits: sigma > 0 is enforced (cost +inf otherwise); redMaPPer's +1000 penalty does not act
   there, since a negative width makes its cost NaN. ``WcenFgFitter``'s maximum is computed in
   closed form. ``WcenCwFitter``'s mixture is summed in log space with its weights clipped at 0
@@ -68,7 +68,10 @@ _LN_SQRT_2PI = 0.5 * np.log(2.0 * np.pi)
 
 
 def _fmin(cost, p0) -> np.ndarray:
-    """``scipy.optimize.fmin`` with redMaPPer's settings; warns when it stops at a limit."""
+    """Minimise ``cost`` from ``p0`` with ``scipy.optimize.fmin`` at redMaPPer's settings.
+
+    A warning is logged when the minimiser stops at a limit.
+    """
     p, _, _, _, flag = scipy.optimize.fmin(cost, np.asarray(p0, np.float64), xtol=FMIN_TOL,
                                            ftol=FMIN_TOL, disp=False, full_output=True)
     if flag:
@@ -92,10 +95,10 @@ def _drop_bad(ok: np.ndarray, what: str) -> None:
 
 # --------------------------------------------------------------------------- inputs and sample
 def chisq_pdf(chisq, k):
-    """chi^2 pdf with ``k`` degrees of freedom (redMaPPer ``chisq_pdf``).
+    """Return the chi^2 pdf with ``k`` degrees of freedom (redMaPPer ``chisq_pdf``).
 
-    The weight ``cwt`` of :func:`fit_central_mag`, with ``k`` = the number of colours. A negative
-    chi^2 (a failed fit) gives NaN for every k, which that fit's floor excludes.
+    It gives the weight ``cwt`` of :func:`fit_central_mag`, with ``k`` the number of colours. A
+    negative chi^2 (a failed fit) gives NaN for every k, which that fit's floor excludes.
 
     >>> float(chisq_pdf(2.0, 2))
     0.18393972058572117
@@ -107,21 +110,23 @@ def chisq_pdf(chisq, k):
 
 
 def background_counts(sigma_g, mpc_per_deg, r_lambda):
-    """``bcounts`` of :func:`fit_central_mag`: Sigma_g / mpc_per_deg^2 x pi r_lambda^2.
+    """Return ``bcounts`` of :func:`fit_central_mag`, Sigma_g / mpc_per_deg^2 x pi r_lambda^2.
 
     Sigma_g [deg^-2 mag^-1 per unit chi^2] is the chi^2 background at the central's (z, chi^2, m),
-    ``mpc_per_deg`` the h^-1 Mpc per degree at z (redMaPPer's ``mpc_scale``): background galaxies
-    per mag and unit chi^2 within r_lambda. An infinite Sigma_g (outside the table) stays infinite.
+    ``mpc_per_deg`` the h^-1 Mpc per degree at z (redMaPPer's ``mpc_scale``) and ``r_lambda`` in
+    h^-1 Mpc; the result counts background galaxies per mag and unit chi^2 within r_lambda. An
+    infinite Sigma_g (outside the table) stays infinite.
     """
     sigma_g, mpc_per_deg, r_lambda = _as_f8(sigma_g, mpc_per_deg, r_lambda)
     return (sigma_g / mpc_per_deg**2) * np.pi * r_lambda**2
 
 
 def select_training(lam, scaleval, w, z, maskfrac, cfg) -> np.ndarray:
-    """Clusters that enter the wcen fits (``WcenCalibrator.run``, centeringcal.py:328-333).
+    """Return the mask of the clusters that enter the wcen fits (``WcenCalibrator.run``).
 
-    wcen_minlambda < lambda/S < wcen_maxlambda, W > 0, wcen_cal_zrange[0] < z < wcen_cal_zrange[1]
-    and MASKFRAC < max_maskfrac, from ``cfg.centering`` and ``cfg.mask``. Every inequality is
+    The cuts (centeringcal.py:328-333) are wcen_minlambda < lambda/S < wcen_maxlambda, W > 0,
+    wcen_cal_zrange[0] < z < wcen_cal_zrange[1] and MASKFRAC < max_maskfrac, from
+    ``cfg.centering`` and ``cfg.mask``. Every inequality is
     strict; NaN fails every test. ``z`` is the seed's ZSPEC. The same selection applies to the
     random-centre and random-satellite catalogues, with their own lambda, S, W and MASKFRAC.
     """
@@ -135,12 +140,13 @@ def select_training(lam, scaleval, w, z, maskfrac, cfg) -> np.ndarray:
 
 
 def random_offsets(rng, r_lambda, mpc_per_deg, ra, dec) -> tuple[np.ndarray, np.ndarray]:
-    """Random centres uniform in area within r_lambda (``CenteringRandom``, centering.py:385-392).
+    """Return (ra, dec) of random centres, uniform in area within r_lambda (``CenteringRandom``).
 
-    r = r_lambda sqrt(U1), phi = 2 pi U2, and the flat-sky offset x = r cos(phi), y = r sin(phi)
-    [h^-1 Mpc] becomes RA + x / (mpc_per_deg cos(Dec)), Dec + y / mpc_per_deg [deg]. Inputs
-    broadcast (repeat them for several centres per cluster); RA is wrapped into [0, 360).
-    ``rng`` is a ``numpy.random.Generator`` or a seed. Returns (ra, dec).
+    As in centering.py:385-392, r = r_lambda sqrt(U1), phi = 2 pi U2, and the flat-sky offset
+    x = r cos(phi), y = r sin(phi) [h^-1 Mpc] becomes RA + x / (mpc_per_deg cos(Dec)),
+    Dec + y / mpc_per_deg [deg]. Inputs broadcast (repeat them for several centres per cluster);
+    RA is wrapped into [0, 360).
+    ``rng`` is a ``numpy.random.Generator`` or a seed.
     """
     rng = np.random.default_rng(rng)
     r_lambda, mpc_per_deg, ra, dec = _as_f8(r_lambda, mpc_per_deg, ra, dec)
@@ -153,15 +159,15 @@ def random_offsets(rng, r_lambda, mpc_per_deg, ra, dec) -> tuple[np.ndarray, np.
 
 
 def random_satellite(rng, pmem_rows) -> np.ndarray:
-    """One neighbour per row, drawn with probability pmem / sum(pmem) (``CenteringRandomSatellite``).
+    """Return the index of one neighbour per row, drawn with probability pmem / sum(pmem).
 
     ``pmem_rows``: a [N, K] array (numpy or JAX, padded with zeros) or a sequence of N 1-D arrays
     (any iterable, ragged rows allowed), the memberships of each cluster's neighbours at its seed
     position. A 1-D array, or a flat sequence of numbers, is one row; an empty sequence has no
-    rows. The draw is exact: redMaPPer quantises the CDF in steps of 1/K (centering.py:434-443),
-    so that galaxies with pmem below sum(pmem)/K are picked with probability 0 or 1/K. The chosen
-    galaxy can be the central itself. Non-finite or negative pmem count as 0; a row without
-    positive pmem gives -1. Returns int64 indices into each row, one per row.
+    rows. The draw is exact: redMaPPer's ``CenteringRandomSatellite`` quantises the CDF in steps
+    of 1/K (centering.py:434-443), so that galaxies with pmem below sum(pmem)/K are picked with
+    probability 0 or 1/K. The chosen galaxy can be the central itself. Non-finite or negative
+    pmem count as 0; a row without positive pmem gives -1. The indices are int64, into each row.
     """
     rng = np.random.default_rng(rng)
     if hasattr(pmem_rows, "ndim"):                           # an array: [N, K], or 1-D = one row
@@ -192,16 +198,16 @@ def random_satellite(rng, pmem_rows) -> np.ndarray:
 
 # --------------------------------------------------------------------------- phi1 Monte Carlo
 def _schechter(m, alpha, mstar=0.0):
-    """redMaPPer's Schechter function in magnitudes, unnormalised (centeringcal.py:486-487)."""
+    """Return redMaPPer's unnormalised Schechter function in magnitudes (centeringcal.py:486-487)."""
     return 10.0 ** (0.4 * (alpha + 1.0) * (mstar - m)) * np.exp(-(10.0 ** (0.4 * (mstar - m))))
 
 
 def _schechter_draws(rng, n: int, alpha: float, mrange) -> np.ndarray:
-    """n magnitudes (m* = 0) from the Schechter function truncated to ``mrange``, by inverse CDF.
+    """Draw ``n`` magnitudes (m* = 0) from the Schechter function truncated to ``mrange``, by inverse CDF.
 
     The CDF is integrated with the trapezoid rule on CDF_NODES nodes (0.0002 mag apart) and
-    inverted by linear interpolation, so the draws follow the density averaged over those cells:
-    continuous, without quantisation.
+    inverted by linear interpolation, so the draws follow the density averaged over those cells,
+    without quantisation.
     """
     m = np.linspace(mrange[0], mrange[1], CDF_NODES)
     pdf = _schechter(m, alpha)
@@ -214,7 +220,7 @@ def _gauss(x, a, mu, sigma):
 
 
 def _histo_gauss(x: np.ndarray) -> tuple[float, float, float]:
-    """(A, mu, sigma) of a least-squares Gaussian fit to the histogram of x (redMaPPer histoGauss).
+    """Return (A, mu, sigma) of a least-squares Gaussian fit to the histogram of x (redMaPPer histoGauss).
 
     Bin size 2 IQR n^(-1/3); bins start at min(x) and are fitted at their centres (esutil
     ``histogram`` convention). Starts from (n, median, std), which is also the fallback if the
@@ -243,13 +249,14 @@ def _histo_gauss(x: np.ndarray) -> tuple[float, float, float]:
 
 def phi1_model(alpha=-1.0, pivot=30.0, rng=None, nmag=100_000, ntrial=5000,
                lambdas=(20, 30, 40, 50, 60, 70, 80, 90, 100)) -> dict:
-    """Brightest-satellite magnitude model PHI1_* (``_schechter_montecarlo_calib``, centeringcal.py:448-539).
+    """Return the brightest-satellite magnitude model PHI1_* (``_schechter_montecarlo_calib``).
 
-    A pool of ``nmag`` magnitudes (relative to m*) is drawn from the Schechter function with slope
-    ``alpha`` between 10 L* and 0.2 L* (m* - 2.5 to m* + 1.7474), by exact inverse CDF (see the
-    module notes for redMaPPer's quantised sampler). Each of ``ntrial`` trials draws max(lambdas)
-    - 1 pool members without replacement in random order; for every lambda its first lambda - 1
-    give the brightest satellite m1, as redMaPPer's prefixes of one permutation per trial. Per
+    As in centeringcal.py:448-539, a pool of ``nmag`` magnitudes (relative to m*) is drawn from
+    the Schechter function with slope ``alpha`` between 10 L* and 0.2 L* (m* - 2.5 to
+    m* + 1.7474), by exact inverse CDF (see the module notes for redMaPPer's quantised sampler).
+    Each of ``ntrial`` trials draws max(lambdas) - 1 pool members without replacement in random
+    order; for every lambda its first lambda - 1 give the brightest satellite m1, as redMaPPer's
+    prefixes of one permutation per trial. Per
     lambda, a Gaussian fitted to the histogram of m1 (histoGauss) gives its mean and width, and
     unweighted straight lines in ln(lambda/pivot) give
 
@@ -285,7 +292,7 @@ def phi1_model(alpha=-1.0, pivot=30.0, rng=None, nmag=100_000, ntrial=5000,
 
 # --------------------------------------------------------------------------- fits
 def fit_lnw(lnw, lam_s, pivot=30.0) -> tuple[float, float]:
-    """(mean, sigma) of ln W ~ N(mean, sigma / sqrt(lam_s/pivot)) (``WcenFgFitter``).
+    """Return (mean, sigma) of ln W ~ N(mean, sigma / sqrt(lam_s/pivot)) (``WcenFgFitter``).
 
     ``lnw`` = ln(W) of the clusters re-centred on random points (LNW_FG_*) or on random
     satellites (LNW_SAT_*), ``lam_s`` their lambda/S. The maximum likelihood is in closed form:
@@ -309,7 +316,7 @@ def fit_lnw(lnw, lam_s, pivot=30.0) -> tuple[float, float]:
 
 
 def fit_lnw_cen(lnw, lam_s, pcen, psat, lnw_sat, lnw_fg, pivot=30.0) -> tuple[float, float]:
-    """(LNW_CEN_MEAN, LNW_CEN_SIGMA) from the ln W mixture of the centrals (``WcenCwFitter``).
+    """Return (LNW_CEN_MEAN, LNW_CEN_SIGMA), fitted on the ln W mixture of the centrals (``WcenCwFitter``).
 
     Minimises -sum ln(pcen fcen + psat fsat + (1 - pcen - psat) ffg), with every component
     N(lnw; mean, sigma / sqrt(lam_s/pivot)): fcen with the fitted (mean, sigma), fsat and ffg
@@ -355,7 +362,7 @@ def fit_lnw_cen(lnw, lam_s, pcen, psat, lnw_sat, lnw_fg, pivot=30.0) -> tuple[fl
 
 def fit_central_mag(refmag, mstar, lam, lam_s, pcen, psat, cwt, bcounts, phi1: dict | None,
                     pivot=30.0) -> tuple[float, float, float]:
-    """(DELTA0, DELTA1, SIGMA_M) of the central magnitude (``WcenCFitter``, centeringcal.py:367-404).
+    """Return (DELTA0, DELTA1, SIGMA_M) of the central magnitude (``WcenCFitter``, centeringcal.py:367-404).
 
     Per cluster: the chosen central's ``refmag``, ``mstar`` = m*(z), ``lam`` = LAMBDA, ``lam_s`` =
     LAMBDA/SCALEVAL, ``pcen``/``psat`` = P_CEN[:, 0]/P_SAT[:, 0], ``cwt`` = :func:`chisq_pdf` of the
@@ -373,7 +380,7 @@ def fit_central_mag(refmag, mstar, lam, lam_s, pcen, psat, cwt, bcounts, phi1: d
 
     bcounts is an unnormalised count density mixed with normalised pdfs, as in redMaPPer. Rows
     with non-finite refmag - m* or ln(lam/pivot) are left out of the start only; fewer than three
-    such rows give (nan, nan, nan).
+    finite rows give (nan, nan, nan).
     """
     refmag, mstar, lam, lam_s, pcen, psat, cwt, bcounts = _as_f8(
         refmag, mstar, lam, lam_s, pcen, psat, cwt, bcounts)

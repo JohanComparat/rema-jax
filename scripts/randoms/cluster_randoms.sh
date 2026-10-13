@@ -110,6 +110,7 @@ python -m rema.cli cluster-randoms qa --sample $P/$n.fits --zvlim $P/zvlim_dr11.
       case $c in
         act_dr6) tpl="--template ACT_RMS=$P/selfn/act_dr6_rms.fits:RMS" ;;
         erass1) tpl="--template EXPOSURE=$P/selfn/erass4_expmap_nside2048.fits:TEXP --template NH=$P/selfn/NHI_HPX.fits:NHI" ;;
+        psz2*) tpl="--template PLANCK_HITS=$P/selfn/planck_hits143_n256.fits:HITS" ;;
         *) tpl="" ;;
       esac
       cmds="$cmds

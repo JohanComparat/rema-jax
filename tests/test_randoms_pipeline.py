@@ -344,3 +344,7 @@ def test_tracer_randoms_and_annotate(products, tmp_path, monkeypatch):
         "--domain", tmp / "domain.fits", "--out", tmp_path / "gal_zv.fits")
     g = read_table(tmp_path / "gal_zv.fits", hdu="TRACER")
     assert g["RA"].tolist() == [11.0] and "ZVLIM" in g          # RA 13 Dec 1.5: failed region; RA 30: out
+    run("cluster-randoms", "annotate", "--table", tmp_path / "gal.fits", "--domain", tmp / "domain.fits",
+        "--out", tmp_path / "gal_dom.fits")
+    g = read_table(tmp_path / "gal_dom.fits", hdu="TRACER")
+    assert g["RA"].tolist() == [11.0] and "ZVLIM" not in g

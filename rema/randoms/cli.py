@@ -330,7 +330,8 @@ def cmd_tracer_randoms(args):
 
 
 def cmd_annotate(args):
-    """A table of positions (e.g. the tracer galaxies) with ZVLIM of a map, cut to the domain."""
+    """A table of positions (e.g. the tracer galaxies or their randoms) cut to the domain, with
+    ZVLIM of a map when one is given."""
     from ..abundance.area import ZvlimMap
     from ..io.tables import read_header, read_table, write_table
     from .domain import RunDomain
@@ -338,12 +339,17 @@ def cmd_annotate(args):
     from .vlim import annotate
 
     t = read_table(args.table, hdu=args.hdu)
-    zmap, dom = ZvlimMap.read(args.zvlim), RunDomain.read(args.domain)
-    a = annotate(t["RA"], t["DEC"], zmap, dom)
-    keep = a["IN_DOMAIN"] & np.isfinite(a["ZVLIM"])
+    dom = RunDomain.read(args.domain)
+    hdr = {**info_header(read_header(args.table, args.hdu)), "DOMDIG": dom.digest()}
+    if args.zvlim:
+        a = annotate(t["RA"], t["DEC"], ZvlimMap.read(args.zvlim), dom)
+        keep = a["IN_DOMAIN"] & np.isfinite(a["ZVLIM"])
+        hdr["ZVLIMF"] = str(args.zvlim)
+    else:                                   # a magnitude-limited tracer: the domain only
+        keep = dom.contains(t["RA"], t["DEC"])
     out = {k: np.asarray(v)[keep] for k, v in t.items()}
-    out["ZVLIM"] = a["ZVLIM"][keep].astype(np.float32)
-    hdr = {**info_header(read_header(args.table, args.hdu)), "ZVLIMF": str(args.zvlim), "DOMDIG": dom.digest()}
+    if args.zvlim:
+        out["ZVLIM"] = a["ZVLIM"][keep].astype(np.float32)
     write_table(args.out, out, header=hdr, extname="TRACER")
     log.info("%s: %d of %d rows in the domain and the map -> %s", args.table, keep.sum(), keep.size, args.out)
 
@@ -511,7 +517,7 @@ def add_parser(sub):
     s = steps.add_parser("annotate", help="positions + ZVLIM of a map, cut to the domain")
     s.add_argument("--table", required=True)
     s.add_argument("--hdu", default=1)
-    s.add_argument("--zvlim", required=True)
+    s.add_argument("--zvlim", help="z_vlim map (default: cut to the domain only)")
     s.add_argument("--domain", required=True)
     s.add_argument("--out", required=True)
     s.set_defaults(func=cmd_annotate)

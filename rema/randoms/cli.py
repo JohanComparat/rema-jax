@@ -8,6 +8,7 @@
   qa        sample -> data / randoms ratio against depth, |b|, seam distance (JSON)
   external-join  scan at an X-ray/SZ catalogue -> joined with that catalogue's columns (EXT_*)
   act-selfn  ACT DR6 nemo noise and masks -> HEALPix noise map for the act_dr6 selection
+  psz2-model  PSZ2 joined catalogue + Planck hit counts -> noise model (EXT_HITS)
   erass1-model  eRASS1 joined catalogue + exposure and HI maps -> approximate detection model
   tracer-randoms  DR11 random points of the domain with the z_vlim of a tracer map
   annotate  a table of positions (tracer galaxies) + ZVLIM, cut to the domain
@@ -195,6 +196,12 @@ def cmd_sample(args):
     cat = _read_catalog(args.clusters, sorted(set(spec.columns(sel) + extra)))
     keep, ann = select_sources(cat, spec, zmap, dom, sel, cfg)
     rows = np.flatnonzero(keep)
+    # The selection of this sample may read columns the copies were not made with (another
+    # noise model, say): take them from the catalogue, by row.
+    if len(cat[spec.ra_column]) <= int(np.max(src["ROW"], initial=-1)):
+        raise SystemExit(f"{args.clusters} has fewer rows than the sources of {args.copies}")
+    for c in sel.columns:
+        src[c] = np.asarray(cat[c])[np.asarray(src["ROW"], np.int64)]
     same = {"ZVLIMF": str(args.zvlim), "DOMDIG": dom.digest()}
     stricter = {k: v for k, v in same.items() if hdr.get(k) != v}
     if stricter:
@@ -352,6 +359,47 @@ def cmd_annotate(args):
         out["ZVLIM"] = a["ZVLIM"][keep].astype(np.float32)
     write_table(args.out, out, header=hdr, extname="TRACER")
     log.info("%s: %d of %d rows in the domain and the map -> %s", args.table, keep.sum(), keep.size, args.out)
+
+
+def cmd_psz2_model(args):
+    """Planck hit counts smoothed to the filter scale, at the PSZ2 clusters; the noise model."""
+    import healpy as hp
+    import yaml
+    from astropy.io import fits
+
+    from ..io.tables import read_table, table_hdu, write_fits
+    from .products import _read_text
+    from .selection.erass1 import HealpixColumn
+    from .selection.psz2 import fit_noise_model
+
+    with fits.open(args.hits, memmap=True) as h:
+        hdr = h[1].header
+        hits = np.asarray(h[1].data[args.hits_column], np.float64).ravel()
+        nest = str(hdr.get("ORDERING", "RING")).upper().startswith("NEST")
+        frame = "G" if str(hdr.get("COORDSYS", "G")).upper().startswith("G") else "C"
+    smooth = hp.ud_grade(hits, args.nside, order_in="NESTED" if nest else "RING", order_out="RING", power=0)
+    write_fits(args.out_hits, [table_hdu({"HITS": smooth.astype(np.float32)},
+                                         {"ORDERING": "RING", "COORDSYS": "GALACTIC" if frame == "G" else "C",
+                                          "NSIDE": args.nside, "SOURCE": Path(args.hits).name}, "HITS")])
+    hmap = HealpixColumn(values=smooth, nest=False, frame=frame)
+    j = read_table(args.joined, hdu="CLUSTERS")
+    j["EXT_HITS"] = hmap(j[args.ra_col.upper()], j[args.dec_col.upper()])
+    m = fit_noise_model(j["EXT_SNR"], j["EXT_Y5R500"], j["EXT_HITS"])
+    # The regression of the catalogue's own noise proxy is diluted towards 0 (Y5R500 / SNR is
+    # noisy and mixes the three pipelines): by default the noise is white, sigma ~ H^-1/2.
+    m["gamma_fit"] = m["gamma"]
+    if args.gamma != "fit":
+        m["gamma"] = float(args.gamma)
+    m.update(hits=str(args.out_hits), nside=args.nside, joined=str(args.joined))
+    Path(args.out_model).write_text(yaml.safe_dump(m, sort_keys=False))
+    hdus = [table_hdu(j, {"EXTCAT": "psz2"}, "CLUSTERS")]
+    cfg = _read_text(args.joined, "CONFIG")
+    if cfg:
+        hdus.append(table_hdu({"YAML": np.array([cfg.encode()])}, extname="CONFIG"))
+    write_fits(args.out, hdus)
+    log.info("PSZ2 noise model: sigma ~ H^%.3f; fit on %d clusters ln(Y5R500/SNR) = %.2f + %.3f(+-%.3f) ln H "
+             "+ %.2f ln Y5R500, scatter %.2f -> %s, %s", m["gamma"], m["n_fit"], m["a"], m["gamma_fit"],
+             m["gamma_err"], m["delta"], m["scatter"], args.out_model, args.out)
 
 
 def cmd_dump_config(args):
@@ -521,6 +569,20 @@ def add_parser(sub):
     s.add_argument("--domain", required=True)
     s.add_argument("--out", required=True)
     s.set_defaults(func=cmd_annotate)
+
+    s = steps.add_parser("psz2-model", help="Planck hit counts -> PSZ2 noise model and EXT_HITS")
+    s.add_argument("--joined", required=True, help="external-join output for psz2")
+    s.add_argument("--hits", required=True, help="HFI map with a hit-count column (e.g. HFI_SkyMap_143_2048_R2.02_full.fits)")
+    s.add_argument("--hits-column", default="HITS")
+    s.add_argument("--nside", type=int, default=256, help="NSIDE of the smoothed hits (about the filter scale)")
+    s.add_argument("--gamma", default="-0.5", help="noise exponent sigma ~ H^gamma: a number (default -0.5, white "
+                   "noise) or 'fit' (the catalogue regression, diluted towards 0)")
+    s.add_argument("--ra-col", default="INPUT_RA")
+    s.add_argument("--dec-col", default="INPUT_DEC")
+    s.add_argument("--out-hits", required=True, help="smoothed hits map (HEALPix)")
+    s.add_argument("--out-model", required=True, help="YAML of the model")
+    s.add_argument("--out", required=True, help="the joined catalogue with EXT_HITS")
+    s.set_defaults(func=cmd_psz2_model)
 
     s = steps.add_parser("dump-config", help="the configuration stored with a catalogue, as YAML")
     s.add_argument("--catalog", required=True)

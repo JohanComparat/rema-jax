@@ -155,8 +155,11 @@ ACT's own random catalogues (``DR6_randoms_v1.0.tgz``: mock clusters of nemo wit
 
 For the SPT-SZ sample (238 clusters with :math:`\xi \geq 5` and :math:`z_\lambda \geq 0.25`) the field depths change the randoms little: the depth-template :math:`\chi^2` are 1-13 for 4 bins with and without them.
 
-The PSZ2 sample (union S/N ≥ 6 in the survey mask, confirmed by rema: 309 clusters) shows what the sky-averaged completeness leaves out.
-Its density relative to the randoms rises with the ecliptic latitude, from 0.71 ± 0.10 below 10.5° to 1.32 ± 0.13 above 39° (:math:`\chi^2` = 15 for 4 bins): Planck observed the ecliptic poles longest, so its noise is lowest there.
-A model of that noise (from the Planck hit counts, as the ACT one) would be needed; meanwhile, PSZ2 samples are for comparison only.
+The PSZ2 sample (union S/N ≥ 6 in the survey mask, confirmed by rema: 309 clusters) needs more than the released selection function, whose completeness is averaged over the sky.
+With the mask only, its density relative to the randoms rises with the ecliptic latitude, from 0.71 ± 0.10 below 10.5° to 1.31 ± 0.13 above 39° (:math:`\chi^2` = 15 for 4 bins), and with the Planck hit counts, from 0.63 to 1.45 (:math:`\chi^2` = 28): Planck observed the ecliptic poles longest.
+``cluster-randoms psz2-model`` takes the hit counts :math:`H` of the HFI 143 GHz map (``HFI_SkyMap_143_2048_R2.02_full.fits``, averaged over NSIDE-256 pixels, about the scale of the matched filters) as the noise, :math:`\sigma \propto H^{\gamma}`, and the ``psz2`` selection then moves the S/N of a cluster as :math:`{\rm S/N}_i (H_i/H_j)^{\gamma}`.
+We use :math:`\gamma = -1/2`, white noise; a regression of the catalogue's own noise proxy, :math:`\ln(Y_{5R500}/{\rm S/N}) = a + \gamma \ln H + \delta \ln Y_{5R500}`, gives :math:`\gamma = -0.129 \pm 0.014`, diluted towards 0 by the scatter of that proxy (it is recorded as ``gamma_fit``).
+With :math:`\gamma = -1/2` the ratio against the hit counts is flat (0.94-1.06, :math:`\chi^2` = 0.7 for 4 bins), against the ecliptic latitude too (:math:`\chi^2` = 3.2), and against the optical depth the :math:`\chi^2` falls from 13 to 5.
+Values of :math:`\gamma` from -0.13 to -0.7 give :math:`\chi^2` = 18, 10, 5.0, 0.7 and 0.9 against the hit counts.
 
 Copies made once serve any stricter sample: ``sample`` with a :math:`z_{\rm vlim}` map or a domain that differ from those of ``copies`` (a higher depth significance, a seam buffer) drops the copies outside them, and the remaining copies are uniform in the smaller area.

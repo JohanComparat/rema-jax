@@ -458,3 +458,47 @@ def test_act_rms_map_from_stitched_images(tmp_path, monkeypatch):
     t = HealpixColumn(str(tmp_path / "selfn.fits"), "RMS")
     out = t(np.array([9.5, 30.0]), np.array([0.0, 0.0]))
     assert out[0] == pytest.approx(0.101, rel=1e-5) and np.isnan(out[1])
+
+
+def test_psz2_noise_model(tmp_path, monkeypatch):
+    import healpy as hp
+    from astropy.io import fits
+    from scipy.special import ndtr
+
+    from rema import cli
+    from rema.io.tables import read_table, write_table
+    from rema.randoms.selection.erass1 import HealpixColumn
+    from rema.randoms.selection.psz2 import fit_noise_model
+
+    rng = np.random.default_rng(14)
+    n = 3000
+    h = rng.uniform(500, 5000, n)
+    y = np.exp(rng.normal(-7, 0.5, n))
+    snr = y / (np.exp(-1.0) * h**-0.5 * y**0.7) * np.exp(rng.normal(0, 0.05, n))
+    m = fit_noise_model(snr, y, h)
+    assert m["gamma"] == pytest.approx(-0.5, abs=0.02) and m["delta"] == pytest.approx(0.7, abs=0.02)
+    nside = 16
+    l, b = hp.pix2ang(nside, np.arange(hp.nside2npix(nside)), lonlat=True)
+    hits = np.where(np.abs(b) > 45, 4000.0, 1000.0)                # deeper at high latitude
+    sel = get_selection({"name": "psz2", "mask_map": np.ones(hits.size), "snr_min": 6.0,
+                         "model": {"gamma": -0.5}, "hits_map": HealpixColumn(values=hits, nest=False, frame="G")})
+    assert sel.columns == ("EXT_SNR", "EXT_HITS") and sel.provenance()["GAMMA"] == -0.5
+    src = {"EXT_SNR": np.array([6.0, 6.0]), "EXT_HITS": np.array([1000.0, 1000.0])}
+    ra, dec = np.array([192.86, 266.4]), np.array([27.13, -28.94])  # Galactic north pole, centre
+    np.testing.assert_allclose(sel.p_detect(src, ra, dec), [ndtr(12.0 - 6.0), ndtr(0.0)], atol=1e-6)
+    # The command, on a toy joined catalogue and hit map.
+    npix = hp.nside2npix(32)
+    fits.BinTableHDU.from_columns([fits.Column("HITS", "E", array=np.full(npix, 2000.0))],
+                                  header=fits.Header({"ORDERING": "NESTED", "COORDSYS": "GALACTIC"})).writeto(tmp_path / "h.fits")
+    write_table(tmp_path / "j.fits", {"INPUT_RA": np.array([10.0, 20.0, 30.0]), "INPUT_DEC": np.array([-30.0, -40.0, -50.0]),
+                                      "EXT_SNR": np.array([6.0, 8.0, 10.0]), "EXT_Y5R500": np.array([1e-3, 2e-3, 3e-3])},
+                extname="CLUSTERS")
+    monkeypatch.setattr(cli, "_setup_jax", lambda: None)
+    assert cli.main(["cluster-randoms", "psz2-model", "--joined", str(tmp_path / "j.fits"), "--hits", str(tmp_path / "h.fits"),
+                     "--nside", "16", "--out-hits", str(tmp_path / "h16.fits"), "--out-model", str(tmp_path / "m.yaml"),
+                     "--out", str(tmp_path / "jh.fits")]) == 0
+    import yaml
+
+    mm = yaml.safe_load((tmp_path / "m.yaml").read_text())
+    assert mm["gamma"] == -0.5 and "gamma_fit" in mm
+    np.testing.assert_allclose(read_table(tmp_path / "jh.fits", hdu="CLUSTERS")["EXT_HITS"], 2000.0)

@@ -208,7 +208,7 @@ Width calibration, magnitude cut and run times
 - Run times on the regions (6.8 and 11.4 million galaxies) at the IN2P3 Computing Centre
   (CC-IN2P3): photo-z filter 21–25 min on a V100 (171 000–197 000 candidates; red sequence:
   59–60 min, 401 000–643 000 candidates), PSCD 14–17 min on eight htc cores (28 000–34 000
-  detections), with peaks of 6–9 GB of memory.
+  detections).
 
 Method
 ------

@@ -410,7 +410,7 @@ Computing cost
      - 21–25 min, 171 000–197 000 candidates
    * - PSCD
      - 14 min, 12 192 detections, 4.2 GB
-     - 14–17 min, 28 000–34 000 detections, 7–9 GB
+     - 14–17 min, 28 000–34 000 detections
 
 The whole study at CC-IN2P3 (galaxy tables of the two regions, twenty region runs and three strip runs)
 used 5.2 GB on /sps.

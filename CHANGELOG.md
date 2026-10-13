@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.5.2] - 2026-10-13
+
+### Documentation
+
+- Second reading of every page against the house style, with the statements checked against the
+  code and the generated tables:
+  - the centring probability of the results page is the measured ⟨P_cen⟩ = 0.81 (0.82 is the
+    prediction of Rykoff et al. 2016);
+  - the tier-B numbers of the cosmology page match its values (4 223 clusters with λ ≥ 20,
+    +0.8% for Ω_m = 0.35, counts within 1% and 3%), and the priors are those of
+    `rema.abundance.likelihood`;
+  - the photo-z pages match their tables (PSCD recovers 16–25% of the Wen & Han clusters,
+    3–17% photo-z outliers fainter than z = 21);
+  - a region is stale when it was made with another plan or calibration (the driver does not
+    check the rema version);
+  - the public-catalogue scan example uses the `inputs/full` and `out/full` layout that
+    `scripts/scan/finalize_scan.sh` requires;
+  - the checkpoint key, the `w` drop reason of percolation, the `--work` fallback of
+    `rema scan-positions`, the `none` value of `BEST_Z_TYPE`, the MW_TRANSMISSION > 0 cut of
+    ingest and the chunks of seven redshifts of the z_λ grid are documented.
+- The randoms index takes 3.2 GB per DR11 randoms file, 12.7 GB for four (measured at
+  CC-IN2P3; the pages said 8 GB).
+- The generated tables and their scripts group thousands with a narrow no-break space.
+- The public-catalogue scan ran on 2026-10-11 and 12.
+
 ## [0.5.1] - 2026-10-12
 
 ### Documentation

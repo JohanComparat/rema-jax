@@ -225,8 +225,8 @@
   |b| < B, and `rema merge --glat-min B` keeps the clusters (and members) at |b| ≥ B, recorded as
   `GLATMIN` and in the QA (`n_clusters_low_glat`).
   The driver passes `GLAT_MIN` to both.
-  Near the Galactic plane, stellar contamination makes most seeds survive the first pass (76%
-  instead of about a third), and percolation ran out of memory.
+  Near the Galactic plane, stellar contamination lets most seeds survive the first pass (76%
+  instead of about a third), and percolation ran out of memory there.
 - The region plan no longer stops on tiles that have DR11 randoms but no DR11 sweep (edge slivers,
   e.g. eight tiles with 0.6 deg² of randoms between RA 0 and 240).
   `rema regions --sweeps DIR`, which the task script passes, treats tiles absent from the sweep

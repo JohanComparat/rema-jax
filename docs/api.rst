@@ -2,7 +2,7 @@ Python API
 ==========
 
 The modules below are those most used in scripts, grouped by stage.
-Their functions work on plain dicts of numpy arrays (tables) or on JAX pytrees (models).
+Their functions work on plain dicts of NumPy arrays (tables) or on JAX pytrees (models).
 The command-line interface (``rema.cli``) is a thin layer over them.
 
 Run modes

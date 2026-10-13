@@ -22,11 +22,13 @@ Each command chooses its configuration in this order:
 
 1. ``--config``, if it is given;
 2. the configuration stored with the input:
+
    - the calibration's, for ``scan``, ``blind``, ``pscd``, ``zred`` and ``background``;
    - the catalogue's ``CONFIG`` HDU, for ``specpost``;
-3. the defaults;
 
-then applies the overrides of the command line: ``--cosmology KEY=VALUE`` and
+3. the defaults.
+
+It then applies the overrides of the command line: ``--cosmology KEY=VALUE`` and
 ``--set SECTION.KEY=VALUE`` (any key, VALUE in YAML, e.g. ``--set model.filter=photoz
 --set richness.firstpass.r0=0.4``), or ``--set @overlay.yaml`` (a partial configuration, merged
 section by section; ``scripts/photoz/*.yaml`` are examples).
@@ -56,7 +58,7 @@ The keys most often changed:
      - Bands of the galaxy table and the reference band
    * - ``survey.ref_snr_min``
      - 5
-     - Selection: S/N in the reference band
+     - Selection: signal-to-noise ratio (S/N) in the reference band
    * - ``survey.mag_max``
      - null
      - Faint limit of the table.
@@ -210,7 +212,7 @@ Large runs (:doc:`hpc`):
       ``NGAL_OWN``, ``NGAL_DATA`` and ``PAIRS_EST``.
     - Header: the settings and ``PLANHASH``.
 ``rema merge`` → ``<out>.fits``, ``<out>_members.fits``, ``<out>_regions.fits``, ``<out>_qa.json``
-    The merged clusters, the members, the per-region statistics and the QA.
+    The merged clusters, the members, the per-region statistics and the quality assurance (QA).
 
 ``rema scan-positions`` → ``CLUSTERS``, ``MEMBERS``, ``CONFIG``
     - Clusters: one row per input row.
@@ -290,8 +292,8 @@ Large runs (:doc:`hpc`):
      - Velocity dispersion (km/s): the gapper or biweight estimate, the bootstrap results,
        the clipping radius and the flags
    * - ``CG_SPEC_Z``, ``BEST_Z``, ``BEST_ZERR``, ``BEST_Z_TYPE``
-     - Spec-z of the central galaxy, and the best redshift: ``spec_z_boot``, else
-       ``cg_spec_z``, else ``photo_z``
+     - Spectroscopic redshift of the central galaxy, and the best redshift: ``spec_z_boot``, else
+       ``cg_spec_z``, else ``photo_z`` (``none`` when none is available)
 
 ``MEMBERS``: one row per galaxy with pmem ≥ ``percolation.member_pmin``, plus the centre
 candidates:

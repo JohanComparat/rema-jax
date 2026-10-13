@@ -1,8 +1,9 @@
 # rema design notes
 
 rema rewrites the redMaPPer cluster finder {cite:p}`Rykoff2014,Rykoff2016` as a JAX package.
-It takes the galaxies, photo-z and randoms of the Legacy Surveys DR11 south, and produces cluster
-catalogues with richness λ, redshift z_λ and centring probabilities, blind or at given positions.
+It takes the galaxies, photo-z and randoms of the Legacy Surveys Data Release 11 (DR11) south, and
+produces cluster catalogues with richness λ, redshift z_λ and centring probabilities, blind or at
+given positions.
 Sects. 1–12 give the algorithm and, at each step, where rema differs from redMaPPer v0.7.7 (the
 `jacobic/redmapper` fork) and why.
 Sect. 13 gives the calibration, Sect. 14 the validation on the development area, Sect. 15 the code
@@ -13,9 +14,10 @@ The DR11 south production catalogue and its validation against the literature ar
 ## 1. Scope
 
 - Data: the sweeps, the row-matched photo-z sweeps (which give `Z_SPEC`) and the randoms of the
-  Legacy Surveys Data Release 11 (DR11) south.
+  DR11 south.
 - Bands: g, r, i and z, with z as the reference band.
-  The code works for any band set, so the DR10 grz/z redMaPPer calibration can also drive it.
+  The code works for any band set, so the grz/z redMaPPer calibration of Data Release 10 (DR10)
+  can also drive it.
 - Modes: blind cluster finding, scans at given positions (redMaPPer zscan), and spectroscopic
   post-processing (cluster spectroscopic redshift and velocity dispersion).
 - Calibration: the red sequence, the corrections and the wcen centring model are calibrated on
@@ -30,7 +32,7 @@ rema selects the galaxies with the following cuts, all set in `SurveyConfig`:
   Clouds).
   Objects fitted as SGA large galaxies (FITBITS bit 9) are kept, since they can be brightest
   cluster galaxies (BCGs).
-- `TYPE != PSF` (and not DUP), and NOBS ≥ 1 in every band.
+- `TYPE != PSF` (and not DUP), NOBS ≥ 1 and MW_TRANSMISSION > 0 in every band.
 - Reference-band signal-to-noise ratio S/N ≥ 5 and REFMAG < m*(z_max) + 2.5.
 
 Fluxes and inverse variances are dereddened with MW_TRANSMISSION.
@@ -60,8 +62,9 @@ The effective area for a galaxy of true magnitude m is A_eff(m) = Σ_pix A_pix F
 Φ((F(m) − max(5σ_f, F_cut))/σ_f).
 DR10 randoms are not used.
 
-**The development strip** (three DR11 sweeps at RA 0–5° and Dec −15° to 0°, 75 deg², Sect. 14),
-mapped from one DR11 randoms file of 66 million points (about eight per pixel):
+We mapped the development strip (three DR11 sweeps at RA 0–5° and Dec −15° to 0°, 75 deg²,
+Sect. 14) from one DR11 randoms file of 66 million points (about eight per pixel):
+
 - 70.9 deg² unmasked of 75 deg²;
 - median 5σ galaxy depths (dereddened): g 24.65, r 24.29, i 23.83, z 23.40;
 - A_eff for z-band S/N ≥ 5: 70.9 deg² to z = 22, 63.8 at 23.0 and 24.8 at 23.5;
@@ -137,8 +140,7 @@ It is factorised as N(m) P(χ² | z, m):
 - P is a kernel-weighted ratio in magnitude; its kernel widens until it holds 50 galaxies, which
   removes the Poisson noise of the bright bins.
 - Bins are 0.02 in z, 0.5 in χ² and 0.2 mag; galaxies enter at z only if m < m*(z) + 2.5.
-
-The lookup is trilinear and differentiable.
+- The lookup is trilinear and differentiable.
 
 ## 8. Richness (`rema/core/richness.py`)
 
@@ -171,7 +173,7 @@ The outputs are:
 
 ## 9. Mask and depth completeness (`rema/core/maskcorr.py`)
 
-A deterministic quadrature replaces redMaPPer's 100 × 6,000 Monte Carlo "maskgals":
+A deterministic quadrature replaces redMaPPer's 100 × 6 000 Monte Carlo "maskgals":
 
 - Points on a polar grid (24 Gauss–Legendre radii × 16 azimuths) around the cluster are looked up
   on the device in the footprint map, with JAX nested `ang2pix`.
@@ -186,12 +188,11 @@ A deterministic quadrature replaces redMaPPer's 100 × 6,000 Monte Carlo "maskga
 rema follows redMaPPer's iteration:
 
 - soft top-70% weights on pcol;
-- L(z) = Σ_i w_i ln L_i(z) on a local 21-point grid, evaluated one grid point at a time to save
-  memory, with a parabola vertex as the new z;
-- up to five iterations, stopping at convergence.
-
-The redshift probability p(z) ∝ exp(L) V(z) is computed on 21 bins over ±4σ of the curvature
-width; Z_LAMBDA_E is its standard deviation.
+- L(z) = Σ_i w_i ln L_i(z) on a local 21-point grid, evaluated in chunks of seven redshifts
+  (fewer for more than 2048 neighbours) to save memory, with a parabola vertex as the new z;
+- up to five iterations, stopping at convergence;
+- the redshift probability p(z) ∝ exp(L) V(z) on 21 bins over ±4σ of the curvature width, whose
+  standard deviation is Z_LAMBDA_E.
 
 ## 11. Centring (`rema/core/centering.py`)
 
@@ -291,8 +292,8 @@ Unused slots have ID −1 and position −400.
       - the new central galaxy has pfree < 0.5;
       - λ/S < 3 at the new centre.
 
-      In the 75 deg² strip, we accepted 12,367 candidates and dropped 44,725 at the seed, 4,359
-      for z_λ, 1,350 for a claimed central galaxy and 7,098 at the new centre.
+      In the 75 deg² strip, we accepted 12 367 candidates and dropped 44 725 at the seed, 4 359
+      for z_λ, 1 350 for a claimed central galaxy and 7 098 at the new centre.
       Without the central-galaxy check, a candidate seeded on a member of a richer cluster could
       re-centre on that cluster's BCG and survive as a low-λ fragment (Sect. 14).
     - Claims: galaxies within R_MASK and brighter than m* + 2.5 get p added to their claimed
@@ -306,7 +307,7 @@ Unused slots have ID −1 and position −400.
       computed together and their claims applied in any order.
     - The dependency graph comes from dual-tree searches between candidates binned by read
       radius and by reach, and is stored as compressed sparse row (CSR) arrays.
-      For the 138,873 candidates of the 75 deg² strip, it holds 40 million pairs, built in 7 s;
+      For the 138 873 candidates of the 75 deg² strip, it holds 40 million pairs, built in 7 s;
       a single search bounded by the largest reach (degrees at z ≈ 0.05) needs more than 50 GB.
   - **Consolidation:** MASKFRAC < 0.2, λ/S ≥ 3, centre in the own box.
   - **Checkpoints:** `rema blind --checkpoint DIR` keeps the first-pass and likelihood results.
@@ -327,7 +328,7 @@ Unused slots have ID −1 and position −400.
     its data box.
   - **Test:** we ran the 74 deg² strip as three 25 deg² regions and as one region.
     The two runs give:
-    - the same 12,857 clusters;
+    - the same 12 857 clusters;
     - every λ ≥ 5 cluster with the same central galaxy, at any distance from the internal
       boundaries;
     - λ equal to a median relative difference of 3 × 10⁻⁶.
@@ -400,9 +401,9 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
   - median λ_out/λ_in = 0.94–1.00;
   - z_λ bias < 0.001 for z ≤ 0.5 and −0.003 at z = 0.75, with scatter 0.002–0.005.
 - **DR11 griz development calibration** on the strip (Z_SPEC in two of the three sweeps): 9.4 min
-  on a CPU, with 34,653 spectroscopic galaxies.
-  - Initial model from 8,466 spectroscopic red galaxies, then two EM iterations.
-  - z_λ against the seeds' spectroscopic redshifts for 1,906 clusters with λ ≥ 5: bias −0.0042,
+  on a CPU, with 34 653 spectroscopic galaxies.
+  - Initial model from 8 466 spectroscopic red galaxies, then two EM iterations.
+  - z_λ against the seeds' spectroscopic redshifts for 1 906 clusters with λ ≥ 5: bias −0.0042,
     NMAD 0.0088 (before the z_λ correction fitted from these same clusters).
   - The red sequence agrees with the DR10 grz calibration in r−z (within 0.02 mag at all z) and
     in g−r up to z = 0.6.
@@ -412,8 +413,8 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
   `rema scan --specpost`, 72 s on a CPU):
   - All 25 lie within |Δz| < 0.05 of the ACT redshift; z_λ,opt − z_ACT has a median of
     −0.0004(1+z) and an NMAD of 0.0033(1+z).
-  - Thirteen clusters get a spectroscopic redshift from ≥ 3 members (σ_v = 317–1,264 km/s).
-    A flagged 2,240 km/s case falls back to the central galaxy's spectroscopic redshift.
+  - Thirteen clusters get a spectroscopic redshift from ≥ 3 members (σ_v = 317–1 264 km/s).
+    A flagged 2 240 km/s case falls back to the central galaxy's spectroscopic redshift.
 - **Scan at nineteen ACT DR5 clusters** (DR10 grz model, magnitude mode) against the redMaPPer
   DR10 scan: z_λ,opt agrees within 0.02 for every cluster at z < 0.8, mostly within 0.005; λ_opt
   is within 20% for twelve of fifteen.
@@ -421,10 +422,10 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
   z_λ = 0.628, λ = 79.5; DR10 had 0.628 and 75.9.
 - **Blind run over the strip** (DR11 griz development calibration, no footprint yet,
   `rema blind --specpost` on an RTX 3060):
-  - 436,947 seeds gave 140,545 first-pass candidates (99 s), then 138,873 after the likelihood
+  - 436 947 seeds gave 140 545 first-pass candidates (99 s), then 138 873 after the likelihood
     pass (66 s).
-  - Percolation (527 s, 2,249 rounds) produced 12,367 clusters; it skipped 68,974 seeds that were
-    already claimed and rejected 57,532 candidates.
+  - Percolation (527 s, 2 249 rounds) produced 12 367 clusters; it skipped 68 974 seeds that were
+    already claimed and rejected 57 532 candidates.
   - The total was 12 min, plus 1.5 min of spectroscopic post-processing.
 - **Against redMaPPer DR10** (grz, wcen centring) in the 59 deg² interior, matching within 3′ and
   |Δz| < 0.05(1+z):
@@ -432,8 +433,8 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
     clusters are confirmed.
     ln(λ/λ_DR10) = +0.04 ± 0.17 (median ± NMAD) and Δz/(1+z) = +0.001 ± 0.006.
   - 0.7 < z < 0.9: λ is 30% lower (ln ratio −0.30 ± 0.40).
-    This is DR10's depth correction: its SCALEVAL is 1.29 at z = 0.7–0.8 and 1.58 at 0.8–0.9,
-    and rema has none without a footprint.
+    The difference comes from DR10's depth correction: its SCALEVAL is 1.29 at z = 0.7–0.8 and
+    1.58 at 0.8–0.9, and rema has none without a footprint.
     Against DR10's uncorrected λ/S, the ln ratios are −0.12 and −0.07.
   - Within 1.5′, only 73% of the DR10 λ ≥ 20 clusters match.
     Most of the rest are the same cluster centred 1.5–3′ away on a different central galaxy
@@ -443,15 +444,15 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
 - **ACT DR5:** the 24 clusters at z < 0.9 are all detected, 22 within 2′ and two at 2.4′ and
   2.7′, with Δz NMAD 0.0044.
   The z = 0.968 cluster is outside the blind range; scan mode finds it at z = 0.948.
-- **CPU against GPU** on the same strip: 12,363 against 12,367 clusters.
+- **CPU against GPU** on the same strip: 12 363 against 12 367 clusters.
   - λ ≥ 20: all 330 have the same central galaxy; |Δλ/λ| is at most 8 × 10⁻⁴ (median
     2 × 10⁻⁶) and |Δz| at most 1.5 × 10⁻⁴.
   - λ ≥ 5: 99.8% have the same central galaxy.
 - **With the footprint** (DR11 randoms):
-  - Calibration on the strip with mask and depth corrections: 2,763 clusters, z_λ against z_spec
+  - Calibration on the strip with mask and depth corrections: 2 763 clusters, z_λ against z_spec
     NMAD 0.0100.
     The wcen parameters agree with the run without a footprint (Δ0 −1.55, Δ1 −0.34, σ_m 0.41).
-  - Blind run: 12,888 clusters after the MASKFRAC < 0.2 cut.
+  - Blind run: 12 888 clusters after the MASKFRAC < 0.2 cut.
     Against DR10 within 3′:
     - 0.1 < z < 0.7, λ ≥ 20: 85% recovered, 96% confirmed, ln(λ/λ_DR10) = +0.14 ± 0.19,
       Δz/(1+z) = +0.002 ± 0.006;
@@ -465,7 +466,7 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
     The DR11 mask bits cover only 3–8% of the randoms around them.
     In a production run, the data boxes of the regions overlap (Sect. 12).
   - **λ normalisation:** rema λ is 10–15% above DR10 at z < 0.7.
-    A calibration on 75 deg² is noisy: adding the third sweep's 6,000 spectroscopic redshifts to
+    A calibration on 75 deg² is noisy: adding the third sweep's 6 000 spectroscopic redshifts to
     it moved λ by about +7%.
     With the production calibration (400 deg²), rema λ is 0.89 times that of DES Y1 redMaPPer,
     0.90 times that of the Sloan Digital Sky Survey (SDSS) DR8 {cite:p}`Rykoff2014`, decreasing
@@ -501,16 +502,16 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
     against 68% with BCG centring.
   - **LNCGLIKE with the z → zred_uncorr mapping** (Sect. 11), on the notebook region (9 deg² own
     box):
-    - The mapping, fitted on the strip from 2,586 clusters, has zred_uncorr − z within ±0.011
+    - The mapping, fitted on the strip from 2 586 clusters, has zred_uncorr − z within ±0.011
       from z = 0.13 to 0.85, −0.018 at 0.05 and −0.024 at 0.93.
     - LNCGLIKE changes by a median of 0.13 and by more than 1 for 3.6% of the candidates.
       The percolation order has a rank correlation of 0.999 with that of the identity.
-    - The catalogue goes from 1,507 to 1,505 clusters, and 99.3% keep their central galaxy.
+    - The catalogue goes from 1 507 to 1 505 clusters, and 99.3% keep their central galaxy.
       All 43 with λ ≥ 20 keep their centre; the ten that change centre have a median λ of 3.6.
 - **Purity at high redshift.** In the strip catalogue, the counts of λ ≥ 5 clusters rise towards
   z_λ = 0.85–0.90.
   Per comoving volume, this bin holds 1.2–1.3 times the density of z_λ = 0.65–0.78.
-  - **Not an edge effect:**
+  - **Upper end of the redshift range:** the excess does not come from the edge.
     - The percolated candidates cut at 0.85 show no excess below 0.85.
     - A run with `model.zrange` up to 0.95 keeps the excess at 0.85–0.90 (×1.2–1.35), which
       grows to ×1.45 at 0.90–0.95.
@@ -524,7 +525,7 @@ and the clusters of the Atacama Cosmology Telescope (ACT) DR5 {cite:p}`Hilton202
   - **Spectroscopy:** among the clusters with at least two spectroscopic members (26 at
     z_λ > 0.85), the spectroscopic coherence in excess of chance suggests that about 40% are
     real, against 60–67% at z < 0.5.
-  - **Conclusion:** down to λ = 5, the catalogue favours completeness, and at z_λ > 0.75 it is
+  - **Recommendation:** down to λ = 5, the catalogue favours completeness, and at z_λ > 0.75 it is
     impure.
     Use λ ≥ 10 there, or calibrate a z-dependent threshold with null tests over a larger area.
 
@@ -587,7 +588,7 @@ laid out as follows.
   XLA's GPU reduction emitter unrolls (grid points × K/256) evaluations, times a factor from the
   batch axes, into every thread of a reduction over the K neighbours.
   With the whole 32-point λ grid at K = 8192 (blind mode), and with the scan kernel's batch of
-  positions × redshift steps, one kernel held 1,024 erf evaluations and 35,600 registers.
+  positions × redshift steps, one kernel held 1 024 erf evaluations and 35 600 registers.
   NVIDIA's `ptxas` needed more than 10 minutes for each such kernel, and its time grows faster
   than linearly with kernel length.
   Cold compiles on an RTX 3060 take 2.6–2.8 s for richness and 7–8 s for z_λ, at
@@ -598,7 +599,7 @@ laid out as follows.
   rank order.
   Their batches are padded to a few sizes: powers of 8 on GPUs, where padding rows are almost
   free, and powers of 2 on CPUs, where they cost as much as real rows.
-  On 600 and 1,500 candidates, the results equal those of the sequential loop.
+  On 600 and 1 500 candidates, the results equal those of the sequential loop.
   Warm timings per candidate (600 candidates on 16 deg², all compilations done):
 
   | device | sequential | batch 64 |
@@ -607,9 +608,9 @@ laid out as follows.
   | RTX 3060 | 13.7 ms | 6.7 ms |
 
 - Blind mode over 75 deg² on an RTX 3060:
-  - first pass 99 s (437,000 seeds, 0.23 ms each);
+  - first pass 99 s (437 000 seeds, 0.23 ms each);
   - likelihood pass 66 s;
-  - percolation 527 s (139,000 candidates, 3.8 ms each).
+  - percolation 527 s (139 000 candidates, 3.8 ms each).
 
   The cheap seed check, which skips z_λ for the 78% of computed candidates that fail λ/S ≥ 3,
   brings percolation from 814 s to 527 s.
@@ -617,18 +618,18 @@ laid out as follows.
   On the laptop's CPU (i9-11900H, 8 cores, 16 threads), the same run takes 62 min:
   - first pass 917 s (2.1 ms per seed);
   - likelihood pass 82 s;
-  - percolation 2,717 s.
+  - percolation 2 717 s.
 
   That is 9× slower than the GPU for the first pass and 5× for percolation.
   Padding the neighbour arrays to powers of 2 on CPUs, instead of powers of 4, makes CPU
-  percolation 1.7× faster (17.3 against 30.1 ms per candidate on 9,915 candidates of the strip,
+  percolation 1.7× faster (17.3 against 30.1 ms per candidate on 9 915 candidates of the strip,
   with the same clusters) and brings the run to about 45 min.
-  The DR11 south production (18,500 deg², 270 regions of 100 deg² with 2° buffers) took 990
+  The DR11 south production (18 500 deg², 270 regions of 100 deg² with 2° buffers) took 990
   task-hours on five CPU cores each, and about 1 h per region on a V100.
-- wcen centring in percolation: 839 s against 659 s with BCG for the 166,000 candidates of the
+- wcen centring in percolation: 839 s against 659 s with BCG for the 166 000 candidates of the
   strip (RTX 3060), so 27% more.
   The kernel compiles in under a second.
-- Scan mode on an RTX 3060: 4,000 positions in 72 s (18 ms each, for 191 redshift steps and two
+- Scan mode on an RTX 3060: 4 000 positions in 72 s (18 ms each, for 191 redshift steps and two
   z_λ refinements), plus 16 s for the first batch with compilation.
   The z_λ refinement keeps the aperture and magnitude limit of each position, so that one
   low-redshift position cannot inflate K for a whole batch of 128 to tens of thousands and
@@ -636,5 +637,5 @@ laid out as follows.
 - Set `XLA_PYTHON_CLIENT_PREALLOCATE=false` on small GPUs.
   The CLI enables a persistent compilation cache (`~/.cache/rema/jax`): a run compiles a few
   dozen programs, each a few seconds to compile (z_λ: 7–8 s per shape on a GPU).
-  On an HPC, point `JAX_COMPILATION_CACHE_DIR` at a shared directory so that every job reuses the
-  same compiled shapes.
+  On a high-performance computing (HPC) cluster, point `JAX_COMPILATION_CACHE_DIR` at a shared
+  directory so that every job reuses the same compiled shapes.

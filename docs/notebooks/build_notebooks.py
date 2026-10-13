@@ -804,6 +804,7 @@ def pipeline_cells():
     `OUTDIR` is laid out like an HPC run directory, and its `galaxies/` points to the per-sweep
     tables that the blind notebook wrote.
     The stages run the task script with the environment variables the driver would set.
+    `CONFIG` is the calibration's configuration, which the regions require of the galaxy tables.
     `AREA_BOX` restricts the run to the sweeps, `TARGET_AREA=25` with `BAND_HEIGHT=5` gives one
     region per sweep, and `NRAND` is the number of randoms files present, as in the production run.
     """))
@@ -824,12 +825,16 @@ OUTDIR.mkdir(parents=True, exist_ok=True)
 GALDIR = REMA_WORK / "galaxies"
 if not (OUTDIR / "galaxies").exists():
     (OUTDIR / "galaxies").symlink_to(GALDIR)
+# The calibration's configuration, for the stages that have no calibration to read it from
+# (ingest, randoms, maps): galaxy tables made with another one are refused by the regions.
+CONFIG = OUTDIR / "config.yaml"
+Calibration.read(CALIB).config.to_yaml(CONFIG)
 
 SKY = sweep_union(SWEEPS)
 BOUND = SKY.bounding()
 area_box = ";".join(f"{b.ra_min:g} {b.ra_max:g} {b.dec_min:g} {b.dec_max:g}" for b in SKY.boxes)
 # Products stay in OUTDIR, never in the production folders a sourced ccin2p3.env may point to.
-ENV = {**os.environ, "DR11": str(REMA_DATA), "OUTDIR": str(OUTDIR), "CALIB": str(CALIB),
+ENV = {**os.environ, "DR11": str(REMA_DATA), "OUTDIR": str(OUTDIR), "CALIB": str(CALIB), "CONFIG": str(CONFIG),
        "CLUSTERS_DIR": str(OUTDIR), "MEMBERS_DIR": str(OUTDIR),
        "AREA_BOX": area_box, "TARGET_AREA": "25", "BAND_HEIGHT": "5", "BUFFER": "2",
        "NRAND": str(len(RANDOMS)), "CHUNK": "100000", "DEVICE": "gpu" if jax.default_backend() == "gpu" else "cpu",

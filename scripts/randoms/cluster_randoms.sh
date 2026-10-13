@@ -105,11 +105,16 @@ python -m rema.cli cluster-randoms qa --sample $P/$n.fits --zvlim $P/zvlim_dr11.
     for c in ${EXTERNAL:-act_dr6 spt_2500d psz2 erass1}; do
       spec=$P/selfn/$c.yaml
       sed "s|SELFN_DIR|$P/selfn|g" "$CODE/scripts/randoms/$c.yaml" > "$spec"
+      case $c in
+        act_dr6) tpl="--template ACT_RMS=$P/selfn/act_dr6_rms.fits:RMS" ;;
+        erass1) tpl="--template EXPOSURE=$P/selfn/erass4_expmap_nside2048.fits:TEXP --template NH=$P/selfn/NHI_HPX.fits:NHI" ;;
+        *) tpl="" ;;
+      esac
       cmds="$cmds
 python -m rema.cli cluster-randoms copies --clusters $P/${c}_joined.fits --config $P/catalog_config.yaml --spec $spec --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --index $IDX --nrand $NRAND --out $P/copies_$c.fits
 python -m rema.cli cluster-randoms place --copies $P/copies_$c.fits --footprint $P/footprint_dr11.fits --config $P/catalog_config.yaml
 python -m rema.cli cluster-randoms sample --clusters $P/${c}_joined.fits --config $P/catalog_config.yaml --spec $spec --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --copies $P/copies_$c.fits --keep RA_OPT --keep DEC_OPT --keep INPUT_NAME --out $P/$c.fits
-python -m rema.cli cluster-randoms qa --sample $P/$c.fits --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --out $P/${c}_qa.json"
+python -m rema.cli cluster-randoms qa --sample $P/$c.fits --zvlim $P/zvlim_dr11.fits --domain $P/domain.fits --nbins 6 $tpl --out $P/${c}_qa.json"
     done
     j=$(submit external "" --partition=$PART_CPU --cpus-per-task=8 --mem=100G --time=24:00:00 -- "$cmds")
     echo "external $j" | tee -a "$LOGS/jobs.txt"

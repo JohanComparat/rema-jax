@@ -36,8 +36,8 @@ The numbers of every run, the issues found and fixed, and the open questions are
    :local:
    :depth: 1
 
-Findings
---------
+Comparison of the three finders
+-------------------------------
 
 The three areas are the strip (RA 0–5°, Dec −15–0°, DECaLS depth; 37.4 deg² in the own box),
 region 9 of the production plan (RA 15–30°, Dec −55 to −45°, DES depth; 92.0 deg²) and region 82
@@ -108,10 +108,9 @@ quarter of them.
 The photo-z filter is the best photo-z finder at high redshift in DES (552 clusters at z > 0.6 in
 region 9, against 519 for the red sequence) but not in DECaLS (327 against 469 in region 82).
 There the red sequence has a peak at z = 0.8–0.9, from its known spike of z_λ at 0.82–0.86 and
-from its impurity in shallow data (the null test calibrates the whole redshift range at once, not
-each redshift).
+from its impurity in shallow data (the null test sets one threshold for the whole redshift range).
 The DR11 photo-z limit the gain: fainter than z = 21 their scatter is 0.03–0.08 (1 + z), with
-3–14% outliers, and at z > 0.6 most members of a cluster are that faint.
+3–17% outliers, and at z > 0.6 most members of a cluster are that faint.
 
 .. figure:: figures/photoz_finders/counts_0009.png
    :alt: Redshift distribution of the clusters of each finder in region 9
@@ -123,7 +122,8 @@ The DR11 photo-z limit the gain: fainter than z = 21 their scatter is 0.03–0.0
 .. figure:: figures/photoz_finders/counts_0082.png
    :alt: Redshift distribution of the clusters of each finder in region 82
 
-   The same in region 82 (DECaLS).
+   Redshift distribution (left) and cumulative density (right) of the clusters of each finder in
+   region 82 (DECaLS), as in the figure above.
    Strip: ``counts_strip.png``.
 
 Recovery of external clusters
@@ -138,11 +138,10 @@ We matched the clusters of each finder to external catalogues, with counterparts
 - eRASS1 (the first eROSITA All-Sky Survey; PCONT < 0.5): 84% for the red sequence and the
   photo-z filter, 88% for PSCD in region 9; 78–82% for all in region 82 (51 clusters each).
 - :cite:t:`WenHan2024`, clusters of the Dark Energy Spectroscopic Instrument (DESI) Legacy Imaging
-  Surveys down to M500 ≈ 0.5 × 10¹⁴ M☉: PSCD recovers 17–25% of them against 13–18% for the red
+  Surveys down to M500 ≈ 0.5 × 10¹⁴ M☉: PSCD recovers 16–25% of them against 13–18% for the red
   sequence, and 38–64% against 13–20% at z < 0.2.
   Above M500 = 3 × 10¹⁴ M☉ all the finders recover most of them (75–100%).
-
-For further reading, :cite:t:`Zou2021` detect galaxy clusters in the DESI Legacy Imaging Surveys.
+  :cite:t:`Zou2021` also detect galaxy clusters in the DESI Legacy Imaging Surveys.
 
 .. figure:: figures/photoz_finders/external_0009.png
    :alt: Recovery of ACT DR6, eRASS1, SPT and Wen & Han 2024 clusters in region 9
@@ -313,7 +312,7 @@ cleaning) before the next detection.
 The catalogue gives the amplitude A (1 for the template: M200 ≈ 10¹⁴ M☉/h), AMICO's
 S/N = A/σ_A, which includes the cluster's own shot noise, SNR_NOCL = A√α against the background
 only, LAMBDA = Σ P(i ∈ j), LAMBDA_STAR (members brighter than m* + 1.5 within R200), the redshift
-of the peak and its members' photo-z error, and the brightest member with P > 0.5.
+of the peak and its members' photo-z error, and the brightest member with P ≥ 0.5.
 The detections are extracted down to SNR_NOCL = 4 and the thresholds are set afterwards by the
 null tests.
 
@@ -327,9 +326,8 @@ Differences from AMICO:
 
 On mocks drawn from the template, the amplitude is unbiased (A = 1.95 ± 0.05, 2.01 ± 0.08,
 1.85 ± 0.09 for an input A = 2 at z = 0.3, 0.7, 0.85) and its scatter is the predicted σ_A.
-
-For further reading, :cite:t:`Bellagamba2019` calibrate the masses of the AMICO galaxy clusters
-in KiDS-DR3 with weak lensing.
+:cite:t:`Bellagamba2019` calibrate the masses of the AMICO galaxy clusters in KiDS-DR3 with weak
+lensing.
 :cite:t:`EuclidAdam2019` assess the performance of galaxy-cluster detection algorithms for the
 Euclid wide photometric survey, and select among them.
 

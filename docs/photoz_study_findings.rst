@@ -20,7 +20,7 @@ Summary
 - PSCD recovers more of the low-mass clusters of :cite:t:`WenHan2024`: 38–64% against 13–20% at
   z < 0.2; above M500 = 3 × 10¹⁴ M☉ every finder recovers 75–100%.
 - No finder gains at z > 0.6: fainter than z = 21 the DR11 photo-z scatter by 0.03–0.08 (1 + z),
-  with 3–14% outliers.
+  with 3–17% outliers.
 - 97–99% of the photo-z detections are also red-sequence clusters, mostly of low richness λ: the
   photo-z finders re-rank systems that the red sequence also detects.
 - Cluster redshifts are as good as the red sequence's: a normalised median absolute deviation
@@ -35,6 +35,9 @@ Results
 We used three areas: the strip (RA 0–5°, Dec −15–0°, Dark Energy Camera Legacy Survey, DECaLS; own
 box 37.4 deg²), region 9 of the production plan (RA 15–30°, Dec −55 to −45°, Dark Energy Survey,
 DES; 92.0 deg²) and region 82 (RA 140–150°, Dec 5–15°, DECaLS; 92.8 deg²).
+The subsections give the detections, their redshift distribution, the recovery of external
+catalogues, the overlap with the red-sequence finder and the member colours, the cluster redshifts
+and the DR11 photo-z widths.
 
 Detections at 0.3 false detections per deg²
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,9 +95,9 @@ SNR is the signal-to-noise ratio.
   with it, PSCD has 39–42%, 20–21% and 10–18% more clusters than the red sequence.
 - A richness is a weaker detection statistic than a likelihood: λ keeps 6–12% fewer clusters than
   SNR for the red sequence, and 39–44% fewer for the photo-z filter.
-- The red sequence's λ threshold is 12.7 and 13.6 in the deeper areas but 18.6 in region 82: in
-  shallow DECaLS data it makes more false detections at fixed λ (compare the excess of λ ≥ 20
-  clusters in shallow areas of the production catalogue).
+- The red sequence's λ threshold is 12.7 on the strip and 13.6 in region 9 (DES) but 18.6 in
+  region 82: in shallow DECaLS data it makes more false detections at fixed λ (compare the excess
+  of λ ≥ 20 clusters in shallow areas of the production catalogue).
 
 Redshift distribution
 ~~~~~~~~~~~~~~~~~~~~~
@@ -133,10 +136,10 @@ Clusters at 0.3 false per deg² with the default statistic of each finder (λ, S
   and its impurity in shallow data, which a single null threshold over the whole redshift range
   does not remove.
 - The cut at z-band magnitude 22 removes a quarter to a third of PSCD's clusters at z > 0.6 and
-  adds a few at low z.
+  adds 60–206 (12–25%) at z ≤ 0.6.
 
-External catalogues
-~~~~~~~~~~~~~~~~~~~
+Recovery of external clusters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Fraction of the clusters of the Atacama Cosmology Telescope (ACT), South Pole Telescope (SPT),
 first eROSITA All-Sky Survey (eRASS1) and :cite:t:`WenHan2024` catalogues recovered at 0.3 false
@@ -409,7 +412,7 @@ Computing cost
      - 14 min, 12 192 detections, 4.2 GB
      - 14–17 min, 28 000–34 000 detections, 7–9 GB
 
-The whole study at CC-IN2P3 (galaxy tables of the two regions, 20 region runs and three strip runs)
+The whole study at CC-IN2P3 (galaxy tables of the two regions, twenty region runs and three strip runs)
 used 5.2 GB on /sps.
 
 Open questions

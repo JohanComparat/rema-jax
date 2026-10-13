@@ -47,6 +47,7 @@ conda activate $SPS/envs/rema
 export PYTHONPATH=$CODE\${PYTHONPATH:+:\$PYTHONPATH}
 export XDG_CACHE_HOME=$SPS/.cache MPLCONFIGDIR=$SPS/.cache/matplotlib
 export JAX_COMPILATION_CACHE_DIR=$WORK/jax_cache XLA_PYTHON_CLIENT_PREALLOCATE=false
+export JAX_PLATFORMS=cpu      # CPU nodes have no GPU; the place stage sets cuda itself
 set -euo pipefail
 EOF
 }

@@ -8,6 +8,6 @@ redMaPPer-inspired redesign (Rykoff et al. 2014, 2016).
 Subpackages are imported on demand, so ``import rema`` stays light.
 """
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 
 __all__ = ["__version__"]

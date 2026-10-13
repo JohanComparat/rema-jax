@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.3] - 2026-10-13
+
+### Documentation
+
+- The four DR11 notebooks are executed with rema 0.5.2 at CC-IN2P3; their results are unchanged
+  (11 534 clusters in the blind notebook, 4 032 and 3 446 in the two pipeline regions).
+- The pipeline notebook passes the calibration's configuration to the task script (`CONFIG`).
+  Without it, the ingest stage rewrote the galaxy tables with the default configuration and the
+  regions refused them (SURVHASH mismatch).
+- The photo-z pages no longer give PSCD peak-memory figures, which had no measurement behind them.
+
 ## [0.5.2] - 2026-10-13
 
 ### Documentation

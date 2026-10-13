@@ -155,4 +155,8 @@ ACT's own random catalogues (``DR6_randoms_v1.0.tgz``: mock clusters of nemo wit
 
 For the SPT-SZ sample (238 clusters with :math:`\xi \geq 5` and :math:`z_\lambda \geq 0.25`) the field depths change the randoms little: the depth-template :math:`\chi^2` are 1-13 for 4 bins with and without them.
 
+The PSZ2 sample (union S/N ≥ 6 in the survey mask, confirmed by rema: 309 clusters) shows what the sky-averaged completeness leaves out.
+Its density relative to the randoms rises with the ecliptic latitude, from 0.71 ± 0.10 below 10.5° to 1.32 ± 0.13 above 39° (:math:`\chi^2` = 15 for 4 bins): Planck observed the ecliptic poles longest, so its noise is lowest there.
+A model of that noise (from the Planck hit counts, as the ACT one) would be needed; meanwhile, PSZ2 samples are for comparison only.
+
 Copies made once serve any stricter sample: ``sample`` with a :math:`z_{\rm vlim}` map or a domain that differ from those of ``copies`` (a higher depth significance, a seam buffer) drops the copies outside them, and the remaining copies are uniform in the smaller area.

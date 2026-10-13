@@ -7,6 +7,7 @@
   sample    catalogue + spec + placed copies -> the sample and its weighted randoms
   qa        sample -> data / randoms ratio against depth, |b|, seam distance (JSON)
   external-join  scan at an X-ray/SZ catalogue -> joined with that catalogue's columns (EXT_*)
+  act-selfn  ACT DR6 nemo noise and masks -> HEALPix noise map for the act_dr6 selection
   erass1-model  eRASS1 joined catalogue + exposure and HI maps -> approximate detection model
   dump-config  catalogue -> its configuration (YAML), for ``rema randoms-index`` and ``rema maps``
 
@@ -276,6 +277,35 @@ def cmd_erass1_model(args):
              m["sigma"], args.out_model, args.out)
 
 
+def cmd_act_selfn(args):
+    from ..io.tables import write_fits
+    from .selection.act import build_rms_map
+
+    t0 = time.time()
+    m = build_rms_map(args.rms, args.area, args.flag, nside=args.nside, max_flag=args.max_flag)
+    # nemo's RMS is in y, fixed_y_c in 1e-4; the mean over a HEALPix pixel differs slightly from
+    # the noise at a cluster: calibrate on the catalogue, so that fixed_y_c / RMS = fixed_SNR.
+    scale, note = 1e4, "y / 1e-4"
+    if args.catalog:
+        from ..io.tables import read_table
+
+        c = read_table(args.catalog)
+        sig = m.lookup_np(c["RADEG"], c["DECDEG"], "RMS")
+        ok = (sig > 0) & (c["FLAGS"] == 0) & (c["FIXED_SNR"] > 0)
+        cal = float(np.median(c["FIXED_Y_C"][ok] / (1e4 * sig[ok]) / c["FIXED_SNR"][ok]))
+        scale *= cal
+        note = f"y / 1e-4 x {cal:.4f} (median fixed_y_c / RMS / fixed_SNR of {ok.sum()} clusters)"
+        log.info("calibration on %d clusters: %s", ok.sum(), note)
+    m.values["RMS"] = (m.values["RMS"] * scale).astype(np.float32)
+    write_fits(args.out, [m.hdu("RMS", {"SOURCE": Path(args.rms).name, "MAXFLAG": args.max_flag,
+                                       "RMSUNIT": note[:68]})])
+    from ..sky.healpix import pix_area_deg2
+
+    log.info("ACT DR6 noise map: %d pixels at NSIDE %d (%.0f deg2), median RMS %.3g (%.0fs) -> %s",
+             m.pixels.size, args.nside, m.pixels.size * pix_area_deg2(args.nside),
+             float(np.median(m.values["RMS"])), time.time() - t0, args.out)
+
+
 def cmd_dump_config(args):
     cfg = _cfg(args, args.catalog)
     cfg.to_yaml(args.out)
@@ -414,6 +444,16 @@ def add_parser(sub):
     s.add_argument("--out-model", required=True, help="YAML of the model")
     s.add_argument("--out", required=True, help="the joined catalogue with EXT_NH and EXT_THETA500")
     s.set_defaults(func=cmd_erass1_model)
+
+    s = steps.add_parser("act-selfn", help="ACT DR6 nemo noise map (stitched CAR) -> HEALPix selection map")
+    s.add_argument("--rms", required=True, help="selFn/stitched_RMSMap_Arnaud_M2e14_z0p4.fits")
+    s.add_argument("--area", required=True, help="selFn/stitched_areaMask.fits")
+    s.add_argument("--flag", help="selFn/stitched_flagMask.fits (pixels with flags > --max-flag left out)")
+    s.add_argument("--max-flag", type=int, default=0)
+    s.add_argument("--nside", type=int, default=2048)
+    s.add_argument("--catalog", help="DR6 cluster catalogue, to calibrate RMS so that fixed_y_c / RMS = fixed_SNR")
+    s.add_argument("--out", required=True)
+    s.set_defaults(func=cmd_act_selfn)
 
     s = steps.add_parser("dump-config", help="the configuration stored with a catalogue, as YAML")
     s.add_argument("--catalog", required=True)

@@ -418,3 +418,43 @@ def test_spt_fields_from_centres():
     f = sel.field_of(ra, dec)
     assert sel.name_f[f[:3]].tolist() == ["ra5h30dec-55", "ra23h30dec-55", "ra1hdec-42.5"]
     assert f[3:].tolist() == [-1, -1]                       # outside R.A. 20h-7h, and north of -40
+
+
+def test_act_rms_map_from_stitched_images(tmp_path, monkeypatch):
+    """The stitched CAR images (noise, area, flags) to the calibrated HEALPix noise map."""
+    from astropy.io import fits
+    from astropy.wcs import WCS
+
+    from rema import cli
+    from rema.io.tables import write_table
+    from rema.randoms.selection.act import build_rms_map
+    from rema.randoms.selection.erass1 import HealpixColumn
+
+    w = WCS(naxis=2)
+    w.wcs.ctype = ["RA---CAR", "DEC--CAR"]
+    w.wcs.crval, w.wcs.crpix, w.wcs.cdelt = [10, 0], [101, 101], [-0.01, 0.01]
+    rms = np.full((200, 200), 1.0e-5, np.float32)
+    rms[:, :100] = 2.0e-5                                      # RA > 10: noisier
+    area = np.ones((200, 200), np.uint8)
+    area[:80] = 0                                              # Dec < -0.2: outside
+    flag = np.zeros((200, 200), np.uint8)
+    flag[150:] = 1                                             # Dec > 0.5: flagged
+    for name, a in (("rms", rms), ("area", area), ("flag", flag)):
+        fits.PrimaryHDU(a, header=w.to_header()).writeto(tmp_path / f"{name}.fits")
+    m = build_rms_map(tmp_path / "rms.fits", tmp_path / "area.fits", tmp_path / "flag.fits", nside=256, chunk_rows=37)
+    v = m.lookup_np(np.array([9.5, 10.5, 9.5, 9.5]), np.array([0.0, 0.0, -0.7, 0.85]), "RMS")
+    np.testing.assert_allclose(v, [1e-5, 2e-5, 0, 0], rtol=1e-6)
+    # The command: in units of 1e-4, calibrated on a catalogue whose fixed_SNR is 1% above y / RMS.
+    write_table(tmp_path / "cat.fits", {"RADEG": np.array([9.5, 10.5]), "DECDEG": np.zeros(2),
+                                        "FLAGS": np.zeros(2, np.int16), "FIXED_Y_C": np.array([0.5, 1.0]),
+                                        "FIXED_SNR": np.array([5.0, 5.0]) / 1.01})
+    monkeypatch.setattr(cli, "_setup_jax", lambda: None)
+    assert cli.main(["cluster-randoms", "act-selfn", "--rms", str(tmp_path / "rms.fits"), "--area",
+                     str(tmp_path / "area.fits"), "--flag", str(tmp_path / "flag.fits"), "--nside", "256",
+                     "--catalog", str(tmp_path / "cat.fits"), "--out", str(tmp_path / "selfn.fits")]) == 0
+    sel = get_selection({"name": "act_dr6", "selfn": str(tmp_path / "selfn.fits")})
+    np.testing.assert_allclose(sel.sigma(np.array([9.5]), np.array([0.0])), [0.1 * 1.01], rtol=1e-5)
+    # The sparse map as a QA template: NaN outside.
+    t = HealpixColumn(str(tmp_path / "selfn.fits"), "RMS")
+    out = t(np.array([9.5, 30.0]), np.array([0.0, 0.0]))
+    assert out[0] == pytest.approx(0.101, rel=1e-5) and np.isnan(out[1])

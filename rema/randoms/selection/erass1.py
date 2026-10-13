@@ -43,7 +43,8 @@ def _galactic(ra, dec):
 
 
 class HealpixColumn:
-    """Values of a HEALPix map (any ordering and frame) at sky positions."""
+    """Values of a HEALPix map (any ordering and frame, full or sparse with a PIXEL column) at
+    sky positions."""
 
     def __init__(self, path=None, column=None, values=None, nside=None, nest=False, frame="C"):
         import healpy as hp
@@ -52,10 +53,16 @@ class HealpixColumn:
         if values is None:
             with fits.open(path, memmap=True) as h:
                 hdr = h[1].header
-                col = column or h[1].columns.names[0]
+                names = h[1].columns.names
+                col = column or [n for n in names if n != "PIXEL"][0]
                 values = np.asarray(h[1].data[col], np.float64).ravel()
                 nest = str(hdr.get("ORDERING", "RING")).upper().startswith("NEST")
                 frame = "G" if str(hdr.get("COORDSYS", "C")).upper().startswith("G") else "C"
+                if "PIXEL" in names:          # a sparse map (rema SparseMap): NaN elsewhere
+                    nside = int(hdr["NSIDE"])
+                    full = np.full(12 * nside**2, np.nan)
+                    full[np.asarray(h[1].data["PIXEL"], np.int64)] = values
+                    values = full
         self.values = np.asarray(values, np.float64)
         self.nside = nside or hp.npix2nside(self.values.size)
         self.nest, self.frame = nest, frame

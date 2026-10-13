@@ -148,6 +148,11 @@ The external selection is not optional for an X-ray sample.
 The eRASS1 sample (EXT_LIKE ≥ 6, confirmed by rema on DR11, volume limited, in the Western Galactic hemisphere: 4 723 clusters, 500 copies each) has the same density as its randoms in six bins of the eROSITA exposure to within 0.88-1.11 (:math:`\chi^2` = 35 for 6 bins) with the approximate detection probability; without it, that is with the DR11 selection alone, the ratio goes from 0.49 at the lowest exposure to 2.29 at the highest (:math:`\chi^2` = 1 440).
 Against :math:`n_{\rm H}` the :math:`\chi^2` falls from 142 to 22.
 ``qa --template NAME=FILE:COLUMN`` adds any HEALPix map (exposure, noise) to the checks and reports both.
+For ACT DR6, ``cluster-randoms act-selfn`` averages the noise of the reference filter (``stitched_RMSMap_Arnaud_M2e14_z0p4.fits``) over the pixels of the area mask with flags 0, in NSIDE-2048 pixels: 13 109 deg², close to the 12 590 deg² of the flags-0 area of DR6.
+At the 8 942 clusters with flags 0, ``fixed_y_c`` over that noise is 1.0149 times ``fixed_SNR`` (68% of them within 0.4%), a factor the command removes.
+The ACT DR6 sample (fixed S/N ≥ 5, flags 0, confirmed by rema, volume limited: 3 189 clusters) follows its randoms against the ACT noise to within 0.96-1.07 (:math:`\chi^2` = 5.8 for 6 bins), against :math:`\chi^2` = 310 without the SZ selection; with the Eddington average of the detection probability (``eddington_alpha: 3``) :math:`\chi^2` = 3.2.
+ACT's own random catalogues (``DR6_randoms_v1.0.tgz``: mock clusters of nemo with S/N ≥ 5, here at :math:`0.1 \leq z < 0.7` in the DR11 domain) put 27% of the clusters in the sixth of the area with the lowest noise, against 24% for our randoms and 25% for the data: the mocks are not confirmed optically, and the measured :math:`\tilde y_0` overestimates the detection probability in noisy areas (Eddington bias).
+
 For the SPT-SZ sample (238 clusters with :math:`\xi \geq 5` and :math:`z_\lambda \geq 0.25`) the field depths change the randoms little: the depth-template :math:`\chi^2` are 1-13 for 4 bins with and without them.
 
 Copies made once serve any stricter sample: ``sample`` with a :math:`z_{\rm vlim}` map or a domain that differ from those of ``copies`` (a higher depth significance, a seam buffer) drops the copies outside them, and the remaining copies are uniform in the smaller area.

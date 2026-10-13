@@ -328,3 +328,19 @@ def test_external_join_and_erass1_model(tmp_path, monkeypatch):
     jn = read_table(tmp_path / "joined_nh.fits", hdu="CLUSTERS")
     np.testing.assert_allclose(jn["EXT_NH"], 3e20, rtol=1e-6)
     np.testing.assert_allclose(jn["EXT_THETA500"], th[rows], rtol=1e-6)
+
+
+def test_tracer_randoms_and_annotate(products, tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "_setup_jax", lambda: None)
+    tmp = products["tmp"]
+    run("cluster-randoms", "tracer-randoms", "--zvlim", tmp / "zvlim.fits", "--domain", tmp / "domain.fits",
+        tmp / "randoms-south-1-0.fits", "--max-points", 50000, "--out", tmp_path / "tr.fits")
+    t = read_table(tmp_path / "tr.fits", hdu="RANDOMS")
+    assert t["RA"].size == 50000 and np.all(np.isfinite(t["ZVLIM"]))
+    assert RunDomain.read(tmp / "domain.fits").contains(t["RA"], t["DEC"]).all()
+    gal = {"RA": np.array([11.0, 13.0, 30.0]), "DEC": np.array([0.5, 1.5, 0.0]), "ZPHOT": np.array([0.3, 0.4, 0.5])}
+    write_table(tmp_path / "gal.fits", gal, extname="TRACER")
+    run("cluster-randoms", "annotate", "--table", tmp_path / "gal.fits", "--zvlim", tmp / "zvlim.fits",
+        "--domain", tmp / "domain.fits", "--out", tmp_path / "gal_zv.fits")
+    g = read_table(tmp_path / "gal_zv.fits", hdu="TRACER")
+    assert g["RA"].tolist() == [11.0] and "ZVLIM" in g          # RA 13 Dec 1.5: failed region; RA 30: out

@@ -4,6 +4,7 @@
 #   scripts/randoms/cluster_randoms.sh config     # the catalogue's configuration, once
 #   scripts/randoms/cluster_randoms.sh submit     # index, footprint, z_vlim, copies, place, samples
 #   scripts/randoms/cluster_randoms.sh external   # the X-ray / SZ samples
+#   scripts/randoms/cluster_randoms.sh tracer     # z_vlim map, randoms and annotation of the galaxy tracer
 #   scripts/randoms/cluster_randoms.sh status
 #
 # Stages, chained with afterok:
@@ -119,6 +120,14 @@ python -m rema.cli cluster-randoms qa --sample $P/$c.fits --zvlim $P/zvlim_dr11.
     j=$(submit external "" --partition=$PART_CPU --cpus-per-task=8 --mem=100G --time=24:00:00 -- "$cmds")
     echo "external $j" | tee -a "$LOGS/jobs.txt"
     ;;
+  tracer)   # the galaxy tracer's z_vlim map (0.5 L*), randoms and annotated galaxies
+    [[ -f $P/tracer_dr11_l0.5.fits && -f $P/domain.fits ]] || { echo "no tracer or domain in $P"; exit 1; }
+    j=$(submit tracer "" --partition=$PART_CPU --cpus-per-task=4 --mem=120G --time=12:00:00 -- \
+      "python -m rema.cli cluster-randoms vlim-map --footprint $P/footprint_dr11.fits --domain $P/domain.fits --catalog $CAT --lstar 0.5 --nsigma $NSIGMA --index $IDX --nrand $NRAND --out $P/zvlim_dr11_l0.5.fits
+python -m rema.cli cluster-randoms tracer-randoms --zvlim $P/zvlim_dr11_l0.5.fits --domain $P/domain.fits --config $P/catalog_config.yaml --index $IDX --nrand $NRAND --max-points ${TRACER_RANDOMS:-100000000} --out $P/tracer_randoms_dr11_l0.5.fits
+python -m rema.cli cluster-randoms annotate --table $P/tracer_dr11_l0.5.fits --zvlim $P/zvlim_dr11_l0.5.fits --domain $P/domain.fits --out $P/tracer_dr11_l0.5_zv.fits")
+    echo "tracer $j" | tee -a "$LOGS/jobs.txt"
+    ;;
   config)   # the catalogue's configuration, for the randoms cuts (run once before submit)
     export PYTHONPATH=$CODE${PYTHONPATH:+:$PYTHONPATH}
     python -m rema.cli cluster-randoms dump-config --catalog "$CAT" --out "$P/catalog_config.yaml"
@@ -129,5 +138,5 @@ python -m rema.cli cluster-randoms qa --sample $P/$c.fits --zvlim $P/zvlim_dr11.
     du -sh "$WORK" 2>/dev/null
     ;;
   *)
-    echo "usage: $0 config|submit|external|status"; exit 1 ;;
+    echo "usage: $0 config|submit|external|tracer|status"; exit 1 ;;
 esac

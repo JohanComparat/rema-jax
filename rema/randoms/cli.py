@@ -9,6 +9,8 @@
   external-join  scan at an X-ray/SZ catalogue -> joined with that catalogue's columns (EXT_*)
   act-selfn  ACT DR6 nemo noise and masks -> HEALPix noise map for the act_dr6 selection
   erass1-model  eRASS1 joined catalogue + exposure and HI maps -> approximate detection model
+  tracer-randoms  DR11 random points of the domain with the z_vlim of a tracer map
+  annotate  a table of positions (tracer galaxies) + ZVLIM, cut to the domain
   dump-config  catalogue -> its configuration (YAML), for ``rema randoms-index`` and ``rema maps``
 
 The catalogue configuration (m*(z), reference band, apertures, catalogue cuts) is the CONFIG HDU
@@ -306,6 +308,46 @@ def cmd_act_selfn(args):
              float(np.median(m.values["RMS"])), time.time() - t0, args.out)
 
 
+def cmd_tracer_randoms(args):
+    """DR11 random points of the domain with the z_vlim of a (tracer) map: randoms of a galaxy
+    sample, cut later to z_vlim above each photo-z slice as the galaxies are."""
+    from ..abundance.area import ZvlimMap
+    from ..io.tables import write_table
+    from .domain import RunDomain
+    from .generate import PositionPool, iter_survey_randoms
+
+    cfg = _cfg(args, args.catalog)
+    zmap, dom = ZvlimMap.read(args.zvlim), RunDomain.read(args.domain)
+    rng = np.random.default_rng(args.seed)
+    pool = PositionPool.from_chunks(iter_survey_randoms(_randoms_sources(args), cfg), cfg, zmap, dom,
+                                    max_points=args.max_points, rng=rng)
+    o = rng.permutation(pool.size)
+    write_table(args.out, {"RA": pool.ra[o], "DEC": pool.dec[o], "ZVLIM": pool.zvlim[o].astype(np.float32)},
+                header={"ZVLIMF": str(args.zvlim), "DOMDIG": dom.digest(), "NREAD": pool.meta["NREAD"],
+                        **{k: zmap.meta[k] for k in ("LSTAR", "NSIGMA") if k in zmap.meta}},
+                extname="RANDOMS")
+    log.info("tracer randoms: %d of %d points -> %s", pool.size, pool.meta["NREAD"], args.out)
+
+
+def cmd_annotate(args):
+    """A table of positions (e.g. the tracer galaxies) with ZVLIM of a map, cut to the domain."""
+    from ..abundance.area import ZvlimMap
+    from ..io.tables import read_header, read_table, write_table
+    from .domain import RunDomain
+    from .products import info_header
+    from .vlim import annotate
+
+    t = read_table(args.table, hdu=args.hdu)
+    zmap, dom = ZvlimMap.read(args.zvlim), RunDomain.read(args.domain)
+    a = annotate(t["RA"], t["DEC"], zmap, dom)
+    keep = a["IN_DOMAIN"] & np.isfinite(a["ZVLIM"])
+    out = {k: np.asarray(v)[keep] for k, v in t.items()}
+    out["ZVLIM"] = a["ZVLIM"][keep].astype(np.float32)
+    hdr = {**info_header(read_header(args.table, args.hdu)), "ZVLIMF": str(args.zvlim), "DOMDIG": dom.digest()}
+    write_table(args.out, out, header=hdr, extname="TRACER")
+    log.info("%s: %d of %d rows in the domain and the map -> %s", args.table, keep.sum(), keep.size, args.out)
+
+
 def cmd_dump_config(args):
     cfg = _cfg(args, args.catalog)
     cfg.to_yaml(args.out)
@@ -454,6 +496,25 @@ def add_parser(sub):
     s.add_argument("--catalog", help="DR6 cluster catalogue, to calibrate RMS so that fixed_y_c / RMS = fixed_SNR")
     s.add_argument("--out", required=True)
     s.set_defaults(func=cmd_act_selfn)
+
+    s = steps.add_parser("tracer-randoms", help="DR11 random points of the domain with z_vlim, for a galaxy tracer")
+    s.add_argument("--zvlim", required=True, help="z_vlim map of the tracer (e.g. --lstar 0.5)")
+    s.add_argument("--domain", required=True)
+    s.add_argument("--catalog", help="catalogue whose CONFIG HDU gives the cuts")
+    s.add_argument("--config")
+    randoms_args(s, "the points")
+    s.add_argument("--max-points", type=int, help="keep a random subset of at most this many")
+    s.add_argument("--seed", type=int, default=2)
+    s.add_argument("--out", required=True)
+    s.set_defaults(func=cmd_tracer_randoms)
+
+    s = steps.add_parser("annotate", help="positions + ZVLIM of a map, cut to the domain")
+    s.add_argument("--table", required=True)
+    s.add_argument("--hdu", default=1)
+    s.add_argument("--zvlim", required=True)
+    s.add_argument("--domain", required=True)
+    s.add_argument("--out", required=True)
+    s.set_defaults(func=cmd_annotate)
 
     s = steps.add_parser("dump-config", help="the configuration stored with a catalogue, as YAML")
     s.add_argument("--catalog", required=True)

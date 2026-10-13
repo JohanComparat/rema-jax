@@ -3,14 +3,14 @@
 ``rema scan-positions`` kept a few input columns (INPUT_NAME, INPUT_SNR, ...); the selection
 functions need others (the fixed-filter y0 and S/N of ACT, the field of SPT, the count rate of
 eRASS1). :func:`join_scan` adds them from the original catalogue, by the input row
-(INPUT_ROW, the row in the original file), as EXT_<NAME> columns.
+(INPUT_ROW, the row in the original file), as ``EXT_<NAME>`` columns.
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-#: catalogue -> (original file name, {EXT_ column: original column})
+#: catalogue -> (original file name, {``EXT_`` column: original column})
 JOIN_COLUMNS = {
     "act_dr6": ("DR6_cluster-catalog_v1.0.fits", {
         "EXT_FIXED_Y_C": "fixed_y_c", "EXT_FIXED_ERR_Y_C": "fixed_err_y_c", "EXT_FIXED_SNR": "fixed_SNR",
@@ -31,7 +31,7 @@ JOIN_COLUMNS = {
 
 
 def join_scan(scan: dict, original: dict, catalogue: str) -> dict:
-    """Scan table ``scan`` (dict of columns, with INPUT_ROW) plus the EXT_ columns of
+    """Scan table ``scan`` (dict of columns, with INPUT_ROW) plus the ``EXT_`` columns of
     ``catalogue`` taken from ``original`` (dict of the original catalogue's columns).
 
     >>> scan = {"INPUT_ROW": np.array([2, 0]), "INPUT_NAME": np.array(["c", "a"]), "LAMBDA": np.array([5., 9.])}

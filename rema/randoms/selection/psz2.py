@@ -1,6 +1,6 @@
 """Planck PSZ2 (Planck Collaboration 2016): the survey (or cosmology) mask, and the noise.
 
-The released PSZ2 completeness (HFI_PCCS_SZ-selfunc-*_R2.08.fits) is averaged over the sky; within
+The released PSZ2 completeness (``HFI_PCCS_SZ-selfunc-*_R2.08.fits``) is averaged over the sky; within
 the mask it does not depend on the position. Planck's noise does: the scan observed the ecliptic
 poles longest. With ``model`` (``cluster-randoms psz2-model``) the noise follows the hit counts H
 of an HFI map (smoothed to the scale of the matched filters), sigma ~ H^gamma, gamma = -1/2 (white

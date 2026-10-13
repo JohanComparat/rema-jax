@@ -256,7 +256,8 @@ task with 5 CPUs and 45 GB, ``--licenses=sps`` on every job, ``MAX_ARRAY=90``, t
      - ``MAX_ARRAY=90``: each array task runs several regions in turn (``$OUTDIR/jobs/batches``)
 
 **Disk space.** ``spsquotalist /sps/lsst/users/$USER`` prints the disk use of the user's directory.
-A full run needs about 80 GB of galaxy tables, 8 GB of randoms index and 1.4 GB of JAX cache,
+A full run needs about 80 GB of galaxy tables, 12.7 GB of randoms index (four files) and 1.4 GB
+of JAX cache,
 all deleted by ``clean``; each region keeps 53 MB (``footprint.fits`` and ``clusters.fits``),
 and the merged catalogues take 14 GB.
 Galaxy tables and a randoms index made with the same configuration can be moved into a new

@@ -217,7 +217,7 @@ writable copy and point ``DR11`` at it.
 
 - One file gives about eight randoms per nside-1024 pixel.
   The aperture of a λ = 20 cluster covers 4 pixels at z = 0.3 and 1.4 pixels at z = 0.8.
-- The index is built once (about 3 GB per file on disk), so more files cost little time.
+- The index is built once (3.2 GB per DR11 randoms file on disk), so more files cost little time.
 - Use all twenty in production, unless scratch space is short.
 
 Devices and resources
@@ -285,7 +285,7 @@ The DR11 south production of rema 0.2.0 (:doc:`ccin2p3`) cost:
    * - randoms
      - 4
      - 16–24 GB each
-     - 92 GB / 8 GB
+     - 92 GB / 12.7 GB
    * - calib
      - 1
      - a few hours on 32 cores, 128 GB

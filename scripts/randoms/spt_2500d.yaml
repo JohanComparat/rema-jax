@@ -1,0 +1,9 @@
+# SPT-SZ 2500d clusters confirmed by rema on DR11: xi >= 5 in the field of their position (the
+# plugin, with the field depths gamma_f of Bocquet et al. 2019), z_lambda >= 0.25.
+name: spt_2500d
+observable: EXT_XI
+z_edges: [0.25, 0.50, 0.75]
+obs_edges: [5.0, 7.0, 1000.0]
+cuts: ["SCANNED == 1", "LAMBDA > 0"]
+selection: {name: spt, fields: SELFN_DIR/spt_sz_2500d_fields.csv, xi_cut: 5.0}
+n_samp: 500

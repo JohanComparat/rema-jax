@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `rema cluster-randoms` (`rema.randoms`, documentation page "Cluster randoms"): volume-limited
+  cluster samples and their random catalogues, as redMaPPer's GenerateRandoms and RandomWeigher,
+  with the weights of an external (X-ray, SZ) selection function. Steps `domain`, `vlim-map`,
+  `copies`, `place`, `sample`, `qa`.
+- `rema.core.richness.aperture_k` and `percolation_quad`, `rema.core.maskcorr.footprint_completeness`
+  and `member_mag_limit`: the aperture completeness shared by the finders and the randoms.
+- `ZvlimMap.meta`: the header keywords of a z_vlim map (luminosity limit, depth significance, band,
+  footprint and domain digests).
+- Documentation pages "Clustering and lensing of the DR11 cluster samples" and "eRASS1 clusters on
+  DR11": w_p, large-scale bias, ΔΣ (DES Y3, HSC Y3, KiDS-1000) and the cross-correlation with the
+  LS DR11 galaxies of every sample, the comparison with Comparat et al. (2025), and the eRASS1
+  sample in bins of L500; figures made by `docs/figures/cluster_stats/make_all.py` and
+  `fig_erass1.py`.
+- Literature: Seppi et al. (2024), Clerc et al. (2024), Comparat et al. (2025, A&A 697, A173),
+  de Haan et al. (2016), Landy & Szalay (1993), Sinha & Garrison (2020) and Lange & Huang (2022).
+
 ## [0.5.3] - 2026-10-13
 
 ### Documentation

@@ -1,0 +1,4 @@
+# Volume-limited richness bins (detection as the catalogue: LAMBDA / SCALEVAL >= 3).
+name: lambda_vlim
+z_edges: [0.10, 0.20, 0.30, 0.45, 0.60, 0.75]
+obs_edges: [10, 20, 30, 45, 60, 10000]

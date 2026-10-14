@@ -82,6 +82,9 @@ Differences from redMaPPer
    photoz_finders
    photoz_study_findings
    public_catalogues_scan
+   cluster_randoms
+   cluster_statistics_dr11
+   erass1_dr11
 
 .. toctree::
    :maxdepth: 2

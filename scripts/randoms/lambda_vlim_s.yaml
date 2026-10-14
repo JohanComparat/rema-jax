@@ -1,0 +1,6 @@
+# As lambda_vlim, with LAMBDA / SCALEVAL >= the lower edge of each richness bin (redMaPPer's
+# select_scaleval): the randoms then also follow the depth through SCALEVAL.
+name: lambda_vlim_s
+z_edges: [0.10, 0.20, 0.30, 0.45, 0.60, 0.75]
+obs_edges: [10, 20, 30, 45, 60, 10000]
+detection_from_bin: true

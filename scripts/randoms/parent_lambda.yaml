@@ -1,0 +1,6 @@
+# Parent of the richness samples: every cluster with LAMBDA >= 10 at 0.05 <= z_lambda < 0.85 below
+# the z_vlim of its position; the samples (lambda_vlim*.yaml) reuse its copies.
+name: parent_lambda
+z_edges: [0.05, 0.85]
+obs_edges: [10, 10000]
+n_samp: 100

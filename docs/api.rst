@@ -151,6 +151,56 @@ The response of the counts to cosmology and their likelihood are described in
 .. automodule:: rema.abundance.sampling
    :members: map_fit, laplace, nuts
 
+Cluster randoms
+---------------
+
+See :doc:`cluster_randoms`.
+
+.. automodule:: rema.randoms.samples
+   :members: SampleSpec, select_sources, make_copies, place, build_sample
+
+.. automodule:: rema.randoms.domain
+   :members: RunDomain
+
+.. automodule:: rema.randoms.vlim
+   :members: zvlim_map_from_footprint, depth_mag, domain_fraction, count_randoms, annotate
+
+.. automodule:: rema.randoms.aperture
+   :members: aperture_values, aperture_model, footprint_map
+
+.. automodule:: rema.randoms.generate
+   :members: PositionPool, generate, iter_survey_randoms
+
+.. automodule:: rema.randoms.weigh
+   :members: copy_weights, detection_q, effective_area
+
+.. automodule:: rema.randoms.selection.base
+   :members: ExternalSelection, NoSelection, get_selection, register, eddington_average
+
+.. automodule:: rema.randoms.qa
+   :members: ratio_vs, sample_qa
+
+.. automodule:: rema.randoms.external
+   :members: join_scan, read_original, JOIN_COLUMNS
+
+.. automodule:: rema.randoms.selection.act
+   :members: ACTDR6Selection
+
+.. automodule:: rema.randoms.selection.spt
+   :members: SPTSelection
+
+.. automodule:: rema.randoms.selection.psz2
+   :members: PSZ2Selection
+
+.. automodule:: rema.randoms.selection.erass1
+   :members: ERASS1ApproxSelection, fit_detection_model, HealpixColumn, theta500_arcmin
+
+.. automodule:: rema.randoms.selection.carmaps
+   :members: images_to_sparsemap, image_to_pixels
+
+.. automodule:: rema.randoms.config
+   :members: RandomsConfig, VlimConfig, GenerateConfig
+
 Model tables
 ------------
 

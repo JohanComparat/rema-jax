@@ -1,0 +1,14 @@
+# eRASS1 clusters confirmed by rema on DR11 (no PCONT or IN_ZVLIM cut: those use DR10):
+# EXT_LIKE >= 6 with the approximate detection model (erass1-model), binned in L500.
+# L500 of the eRASS1 catalogue is in 1e42 erg/s: the edges are log10 L500 [erg/s] = 43.1, 43.7, 44.3
+# (43.1 is the C1 threshold of Comparat et al. 2025).
+name: erass1
+ra_column: RA
+dec_column: DEC
+observable: EXT_L500
+z_edges: [0.10, 0.30, 0.50, 0.80]
+obs_edges: [0.0, 12.59, 50.12, 199.5, 1.0e5]
+cuts: ["SCANNED == 1", "LAMBDA > 0"]
+selection: {name: erass1_approx, model: SELFN_DIR/erass1_model.yaml, expmap: SELFN_DIR/erass4_expmap_nside2048.fits,
+            exp_column: TEXP, nhmap: SELFN_DIR/NHI_HPX.fits, ext_like_cut: 6.0}
+n_samp: 500

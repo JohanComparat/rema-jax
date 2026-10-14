@@ -1,0 +1,12 @@
+# ACT DR6 clusters confirmed by rema on DR11: fixed-filter S/N >= 5 and flags == 0 (the
+# selection plugin), lambda / SCALEVAL >= 3 and MASKFRAC < 0.2 at the SZ position, below the
+# z_vlim of that position; binned in fixed_y_c (1e-4). SELFN_DIR is replaced by the driver.
+name: act_dr6
+ra_column: RA
+dec_column: DEC
+observable: EXT_FIXED_Y_C
+z_edges: [0.10, 0.30, 0.50, 0.70]
+obs_edges: [0.0, 1.0, 2.0, 1000.0]
+cuts: ["SCANNED == 1", "LAMBDA > 0"]
+selection: {name: act_dr6, selfn: SELFN_DIR/act_dr6_rms.fits, q_cut: 5.0}
+n_samp: 500

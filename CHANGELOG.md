@@ -14,6 +14,17 @@ All notable changes to `rema` are documented here.
   and `member_mag_limit`: the aperture completeness shared by the finders and the randoms.
 - `ZvlimMap.meta`: the header keywords of a z_vlim map (luminosity limit, depth significance, band,
   footprint and domain digests).
+- Documentation pages "Clustering and lensing of the DR11 cluster samples" and "eRASS1 clusters on
+  DR11": w_p, large-scale bias, ΔΣ (DES Y3, HSC Y3, KiDS-1000) and the cross-correlation with the
+  LS DR11 galaxies of every sample, the comparison with Comparat et al. (2025), and the eRASS1
+  sample in bins of L500; figures made by `docs/figures/cluster_stats/make_all.py` and
+  `fig_erass1.py`.
+
+### Fixed
+
+- `scripts/randoms/erass1.yaml`: the L500 bin edges are in the unit of the eRASS1 catalogue
+  (1e42 erg/s), at log10 L500 = 43.1, 43.7, 44.3; they were in erg/s, which put every cluster in
+  the first bin.
 
 ## [0.5.0] - 2026-10-12
 

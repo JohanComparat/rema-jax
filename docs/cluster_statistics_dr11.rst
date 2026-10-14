@@ -39,7 +39,7 @@ The samples
    * - ``erass1``
      - eRASS1 extended sources, ``EXT_LIKE`` ≥ 6, rema optical confirmation on DR11
      - 0.10, 0.30, 0.50, 0.80
-     - none (see `Limitations`_)
+     - :math:`\log_{10} L_{500}` [erg s\ :sup:`-1`]: 43.1, 43.7, 44.3
      - 4 725
    * - ``act_dr6``
      - ACT DR6, fixed S/N ≥ 5, ``flags == 0``
@@ -93,7 +93,7 @@ The ``lambda_vlim_s`` sample gives the same values within the errors.
    Projected cluster auto-correlation :math:`r_p\,w_p(r_p)` of the X-ray and SZ samples; colours are the redshift and observable bins.
    SPT-SZ 2500d has no pair in most bins and is not shown.
 
-For the X-ray and SZ samples, the signal-to-noise ratio is 9.0, 10.8 and 3.6 for the three eRASS1 redshift bins, 3.6-4.7 for the ACT DR6 bins with :math:`\tilde y_0 < 10^{-4}`, below 1 for the other ACT DR6 bins, and 2.3 for the low-redshift PSZ2 bin.
+For the X-ray and SZ samples, the signal-to-noise ratio is 1.9-5.1 for the eRASS1 bins of :math:`L_{500}` below :math:`z = 0.5` (:doc:`erass1_dr11`), 3.6-4.7 for the ACT DR6 bins with :math:`\tilde y_0 < 10^{-4}`, below 1 for the other ACT DR6 bins, and 2.3 for the low-redshift PSZ2 bin.
 
 Excess surface density
 ----------------------
@@ -115,7 +115,7 @@ The three surveys agree within 1-2σ in every bin; the signal-to-noise ratio of 
 
    Excess surface density :math:`\Delta\Sigma(R)` of the X-ray and SZ samples, in the convention of Fig. ``esd_lambda``.
 
-At :math:`R = 1\,h^{-1}` Mpc, eRASS1 gives 44 ± 3, 52 ± 6 and 129 ± 21 :math:`h\,M_\odot\,{\rm pc}^{-2}` in its three redshift bins, ACT DR6 52-68 for :math:`\tilde y_0 < 10^{-4}` and 72-112 above, and PSZ2 90 ± 17 and 77 ± 18.
+At :math:`R = 1\,h^{-1}` Mpc, eRASS1 gives 32 ± 8 to 63 ± 23 :math:`h\,M_\odot\,{\rm pc}^{-2}` from the lowest to the highest bin of :math:`L_{500}` at :math:`0.10 \leq z < 0.30` (:doc:`erass1_dr11`), ACT DR6 52-68 for :math:`\tilde y_0 < 10^{-4}` and 72-112 above, and PSZ2 90 ± 17 and 77 ± 18.
 SPT-SZ 2500d has no lensing measurement: the DES Y3 source file used here covers only :math:`-22.5° < \delta < 5.4°` (1 640 deg²), and neither HSC nor KiDS reaches the SPT field.
 
 Cross-correlation with DR11 galaxies in photo-z slices
@@ -141,7 +141,7 @@ At :math:`r_p = 1\,h^{-1}` Mpc and :math:`0.30 \leq z < 0.45`, with :math:`\log_
 
    Cluster-galaxy cross-correlation :math:`r_p\,w_x(r_p)` of the X-ray and SZ samples, with the galaxy sample complete to the bin's upper redshift (squares, dashed) and with :math:`\log_{10} M^* > 11.25` (circles).
 
-The X-ray and SZ samples are detected with signal-to-noise ratios of 27-58 (eRASS1), 16-49 (ACT DR6), 10-31 (PSZ2) and 10-15 (SPT-SZ 2500d).
+The X-ray and SZ samples are detected with signal-to-noise ratios of 3-50 (eRASS1, per bin of :math:`L_{500}`), 16-49 (ACT DR6), 10-31 (PSZ2) and 10-15 (SPT-SZ 2500d).
 
 .. _c25-comparison:
 
@@ -212,8 +212,6 @@ The richness bins show the same colour dependence as the eRASS1 clusters: on lar
 Limitations
 -----------
 
-- The bins of ``erass1`` were set in erg s\ :sup:`-1`, while ``EXT_L500`` is in :math:`10^{42}` erg s\ :sup:`-1`: every cluster fell in the first bin, so the eRASS1 measurements above are for the whole sample.
-  The comparison with Comparat et al. (2025) applies the luminosity thresholds in the right unit.
 - The colour classes use the systematic weights and the randoms of the whole galaxy sample; the blue-cloud G1075 auto-correlation has a large-scale excess that they do not correct.
 - The cluster density at :math:`z > 0.3` depends on the imaging depth (:doc:`cluster_randoms`); the randoms do not correct it, and the large-scale clustering above :math:`z = 0.3` is biased high until systematic weights are applied.
 - The DES Y3 source file covers 1 640 deg² (:math:`-22.5° < \delta < 5.4°`): only 350 of the 3 191 ACT DR6 clusters and none of SPT-SZ 2500d have DES sources. A full-footprint DES Y3 file would give the SPT lensing and three times more ACT lenses.

@@ -74,6 +74,7 @@ What differs from redMaPPer
    public_catalogues_scan
    cluster_randoms
    cluster_statistics_dr11
+   erass1_dr11
 
 .. toctree::
    :maxdepth: 2

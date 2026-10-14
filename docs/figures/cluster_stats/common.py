@@ -50,18 +50,19 @@ Z_EDGES = {"lambda_vlim": [0.10, 0.20, 0.30, 0.45, 0.60, 0.75], "lambda_vlim_s":
            "erass1": [0.10, 0.30, 0.50, 0.80], "act_dr6": [0.10, 0.30, 0.50, 0.70],
            "spt_2500d": [0.25, 0.50, 0.75], "psz2_noise": [0.05, 0.25, 0.50]}
 OBS_EDGES = {"lambda_vlim": [10, 20, 30, 45, 60, None], "lambda_vlim_s": [10, 20, 30, 45, 60, None],
-             "erass1": [0, 1e43, 1e44, None], "act_dr6": [0, 1, 2, None],
+             "erass1": [0, 12.59, 50.12, 199.5, None], "act_dr6": [0, 1, 2, None],
              "spt_2500d": [5, 7, None], "psz2_noise": [6, None]}
-OBS_NAME = {"lambda_vlim": r"\lambda", "lambda_vlim_s": r"\lambda", "erass1": r"L_{500}",
+OBS_NAME = {"lambda_vlim": r"\lambda", "lambda_vlim_s": r"\lambda", "erass1": r"\log L_{500}",
             "act_dr6": r"\tilde y_0/10^{-4}", "spt_2500d": r"\xi", "psz2_noise": r"{\rm S/N}"}
 EXTERNAL = ["erass1", "act_dr6", "spt_2500d", "psz2_noise"]
 
 
 def obs_label(sample, ob):
     lo, hi = OBS_EDGES[sample][ob], OBS_EDGES[sample][ob + 1]
-    fmt = (lambda v: f"10^{{{np.log10(v):.0f}}}") if sample == "erass1" else (lambda v: f"{v:g}")
-    if sample == "erass1":
-        return "all"   # the spec's edges are in erg/s, L500 in 1e42 erg/s: every cluster is in bin 0
+    # eRASS1 L500 is in 1e42 erg/s: the labels give log10 L500 [erg/s].
+    fmt = (lambda v: f"{np.log10(v) + 42:.1f}") if sample == "erass1" else (lambda v: f"{v:g}")
+    if sample == "erass1" and lo == 0:
+        return f"${OBS_NAME[sample]}<{fmt(hi)}$"
     return f"${fmt(lo)}\\leq {OBS_NAME[sample]}<{fmt(hi)}$" if hi else f"${OBS_NAME[sample]}\\geq {fmt(lo)}$"
 
 

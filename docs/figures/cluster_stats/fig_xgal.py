@@ -46,7 +46,7 @@ def main():
     fig, axs = plt.subplots(1, len(EXTERNAL), figsize=(2.9 * len(EXTERNAL), 2.9), sharey=True)
     for ax, s in zip(axs, EXTERNAL):
         i = 0
-        for f in sorted(xdir.glob(f"{s}_x_M*.h5")):
+        for f in sorted(p for p in xdir.glob(f"{s}_x_M*.h5") if "onebin" not in p.stem):
             thr = f.stem.split("_x_M")[1]
             d = load(f, "xgal")
             for (zb, ob) in sorted(d):

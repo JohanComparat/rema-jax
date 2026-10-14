@@ -71,7 +71,7 @@ def aperture_values(ra, dec, z, lam, fmap: DeviceMap, cfg, *, model: FilterModel
     >>> fm = SparseMap(64, np.arange(npix), {"FRACGOOD": np.ones(npix, np.float32),
     ...                "SIGF_Z": np.full(npix, 1e-3, np.float32)}).device(("FRACGOOD", "SIGF_Z"))
     >>> out = aperture_values([10.0], [0.0], [0.3], [20.0], fm, RemaConfig(), batch=4)
-    >>> round(float(out["SCALEVAL"][0]), 4), round(float(out["MASKFRAC"][0]), 4)
+    >>> round(float(out["SCALEVAL"][0]), 4), abs(round(float(out["MASKFRAC"][0]), 4))
     (1.0, 0.0)
     """
     ra, dec, z, lam = (np.atleast_1d(np.asarray(a, np.float64)) for a in (ra, dec, z, lam))

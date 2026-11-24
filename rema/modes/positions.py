@@ -213,12 +213,25 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
     mem = _concat(mems)
     joined = join_to_input(table, cat, n)
     stats.update(n_scanned=int(joined["SCANNED"].sum()),
-                 n_found=int(np.sum(joined.get("LAMBDA", np.zeros(n)) > 0)), t_total=time.time() - t0)
+                 n_found=_n_found(joined, n), t_total=time.time() - t0)
     log.info("scanned %d of %d positions, %d with lambda > 0, %.1fs", stats["n_scanned"], n,
              stats["n_found"], stats["t_total"])
     if info is not None:
         info.update(stats)
     return joined, mem
+
+
+def _n_found(joined: dict, n: int) -> int:
+    """Positions with lambda > 0: LAMBDA, or LAMBDA_STEPS > 0 at some redshift (grid-lambda).
+
+    >>> _n_found({"LAMBDA_STEPS": np.array([[-1.0, 3.0], [-1.0, -1.0]])}, 2)
+    1
+    """
+    if "LAMBDA" in joined:
+        return int(np.sum(np.asarray(joined["LAMBDA"]) > 0))
+    if "LAMBDA_STEPS" in joined:
+        return int(np.sum(np.any(np.asarray(joined["LAMBDA_STEPS"]) > 0, axis=1)))
+    return 0
 
 
 def _concat(parts):

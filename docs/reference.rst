@@ -223,6 +223,15 @@ Large runs (:doc:`hpc`):
     - The primary header holds ``MODE = scan-positions``, ``CALSHA1``, ``INPUT``, ``NPOS``,
       ``NSCANNED``, ``NFOUND`` (λ > 0) and ``TTOTAL``.
 
+``rema grid-points`` → ``POINTS``
+    - Columns: ``PIX`` (NESTED at ``--nside-max``), ``RA``, ``DEC``, ``LEVEL`` (the NSIDE of the level).
+    - Header: ``NSIDE``, ``NSIDEMAX``, ``NSIDEBAS``, ``NPOINTS``, ``DOMAIN``.
+``rema grid-lambda`` → ``GRID``, ``ZSTEPS``
+    - Grid: ``PIX``, ``RA``, ``DEC``, ``LEVEL``, ``SCANNED`` and one ``<COL>_STEPS`` column per
+      ``--columns`` entry, one value per redshift of ``ZSTEPS`` (−1 where not measured).
+    - The primary header holds ``MODE = grid-lambda``, ``CALSHA1``, ``POINTS``, ``TASK``, ``NTASK``,
+      ``NPOS``, ``NSCANNED`` and ``TTOTAL``.
+
 ``rema pscd`` → ``CLUSTERS``, ``MEMBERS``, ``CONFIG`` (``FILTER = pscd``)
     - Clusters: ``MEM_MATCH_ID`` ((region << 32) | rank in decreasing S/N), ``RANK`` (order of
       extraction), ``RA``, ``DEC``, ``Z``, ``Z_E``, the amplitude ``A`` and ``A_E``, ``SNR``

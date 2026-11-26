@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.7.0] - 2026-11-26
+
+### Added
+
+- `rema grid-points` and `rema grid-lambda` (`rema.modes.grid_lambda`): λ(z) in the percolation
+  aperture at fixed positions and fixed redshifts, without centring or redshift iteration, for
+  scan-mode randoms.
+  The points are centres of NESTED HEALPix pixels at NSIDE 4096; level NSIDE adds the points that
+  NSIDE/2 lacks, so the levels 64, 128, … together give one point per pixel of the finest level and a
+  finer run reuses every point measured before.
+  The output table `GRID` holds `PIX`, `RA`, `DEC`, `LEVEL`, `SCANNED` and one `<COL>_STEPS` column
+  per measured quantity (`LAMBDA`, `LAMBDA_E`, `R_LAMBDA`, `SCALEVAL`, `MASKFRAC`, `LNLAMLIKE`), on the
+  redshifts of the `ZSTEPS` table.
+- `rema.modes.positions.scan_positions(runner=...)`: the measurement run on each group of positions
+  (default `rema.modes.scan.run_scan`); `NFOUND` counts the positions with λ > 0 at some redshift for
+  `grid-lambda`.
+- `scripts/randoms/grid_lambda.sh`: the CC-IN2P3 driver (points, sweep ingestion array, grid-lambda
+  array, merge).
+
 ## [0.6.0] - 2026-10-14
 
 ### Added

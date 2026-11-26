@@ -20,6 +20,9 @@ Run modes
 .. automodule:: rema.modes.positions
    :members: scan_positions, join_to_input, group_positions, data_box
 
+.. automodule:: rema.modes.grid_lambda
+   :members: level_offsets, level_pixels, grid_points, grid_zsteps, run_grid
+
 .. automodule:: rema.modes.specpost
    :members: process, clip_velocity_batch, bootstrap_clip
 

@@ -117,7 +117,7 @@ def join_to_input(table: dict, cat: dict, nrows: int | None = None) -> dict:
 def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr11=None, calib=None,
                    work=None, cfg=None, buffer: float = 1.2, cell: float = 10.0, nrand: int = 4,
                    batch: int = 128, specpost: bool = True, galaxies=None, footprint=None,
-                   index=None, info: dict | None = None):
+                   index=None, info: dict | None = None, runner=None):
     """Scan the positions of ``table`` (dict of columns) and return ``(joined, members)`` (see the module
     docstring).
 
@@ -126,7 +126,9 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
     directory; ``cfg``: the configuration (default: the calibration's); ``galaxies`` (a galaxy
     table or a directory of per-sweep tables) and ``footprint`` (a Footprint) replace the
     ingestion and the randoms; ``index``: a randoms index directory covering the positions, used
-    instead of indexing the randoms; ``nrand``: randoms files used for the footprints.
+    instead of indexing the randoms; ``nrand``: randoms files used for the footprints; ``runner``:
+    called as ``runner(region, ra, dec, ids=rows, batch=batch)`` -> (catalogue, members) instead of
+    :func:`rema.modes.scan.run_scan` (e.g. :func:`rema.modes.grid_lambda.run_grid`).
     """
     from ..calibration import Calibration
     from ..io.legacy import ingest_sweeps, read_galaxies
@@ -197,7 +199,7 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
         reg = Region.build(gal, cal.rs, cfg, footprint=fp, zredcorr=cal.zredcorr, bkg=cal.bkg,
                            zlcorr=cal.zlcorr, zbkg=cal.zbkg, wcen_params=cal.wcen, sky=sky)
         log.info("group of %d positions: %d galaxies", rows.size, np.size(gal["RA"]))
-        cat, mem = run_scan(reg, ra[rows], dec[rows], ids=rows, batch=batch)
+        cat, mem = (runner or run_scan)(reg, ra[rows], dec[rows], ids=rows, batch=batch)
         if specpost and cat:
             sc = cfg.spec
             cat, mem = sp.process(cat, mem, min_members=sc.min_members, vmax_init=sc.vmax_init,
@@ -211,12 +213,25 @@ def scan_positions(table: dict, *, ra_col: str = "RA", dec_col: str = "DEC", dr1
     mem = _concat(mems)
     joined = join_to_input(table, cat, n)
     stats.update(n_scanned=int(joined["SCANNED"].sum()),
-                 n_found=int(np.sum(joined.get("LAMBDA", np.zeros(n)) > 0)), t_total=time.time() - t0)
+                 n_found=_n_found(joined, n), t_total=time.time() - t0)
     log.info("scanned %d of %d positions, %d with lambda > 0, %.1fs", stats["n_scanned"], n,
              stats["n_found"], stats["t_total"])
     if info is not None:
         info.update(stats)
     return joined, mem
+
+
+def _n_found(joined: dict, n: int) -> int:
+    """Positions with lambda > 0: LAMBDA, or LAMBDA_STEPS > 0 at some redshift (grid-lambda).
+
+    >>> _n_found({"LAMBDA_STEPS": np.array([[-1.0, 3.0], [-1.0, -1.0]])}, 2)
+    1
+    """
+    if "LAMBDA" in joined:
+        return int(np.sum(np.asarray(joined["LAMBDA"]) > 0))
+    if "LAMBDA_STEPS" in joined:
+        return int(np.sum(np.any(np.asarray(joined["LAMBDA_STEPS"]) > 0, axis=1)))
+    return 0
 
 
 def _concat(parts):

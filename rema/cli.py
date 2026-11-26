@@ -10,6 +10,8 @@ Commands (each reads and writes FITS files, so stages can be resumed and run per
   scan       richness and redshift at given positions (redMaPPer zscan)
   scan-positions  the same plus spectroscopic post-processing for a table of positions, joined
              to it; ingests the sweeps and builds the footprints around the positions
+  grid-points     points of one level of the nested HEALPix grid of the scan-mode randoms
+  grid-lambda     lambda(z) at fixed positions and redshifts (no centring) on those points
   blind      blind cluster finding over a region (red-sequence or, with
              --set model.filter=photoz, photo-z filter)
   pscd       photo-z space cluster detection over a region (the AMICO matched filter)
@@ -389,6 +391,74 @@ def cmd_scan_positions(args):
            "NPOS": info["n_positions"], "NSCANNED": info["n_scanned"], "NFOUND": info["n_found"],
            "TTOTAL": round(info["t_total"], 1)}
     _write_catalog(args.out, joined, mem, cfg, hdr)
+
+
+def cmd_grid_points(args):
+    """Write the points of one level of the nested HEALPix grid inside a run domain."""
+    from .io.tables import table_hdu, write_fits
+    from .modes.grid_lambda import grid_points
+    from .randoms.domain import RunDomain
+
+    dom = RunDomain.read(args.domain) if args.domain else None
+    pts = grid_points(args.nside, dom, nside_max=args.nside_max, base=args.base)
+    hdr = {"NSIDE": args.nside, "NSIDEMAX": args.nside_max, "NSIDEBAS": args.base, "NPOINTS": pts["PIX"].size,
+           "DOMAIN": Path(args.domain).name if args.domain else "full sky"}
+    write_fits(args.out, [table_hdu(pts, hdr, "POINTS")])
+    log.info("wrote %s (%d points of level %d)", args.out, pts["PIX"].size, args.nside)
+
+
+def cmd_grid_lambda(args):
+    """Measure lambda(z) at fixed positions and redshifts (the points of `rema grid-points`)."""
+    import os
+    from functools import partial
+
+    from .calibration import Calibration
+    from .io.tables import read_table, table_hdu, write_fits
+    from .modes.grid_lambda import GRID_COLUMNS, grid_zsteps, run_grid
+    from .modes.positions import scan_positions
+    from .pipeline import file_sha1
+
+    dr11 = args.dr11 or _default_dr11()
+    if dr11 is None and not (args.galaxies and args.footprint):
+        raise SystemExit("give --dr11 (or set DR11 or LEGACYSURVEY_DIR), or --galaxies and --footprint")
+    calib = args.calib or (str(Path(dr11) / "rema" / "rema_dr11_v0.2.0_ra0-240" / "calib" / "calib.fits")
+                           if dr11 else None)
+    if calib is None:
+        raise SystemExit("give --calib")
+    sps = Path("/sps/lsst/users") / os.environ.get("USER", "")
+    work = args.work or str(sps / "rema_scan" if sps.is_dir() else Path("rema_scan_work"))
+    cal = Calibration.read(calib)
+    cfg = _with_overrides(_with_cosmology(_run_cfg(args.config, cal.config, "calibration"), args), args)
+    pts = read_table(args.points, hdu="POINTS")
+    if not 0 <= args.task < args.ntask:
+        raise SystemExit("need 0 <= --task < --ntask")
+    rows = np.array_split(np.arange(pts["PIX"].size), args.ntask)[args.task]   # contiguous in nested order
+    table = {k: np.asarray(pts[k])[rows] for k in ("PIX", "RA", "DEC", "LEVEL")}
+    zsteps = grid_zsteps(cfg, tuple(args.zrange) if args.zrange else None, args.zstep)
+    keep = [c.strip().upper() for c in args.columns.split(",")]
+    bad = sorted(set(keep) - set(GRID_COLUMNS))
+    if bad:
+        raise SystemExit(f"unknown --columns {bad}; choose from {list(GRID_COLUMNS)}")
+    from .sky.maps import Footprint
+
+    fp = Footprint.read(args.footprint) if args.footprint else None
+    info = {}
+    joined, _ = scan_positions(table, dr11=dr11, calib=calib, work=work, cfg=cfg, buffer=args.buffer,
+                               cell=args.cell, nrand=args.nrand, batch=args.batch, specpost=False,
+                               galaxies=args.galaxies, footprint=fp, index=args.index, info=info,
+                               runner=partial(run_grid, zsteps=zsteps))
+    out = {"PIX": joined["INPUT_PIX"], "RA": joined["INPUT_RA"], "DEC": joined["INPUT_DEC"],
+           "LEVEL": joined["INPUT_LEVEL"], "SCANNED": joined["SCANNED"]}
+    n = out["PIX"].size
+    for c in keep:
+        col = joined.get(f"{c}_STEPS")
+        out[f"{c}_STEPS"] = (np.asarray(col, np.float32) if col is not None
+                             else np.full((n, zsteps.size), -1.0, np.float32))
+    hdr = {"MODE": "grid-lambda", "CALSHA1": file_sha1(calib), "POINTS": Path(args.points).name,
+           "TASK": args.task, "NTASK": args.ntask, "NPOS": n, "NSCANNED": info["n_scanned"],
+           "TTOTAL": round(info["t_total"], 1)}
+    write_fits(args.out, [table_hdu(out, hdr, "GRID"), table_hdu({"Z": zsteps.astype(np.float32)}, None, "ZSTEPS")])
+    log.info("wrote %s (%d points, %d redshifts, %.1fs)", args.out, n, zsteps.size, info["t_total"])
 
 
 def cmd_blind(args):
@@ -851,6 +921,41 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--set", action="append", metavar="SECTION.KEY=VALUE")
     centering(s)
     s.set_defaults(func=cmd_scan_positions)
+
+    s = sub.add_parser("grid-points", help="points of one level of the nested HEALPix grid (scan-mode randoms)")
+    s.add_argument("--nside", type=int, required=True, help="level: the points this NSIDE adds to NSIDE / 2 "
+                   "(all of them at --base)")
+    s.add_argument("--nside-max", type=int, default=4096, help="NSIDE of the pixels whose centres are the points")
+    s.add_argument("--base", type=int, default=64, help="first level")
+    s.add_argument("--domain", help="run domain (`rema cluster-randoms domain`); default the whole sky")
+    s.add_argument("--out", required=True)
+    s.set_defaults(func=cmd_grid_points)
+
+    s = sub.add_parser("grid-lambda", help="lambda(z) in the percolation aperture at fixed positions and "
+                       "redshifts, without centring (scan-mode randoms)")
+    s.add_argument("points", help="output of `rema grid-points`")
+    s.add_argument("--out", required=True, help="output FITS: GRID (PIX, RA, DEC, LEVEL, SCANNED, <COL>_STEPS) "
+                   "and ZSTEPS")
+    s.add_argument("--task", type=int, default=0, help="this task's share of the points (contiguous in nested order)")
+    s.add_argument("--ntask", type=int, default=1)
+    s.add_argument("--zrange", type=float, nargs=2, help="redshift grid range (default the model's)")
+    s.add_argument("--zstep", type=float, default=0.02)
+    s.add_argument("--columns", default="LAMBDA,LAMBDA_E,SCALEVAL,MASKFRAC",
+                   help="measured columns to keep, from LAMBDA, LAMBDA_E, R_LAMBDA, SCALEVAL, MASKFRAC, LNLAMLIKE")
+    s.add_argument("--dr11")
+    s.add_argument("--calib")
+    s.add_argument("--config")
+    s.add_argument("--work")
+    s.add_argument("--buffer", type=float, default=1.2)
+    s.add_argument("--cell", type=float, default=10.0)
+    s.add_argument("--nrand", type=int, default=4)
+    s.add_argument("--batch", type=int, default=128)
+    s.add_argument("--galaxies")
+    s.add_argument("--footprint")
+    s.add_argument("--index")
+    s.add_argument("--cosmology", action="append", metavar="KEY=VALUE")
+    s.add_argument("--set", action="append", metavar="SECTION.KEY=VALUE")
+    s.set_defaults(func=cmd_grid_lambda)
 
     s = sub.add_parser("blind", help="blind cluster finding")
     common(s)
